@@ -1,0 +1,16 @@
+name = "dog"
+account_id = "74ad6bf8dfaaccf82de6f0847f7d2d54"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+main = "worker/index.ts"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "dog.nonarkara.org"
+custom_domain = true
+
+[observability]
+enabled = true
