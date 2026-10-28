@@ -1,8 +1,18 @@
 /* ============================================================================
    CANINE OS — Design Law
    Dieter Rams × Vignelli planar grid.
-   Zero border-radius (except true circles) · Zero drop-shadows · Zero gradients
-   · One accent (#f59e0b) · Hairline rules in place of cards.
+
+   Zero border-radius (except true circles) · zero drop-shadows · zero
+   gradients · one accent (#f59e0b) · hairline rules instead of cards.
+
+   THE THREE VOICES, and what each one is for:
+     display (Josefin Sans)  — headings and the name of the thing
+     body   (Source Sans 3)  — reading and labels
+     mono   (JetBrains Mono) — DATA ONLY: numbers, dates, codes, ids
+                             anything that has to line up in a column
+
+   Monospace is a data voice. A label in a monospace face is a scaffold
+   wearing a lab coat: it reads "technical" without being technical.
    ========================================================================= */
 
 @import 'tailwindcss';
@@ -11,6 +21,7 @@
    Tailwind v4 generates utilities from these names:
    --font-display → font-display   --font-body → font-body
    --font-mono   → font-mono       --color-accent → bg-accent / text-accent
+   --color-faint  → text-faint / border-faint
    ------------------------------------------------------------------------- */
 @theme {
   --font-display: 'Josefin Sans', sans-serif;
@@ -19,6 +30,7 @@
 
   --color-accent: #f59e0b;
   --color-accent-strong: #d97706;
+  --color-faint: #8b8b95; /* 5.9:1 on the ground — the muted tone that still passes */
   --color-hairline: #27272a;
   --color-hairline-strong: #3f3f46;
 
@@ -35,7 +47,7 @@
   --border-strong: #3f3f46;
   --text-main: #f4f4f5;
   --text-muted: #a1a1aa;
-  --text-faint: #71717a;
+  --text-faint: #8b8b95;
   --accent: #f59e0b;
   --accent-faint: rgba(245, 158, 11, 0.12);
   --accent-border: rgba(245, 158, 11, 0.35);
@@ -56,19 +68,19 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    line-height: 1.45;
-    overflow-x: hidden;
+    line-height: 1.5;
   }
 
+  /* The display face. Case is NOT imposed here — a heading chooses its own
+     case, and a proper noun (a dog's name) must not be shouted. */
   h1,
   h2,
   h3,
   h4,
   h5 {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
     font-weight: 600;
-    text-transform: uppercase;
+    letter-spacing: -0.01em;
   }
 
   code,
@@ -76,16 +88,26 @@
     font-family: var(--font-mono);
     font-feature-settings: 'zero' 1;
   }
+
+  /* A visible focus ring on every control. Keyboard use is a real use. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #000;
+  }
 }
 
 @layer components {
-  /* The display voice: uppercase, tracked out, condensed. Used for headings
-     and for the interface's small labels — never for body copy. */
+  /* ---- the three voices ------------------------------------------------- */
+
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
     font-weight: 600;
-    text-transform: uppercase;
+    letter-spacing: -0.01em;
   }
 
   .font-body {
@@ -97,26 +119,37 @@
     font-feature-settings: 'zero' 1;
   }
 
-  /* Permit true circles for badges and status dots. */
-  .rounded-full,
-  .circle-badge,
-  .status-dot {
-    border-radius: 50% !important;
+  /* A field label. The sans face, small, uppercase, tracked — the way a
+     printed instrument labels its fields. Used for LABELS, never for the
+     value that follows it. */
+  .label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
   }
 
-  /* Buttons and interactive controls — sized to their label, not their box. */
+  /* A value that has to line up with other values. Mono, and mono only. */
+  .data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- controls ---------------------------------------------------------- */
+
   button,
   .btn {
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-family: var(--font-body);
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 7px 12px;
     cursor: pointer;
     background: var(--bg-elevated);
     color: var(--text-main);
@@ -124,8 +157,8 @@
     transition:
       background-color 0.15s ease-out,
       border-color 0.15s ease-out,
-      transform 0.05s ease-out;
-    min-height: 32px;
+      color 0.15s ease-out;
+    min-height: 34px;
   }
 
   button:hover,
@@ -139,20 +172,11 @@
     transform: scale(0.98);
   }
 
-  button:focus-visible,
-  .btn:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
   button:disabled,
   .btn:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
+    transform: none;
   }
 
   button.btn-accent,
@@ -169,7 +193,21 @@
     border-color: #d97706;
   }
 
-  /* Inputs and forms */
+  /* A quiet control: no ground of its own until it is touched. */
+  .btn-quiet {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+  }
+
+  .btn-quiet:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-strong);
+    color: var(--text-main);
+  }
+
+  /* ---- inputs ------------------------------------------------------------ */
+
   input,
   select,
   textarea {
@@ -189,7 +227,8 @@
     border-color: var(--accent);
   }
 
-  /* Custom scrollbars */
+  /* ---- scrollbars -------------------------------------------------------- */
+
   ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
@@ -240,4 +279,48 @@
 
 @utility border-hairline-b-0 {
   border-bottom: 0;
+}
+
+/* --- Print -----------------------------------------------------------------
+   "PRINT PASSPORT" prints the record. A record is not the interface around
+   it: no 3D stage, no navigation, no action buttons, no footer chrome.
+   ------------------------------------------------------------------------- */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-sheet {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+
+  .print-sheet * {
+    background: transparent !important;
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+
+  .print-sheet .data,
+  .print-sheet .label {
+    color: #000 !important;
+  }
+}
+
+.print-only {
+  display: none;
 }

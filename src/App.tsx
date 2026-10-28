@@ -1,20 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import { DEFAULT_DOGS } from './data/defaultDogs';
-import { loadStoredDogs, saveDogs, loadActiveDogId, saveActiveDogId } from './utils/dogCalculators';
-import { DogAvatar3D } from './components/DogAvatar3D';
+import { loadStoredDogs, saveDogs, loadActiveDogId, saveActiveDogId, calculateDogAge } from './utils/dogCalculators';
 import { TamagotchiControls } from './components/TamagotchiControls';
 import { DogPassportView } from './components/DogPassportView';
-import { MetaversePark3D } from './components/MetaversePark3D';
 import { ClinicalArchiveView } from './components/ClinicalArchiveView';
 import { ReconstructionPipelineModal } from './components/ReconstructionPipelineModal';
 import { sound } from './utils/proceduralAudio';
-import { Dog, Globe, Sparkles, Plus, FileSpreadsheet, Shield } from 'lucide-react';
+import { Dog, Globe, Plus, FileSpreadsheet, Shield, X, ChevronDown } from 'lucide-react';
+
+/**
+ * THE TWO 3D SCENES ARE LOADED ON DEMAND.
+ *
+ * three.js is 600 kB of the bundle, and it is used for two things only: the
+ * avatar in the command deck, and the park in the commons. Loading it with
+ * the interface means the reader waits for a library they may never use
+ * before the page says anything. Loading it when the scene is asked for means
+ * the record, the passport and the care panel are on screen first.
+ *
+ * The stage is sized by its own aspect ratio, not by the scene inside it, so
+ * the box a reader sees does not change when the scene arrives.
+ */
+const DogAvatar3D = lazy(() =>
+  import('./components/DogAvatar3D').then((m) => ({ default: m.DogAvatar3D }))
+);
+const MetaversePark3D = lazy(() =>
+  import('./components/MetaversePark3D').then((m) => ({ default: m.MetaversePark3D }))
+);
+
+/**
+ * THE HEADER IS ONE BAND.
+ *
+ * It used to be three stacked rows — identity, dog switcher, mode switcher —
+ * each on its own line, which made the chrome taller than the work above the
+ * fold and turned the top of every page into a directory of the app. One row:
+ * what this is, which dog, which view. Everything else is content.
+ *
+ * The one loud control in the header is the active VIEW. The active dog is
+ * marked by an accent rule and colour, not by a second amber chip: two amber
+ * chips at opposite ends of a row are two controls shouting across an empty
+ * space, and that is exactly the failure the spatial law names.
+ */
+
+type Mode = 'command' | 'metaverse' | 'clinical';
+
+const MODES: { id: Mode; label: string; icon: React.ReactNode }[] = [
+  { id: 'command', label: 'Command', icon: <Shield size={13} aria-hidden="true" /> },
+  { id: 'metaverse', label: 'Commons', icon: <Globe size={13} aria-hidden="true" /> },
+  { id: 'clinical', label: 'Clinical', icon: <FileSpreadsheet size={13} aria-hidden="true" /> },
+];
 
 export const App: React.FC = () => {
   const [dogs, setDogs] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
   const [activeDogId, setActiveDogId] = useState<string>(() => loadActiveDogId(DEFAULT_DOGS[0].id));
-  const [activeMode, setActiveMode] = useState<'command' | 'metaverse' | 'clinical'>('command');
+  const [activeMode, setActiveMode] = useState<Mode>('command');
 
   // Interactive 3D triggers
   const [interactionTrigger, setInteractionTrigger] = useState<'pet' | 'feed' | 'play' | 'groom' | null>(null);
@@ -23,6 +62,7 @@ export const App: React.FC = () => {
   // Modals
   const [isReconstructionOpen, setIsReconstructionOpen] = useState(false);
   const [isAddDogOpen, setIsAddDogOpen] = useState(false);
+  const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
 
   // New dog form
   const [newDogName, setNewDogName] = useState('');
@@ -30,6 +70,7 @@ export const App: React.FC = () => {
   const [newDogBirth, setNewDogBirth] = useState('2023-01-01');
 
   const currentDog = dogs.find((d) => d.id === activeDogId) || dogs[0];
+  const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
 
   useEffect(() => {
     saveDogs(dogs);
@@ -194,139 +235,182 @@ export const App: React.FC = () => {
   };
 
   const resetToFactoryDefaults = () => {
-    if (window.confirm('Reset dogs data to original Expo profile defaults?')) {
+    if (window.confirm(`Reset all dog profiles to the factory defaults?`)) {
       setDogs(DEFAULT_DOGS);
       setActiveDogId(DEFAULT_DOGS[0].id);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 flex flex-col font-body selection:bg-amber-500 selection:text-black">
-      {/* Top Application Bar (Dieter Rams Planar Grid) */}
-      <header className="border-hairline-b bg-zinc-950 px-3 py-2 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
-          {/* Logo & Protocol Title */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-amber-500 rounded-full" />
-              <h1 className="font-display text-sm tracking-widest font-bold text-white">
-                CANINE // DOG.NONARKARA.ORG
-              </h1>
-            </div>
-            <span className="font-mono text-[9px] text-zinc-500 border-hairline px-1.5 py-0.5">
-              MVP V1.2 · 1440×900
-            </span>
+    <div className="min-h-screen bg-ground text-zinc-100 flex flex-col font-body">
+      {/* ---- one band of chrome -------------------------------------------- */}
+      <header className="border-hairline-b bg-surface sticky top-0 z-40 no-print">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 flex items-center gap-2 sm:gap-3">
+          <span className="hidden sm:inline font-display text-[15px] text-white shrink-0">
+            Canine OS
+          </span>
+
+          {/* Which dog. The dog is the subject of the app, so the switcher sits
+              in the middle of the band, where the eye lands first.
+
+              It is a DISCLOSURE, not a row of buttons: a row grows with the
+              number of dogs, and the header is a fixed band. A row of chips
+              that outgrows the band pushes the whole page sideways, and a
+              sideways-scrolling page is the one failure no layout can excuse.
+              The disclosure shows the dog you are with; the list is the set. */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setIsDogMenuOpen((open) => !open)}
+              aria-haspopup="listbox"
+              aria-expanded={isDogMenuOpen}
+              aria-controls="dog-switcher"
+              className="btn-quiet min-h-11 px-2 text-[13px] whitespace-nowrap"
+            >
+              <Dog size={13} aria-hidden="true" />
+              {currentDog.name}
+              <ChevronDown size={13} aria-hidden="true" />
+            </button>
+
+            {isDogMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsDogMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <ul
+                  id="dog-switcher"
+                  role="listbox"
+                  aria-label="Dogs"
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[200px] border-hairline bg-elevated shadow-none"
+                >
+                  {dogs.map((dog) => (
+                    <li key={dog.id} role="none">
+                      <button
+                        role="option"
+                        aria-selected={dog.id === activeDogId}
+                        onClick={() => {
+                          setActiveDogId(dog.id);
+                          setIsDogMenuOpen(false);
+                        }}
+                        className={`w-full min-h-11 px-3 text-left text-[13px] ${
+                          dog.id === activeDogId ? 'text-accent' : 'text-zinc-300 hover:text-white'
+                        }`}
+                      >
+                        {dog.name}
+                        <span className="block text-[11px] text-faint">{dog.breed}</span>
+                      </button>
+                    </li>
+                  ))}
+                  <li role="none" className="border-hairline-t">
+                    <button
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => {
+                        setIsDogMenuOpen(false);
+                        setIsAddDogOpen(true);
+                      }}
+                      className="w-full min-h-11 px-3 text-left text-[13px] text-zinc-300 hover:text-white"
+                    >
+                      <Plus size={13} className="inline mr-1 -mt-0.5" aria-hidden="true" />
+                      Enroll another dog
+                    </button>
+                  </li>
+                </ul>
+              </>
+            )}
           </div>
 
-          {/* Dog Switcher */}
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 md:pb-0">
-            {dogs.map((dog) => (
-              <button
-                key={dog.id}
-                onClick={() => setActiveDogId(dog.id)}
-                className={`text-[10px] py-1 px-2.5 font-mono flex items-center gap-1.5 ${
-                  dog.id === activeDogId
-                    ? 'btn-accent'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Dog size={11} /> {dog.name.toUpperCase()}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setIsAddDogOpen(true)}
-              className="btn text-[10px] py-1 px-2 text-zinc-400 hover:text-amber-400"
-              title="Add another dog"
-            >
-              <Plus size={11} /> ADD DOG
-            </button>
-          </div>
-
-          {/* 3-Way Mode Switcher: Command vs Commons vs Clinical */}
-          <div className="flex border-hairline bg-black p-0.5 font-mono text-[10px]">
-            <button
-              onClick={() => setActiveMode('command')}
-              className={`py-1 px-2.5 ${
-                activeMode === 'command'
-                  ? 'bg-amber-500 text-black font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              01. COMMAND
-            </button>
-            <button
-              onClick={() => setActiveMode('metaverse')}
-              className={`py-1 px-2.5 flex items-center gap-1 ${
-                activeMode === 'metaverse'
-                  ? 'bg-amber-500 text-black font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Globe size={11} /> 02. COMMONS
-            </button>
-            <button
-              onClick={() => setActiveMode('clinical')}
-              className={`py-1 px-2.5 flex items-center gap-1 ${
-                activeMode === 'clinical'
-                  ? 'bg-amber-500 text-black font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <FileSpreadsheet size={11} /> 03. CLINICAL
-            </button>
-          </div>
+          {/* Which view. The ONE loud control in the header. */}
+          <nav aria-label="Views" className="ml-auto shrink-0">
+            <ul className="flex items-center">
+              {MODES.map((mode) => {
+                const isActive = mode.id === activeMode;
+                return (
+                  <li key={mode.id}>
+                    <button
+                      onClick={() => {
+                        setActiveMode(mode.id);
+                        setIsDogMenuOpen(false);
+                      }}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`min-h-11 px-2.5 text-[12px] ${
+                        isActive ? 'btn-accent' : 'btn-quiet'
+                      }`}
+                    >
+                      <span className="hidden sm:inline">{mode.icon}</span>
+                      {mode.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         </div>
       </header>
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 space-y-4">
-        {/* VIEW 01: THE COMMAND DECK (Option 1) */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-4 py-4">
+        {/* ---- the subject ------------------------------------------------- */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+          <h1 className="font-display text-3xl text-white">{currentDog.name}</h1>
+          <p className="text-[13px] text-zinc-400">
+            {currentDog.breed}
+            <span className="text-zinc-600"> / </span>
+            <span className="data text-zinc-300">{age.formattedCalendarAge}</span>
+          </p>
+        </div>
+
         {activeMode === 'command' && (
           <div className="space-y-4">
-            {/* Top Deck: 3D Avatar Canvas + Tamagotchi Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-              {/* Left 7 Cols: 3D Interactive WebGL Avatar */}
-              <div className="lg:col-span-7 h-[360px] lg:h-[400px]">
-                <DogAvatar3D
-                  dog={currentDog}
-                  interactionTrigger={interactionTrigger}
-                  onInteractionEnd={() => setInteractionTrigger(null)}
-                />
+            {/* The deck. The stage and the care panel sit side by side; the
+                stage's height comes from its own aspect ratio, and the care
+                panel's from its content, so neither column is padded out to
+                meet the other. */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+              {/* The stage. Its height comes from its own aspect ratio, because
+                  the camera's field of view is vertical: a wider stage at the
+                  same height would frame the dog smaller, and a narrower one
+                  would crop it. The box is therefore the same shape the scene
+                  is composed for, and it does not move when the scene
+                  arrives. */}
+              <div className="lg:col-span-7 aspect-[4/3] lg:aspect-[16/10] bg-black border-hairline overflow-hidden">
+                <Suspense fallback={null}>
+                  <DogAvatar3D
+                    dog={currentDog}
+                    interactionTrigger={interactionTrigger}
+                    onInteractionEnd={() => setInteractionTrigger(null)}
+                  />
+                </Suspense>
               </div>
 
-              {/* Right 5 Cols: Tamagotchi Care Deck & Photogrammetry Hook */}
-              <div className="lg:col-span-5 flex flex-col justify-between">
+              <div className="lg:col-span-5 flex flex-col gap-4">
                 <TamagotchiControls
                   dog={currentDog}
                   onInteract={handleInteract}
                   isInteracting={isInteracting}
                 />
 
-                {/* 3D Photogrammetry Callout Card */}
-                <div className="border-hairline bg-zinc-950 p-3 mt-3 flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <span className="font-mono text-[9px] text-amber-500 uppercase tracking-widest block font-semibold">
-                      OPEN-SOURCE 3D PIPELINE
-                    </span>
-                    <h4 className="font-display text-xs text-white">
-                      PHOTO-TO-3D AVATAR ENGINE
-                    </h4>
-                    <p className="text-[11px] text-zinc-400">
-                      Stitch {currentDog.photos.length} photos into 3D mesh via TripoSR / InstantMesh.
+                {/* The photogrammetry callout is a caption on the pipeline, not
+                    a card of its own. */}
+                <div className="border-hairline bg-surface p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="font-display text-[13px] text-white">Photo to 3D avatar</h2>
+                    <p className="text-[12px] text-zinc-400">
+                      Stitch {currentDog.photos.length}{' '}
+                      {currentDog.photos.length === 1 ? 'photo' : 'photos'} into a mesh via TripoSR or
+                      InstantMesh.
                     </p>
                   </div>
                   <button
                     onClick={() => setIsReconstructionOpen(true)}
-                    className="btn btn-accent text-[10px] py-1.5 px-3 shrink-0"
+                    className="btn btn-accent shrink-0"
                   >
-                    <Sparkles size={11} /> PIPELINE
+                    Pipeline
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Bottom: Comprehensive Dog Passport & Health Ledger */}
             <DogPassportView
               dog={currentDog}
               onUpdateDog={handleUpdateCurrentDog}
@@ -335,36 +419,12 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* VIEW 02: THE SPATIAL COMMONS (Option 2 - Metaverse Park) */}
         {activeMode === 'metaverse' && (
-          <div className="space-y-3">
-            <div className="border-hairline bg-zinc-950 p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <div>
-                <span className="font-mono text-[9px] text-amber-500 uppercase tracking-widest block">
-                  GOAL 2 // THE METAVERSE OF DOGS
-                </span>
-                <h3 className="font-display text-lg text-white">
-                  CANINE COMMONS · TRIBAL METAVERSE PARK
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  {currentDog.name} has entered the park representing the{' '}
-                  <span className="text-amber-400 font-semibold">{currentDog.metaverseTribe}</span>.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setActiveMode('command')}
-                className="btn text-xs py-1 px-3"
-              >
-                RETURN TO COMMAND DECK
-              </button>
-            </div>
-
+          <Suspense fallback={null}>
             <MetaversePark3D myDog={currentDog} />
-          </div>
+          </Suspense>
         )}
 
-        {/* VIEW 03: CLINICAL ARCHIVE (Option 3 - Tri-Column Studio) */}
         {activeMode === 'clinical' && (
           <ClinicalArchiveView
             dog={currentDog}
@@ -373,27 +433,17 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-hairline-t bg-zinc-950 px-3 py-3 mt-8 text-zinc-500 font-mono text-[10px]">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            <span>CANINE OS // SHIPPED TO DOG.NONARKARA.ORG</span> ·{' '}
-            <span className="text-zinc-400">EXPO (THAI BANGKAEW · 5Y)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span>LOCAL-FIRST PERSISTENCE</span>
-            <span>·</span>
-            <button
-              onClick={resetToFactoryDefaults}
-              className="text-zinc-500 hover:text-amber-500 underline"
-            >
-              RESET TO DEFAULTS
-            </button>
-          </div>
+      <footer className="border-hairline-t bg-surface px-3 sm:px-4 py-3 mt-8 no-print">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <p className="text-[12px] text-faint">
+            Canine OS is local-first. Every profile, note and measurement stays on this device.
+          </p>
+          <button onClick={resetToFactoryDefaults} className="btn-quiet text-[12px]">
+            Reset profiles to defaults
+          </button>
         </div>
       </footer>
 
-      {/* 3D Reconstruction Pipeline Modal */}
       <ReconstructionPipelineModal
         dog={currentDog}
         isOpen={isReconstructionOpen}
@@ -410,45 +460,63 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Add New Dog Modal */}
+      {/* ---- enroll a dog --------------------------------------------------- */}
       {isAddDogOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3">
-          <div className="bg-zinc-950 border border-amber-500/80 w-full max-w-md p-4 text-zinc-100 space-y-3">
-            <div className="flex justify-between items-center border-hairline-b pb-2">
-              <h4 className="font-display text-base text-white">ENROLL NEW DOG TO SYSTEM</h4>
-              <button onClick={() => setIsAddDogOpen(false)} className="text-zinc-500 hover:text-white">
-                ✕
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 no-print">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="enroll-title"
+            className="bg-surface border-hairline w-full max-w-md p-4 text-zinc-100"
+          >
+            <div className="flex justify-between items-center border-hairline-b pb-2 mb-3">
+              <h2 id="enroll-title" className="font-display text-base text-white">
+                Enroll a new dog
+              </h2>
+              <button
+                onClick={() => setIsAddDogOpen(false)}
+                className="btn-quiet w-9 h-9 min-h-0"
+                aria-label="Close"
+              >
+                <X size={15} aria-hidden="true" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateNewDog} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateNewDog} className="space-y-3">
               <div>
-                <label className="font-mono text-[10px] text-zinc-400 block mb-1">DOG NAME</label>
+                <label className="label block mb-1" htmlFor="new-dog-name">
+                  Dog name
+                </label>
                 <input
+                  id="new-dog-name"
                   type="text"
                   value={newDogName}
                   onChange={(e) => setNewDogName(e.target.value)}
-                  placeholder="e.g. Luna"
+                  placeholder="Luna"
                   className="w-full"
                   required
                 />
               </div>
-
               <div>
-                <label className="font-mono text-[10px] text-zinc-400 block mb-1">BREED</label>
+                <label className="label block mb-1" htmlFor="new-dog-breed">
+                  Breed
+                </label>
                 <input
+                  id="new-dog-breed"
                   type="text"
                   value={newDogBreed}
                   onChange={(e) => setNewDogBreed(e.target.value)}
-                  placeholder="e.g. Thai Ridgeback, French Bulldog, Beagle"
+                  placeholder="Thai Ridgeback"
                   className="w-full"
                   required
                 />
               </div>
-
               <div>
-                <label className="font-mono text-[10px] text-zinc-400 block mb-1">BIRTH DATE</label>
+                <label className="label block mb-1" htmlFor="new-dog-birth">
+                  Birth date
+                </label>
                 <input
+                  id="new-dog-birth"
                   type="date"
                   value={newDogBirth}
                   onChange={(e) => setNewDogBirth(e.target.value)}
@@ -461,12 +529,12 @@ export const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddDogOpen(false)}
-                  className="btn text-xs py-1 px-3"
+                  className="btn"
                 >
-                  CANCEL
+                  Cancel
                 </button>
-                <button type="submit" className="btn btn-accent text-xs py-1 px-3">
-                  CREATE PROFILE
+                <button type="submit" className="btn btn-accent">
+                  Create profile
                 </button>
               </div>
             </form>

@@ -909,7 +909,10 @@ function scanStylesheets(text, into) {
 
 function cssBreakpoints(root) {
   const into = { viewport: new Set(), container: new Set(), cliffs: new Set(), namedCliffs: new Map() };
-  const dir = path.join(root, "_next", "static", "css");
+  let dir = path.join(root, "assets");
+  if (!existsSync(dir)) {
+    dir = path.join(root, "_next", "static", "css");
+  }
   let files = [];
   try {
     files = readdirSync(dir).filter((f) => f.endsWith(".css"));

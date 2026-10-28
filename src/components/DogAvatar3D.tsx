@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { DogProfile } from '../types/dog';
 import { sound } from '../utils/proceduralAudio';
@@ -16,7 +16,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
-  const [isHovered, setIsHovered] = useState(false);
 
   // References to animated dog parts
   const dogParts = useRef<{
@@ -156,19 +155,27 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.1);
+    // Lights.
+    //
+    // The first cut used a hot ambient (1.1) plus a hot key (2.0) plus an
+    // amber rim (1.8). The result was a bleached white creature on a brown
+    // disc: the ambient washed out the sable, and the amber rim — which is
+    // the UI's accent — lit the whole podium toffee.
+    //
+    // The accent belongs to the interface, not to the fur. The rim is now a
+    // dim neutral, and the key does the modelling.
+    const ambientLight = new THREE.AmbientLight(0xd8dbe4, 0.42);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfff7ed, 2.0);
+    const dirLight = new THREE.DirectionalLight(0xfff4e6, 2.4);
     dirLight.position.set(4, 6, 5);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
-    // Subtle amber rim light
-    const rimLight = new THREE.DirectionalLight(0xf59e0b, 1.8);
+    // A cool fill from behind separates the sable saddle from the ground.
+    const rimLight = new THREE.DirectionalLight(0x9fb4d6, 1.1);
     rimLight.position.set(-4, 3, -4);
     scene.add(rimLight);
 
@@ -252,10 +259,16 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     torso.add(bellyMesh);
 
     // Bangkaew Signature: Lion Mane / Collar Ruff (แผงคอสิงโต)
+    //
+    // The ruff is a collar AROUND the neck, not a bib covering the chest.
+    // The first cut made it a 0.86-wide slab that spanned the whole
+    // front of the body, so from the front the dog read as one white
+    // shape. Narrowed and pulled back, it frames the dark face instead
+    // of hiding it.
     const ruffGroup = new THREE.Group();
     ruffGroup.position.set(0, 0.12, 0.55);
 
-    const ruffCoreGeo = new THREE.BoxGeometry(0.86, 0.72, 0.42);
+    const ruffCoreGeo = new THREE.BoxGeometry(0.7, 0.6, 0.34);
     const ruffCore = new THREE.Mesh(ruffCoreGeo, whiteFurMat);
     ruffGroup.add(ruffCore);
 
@@ -595,35 +608,23 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   }, [dog]);
 
   return (
-    <div
-      className="relative w-full h-full min-h-[300px] bg-black border-hairline overflow-hidden select-none"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="relative w-full h-full bg-black overflow-hidden select-none">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Viewport HUD Overlays (Dieter Rams / Vignelli style) */}
-      <div className="absolute top-2 left-2 flex items-center gap-2 pointer-events-none">
-        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-        <span className="font-mono text-[10px] text-zinc-400 tracking-wider uppercase">
-          LIVE 3D AVATAR // {dog.breed}
-        </span>
-      </div>
-
-      <div className="absolute top-2 right-2 pointer-events-none">
-        <span className="font-mono text-[10px] text-zinc-500 border-hairline px-1.5 py-0.5 bg-black/80">
-          DRAG TO ORBIT · CLICK TO PET
-        </span>
-      </div>
-
-      {/* Floating prompt when hovered */}
-      {isHovered && (
-        <div className="absolute bottom-2 left-2 pointer-events-none">
-          <span className="font-mono text-[10px] text-amber-500 bg-black/90 border border-amber-500/40 px-2 py-0.5">
-            EXPO · 5Y // THAI BANGKAEW
-          </span>
-        </div>
-      )}
+      {/* Two captions, and only two. The scene is the content; a "LIVE" badge
+          on a scene that is obviously live is noise, and a dot that pulses to
+          prove it is decoration pretending to be a signal. What the reader
+          actually needs is what they are looking at, and what they can do to
+          it. Both are said once, in the reading voice, where the scene does
+          not cover them. */}
+      <p className="absolute bottom-2 left-2 max-w-[70%] text-[11px] leading-tight text-zinc-300 pointer-events-none">
+        {dog.name}
+        <span className="text-zinc-500"> / </span>
+        {dog.breed}
+      </p>
+      <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
+        Drag to orbit, click to pet
+      </p>
     </div>
   );
 };

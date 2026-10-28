@@ -1,20 +1,16 @@
-import React, { useState } from 'react';
-import { DogProfile, Vaccination, ParasitePrevention, MedicalRecord } from '../types/dog';
+import React, { useEffect, useRef, useState } from 'react';
+import { DogProfile, Vaccination } from '../types/dog';
 import { calculateDogAge, getVaccineStatus } from '../utils/dogCalculators';
 import {
-  ShieldCheck,
-  AlertTriangle,
-  Calendar,
-  Award,
-  Heart,
+  Camera,
+  Download,
+  Pill,
   Plus,
   Printer,
-  Download,
-  Info,
-  Activity,
-  Syringe,
-  Pill,
   Sparkles,
+  Stethoscope,
+  Syringe,
+  X,
 } from 'lucide-react';
 
 interface DogPassportViewProps {
@@ -23,35 +19,253 @@ interface DogPassportViewProps {
   onOpenReconstruction: () => void;
 }
 
+type SubTabKey = 'overview' | 'vaccines' | 'parasites' | 'history' | 'photos';
+
+interface SubTabDef {
+  key: SubTabKey;
+  label: string;
+  noun: string; // used for the screen-reader label of the count
+}
+
+const SUB_TABS: SubTabDef[] = [
+  { key: 'overview', label: 'Identity', noun: 'recorded details' },
+  { key: 'vaccines', label: 'Vaccines', noun: 'vaccinations' },
+  { key: 'parasites', label: 'Parasites', noun: 'parasite records' },
+  { key: 'history', label: 'History', noun: 'medical records' },
+  { key: 'photos', label: 'Photos', noun: 'photos' },
+];
+
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Dates are read as dates, never as UTC-shifted ISO strings. */
+const formatDate = (iso: string): string => {
+  if (!iso) return 'Not recorded';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${String(d).padStart(2, '0')} ${MONTHS[m - 1]} ${y}`;
+};
+
+const todayIso = (): string => {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+const TARGET_LABEL: Record<string, string> = {
+  'flea-tick-heartworm': 'Flea, tick & heartworm',
+  'flea-tick': 'Flea & tick',
+  heartworm: 'Heartworm',
+  'all-in-one': 'All in one',
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  checkup: 'Checkup',
+  treatment: 'Treatment',
+  surgery: 'Surgery',
+  dental: 'Dental',
+  dietary: 'Dietary',
+};
+
+const ANGLE_LABEL: Record<string, string> = {
+  front: 'Front',
+  side: 'Side',
+  closeup: 'Close-up',
+  body: 'Full body',
+  other: 'Other',
+};
+
+/**
+ * A photo grid takes its column count from the number of photos, so the last
+ * row never leaves a single tile stranded. When no count divides the photos
+ * cleanly, the last tile spans the row instead of sitting alone.
+ */
+const photoGrid = (count: number): { cols: string; spanLast: boolean } => {
+  if (count <= 1) return { cols: 'grid-cols-1', spanLast: false };
+  if (count === 2) return { cols: 'grid-cols-2', spanLast: false };
+  if (count === 3) return { cols: 'grid-cols-3', spanLast: false };
+  if (count === 4) return { cols: 'grid-cols-2', spanLast: false };
+  if (count <= 6) return { cols: 'grid-cols-3', spanLast: false };
+  if (count % 3 === 0) return { cols: 'grid-cols-3', spanLast: false };
+  if (count % 4 === 0) return { cols: 'grid-cols-4', spanLast: false };
+  if (count % 3 === 1) return { cols: 'grid-cols-4', spanLast: true };
+  return { cols: 'grid-cols-3', spanLast: false };
+};
+
+/** One row of a definition list: sans label, sans or mono value. */
+const DefRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4">
+    <dt className="label">{label}</dt>
+    <dd className="text-xs text-zinc-200">{children}</dd>
+  </div>
+);
+
+/** A compact label/value cell for grids of facts. */
+const FactCell: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div>
+    <dt className="label">{label}</dt>
+    <dd className="mt-0.5 text-xs text-zinc-200">{children}</dd>
+  </div>
+);
+
+interface EmptyStateProps {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  action?: React.ReactNode;
+}
+
+/** Every list states what to do next — an empty box teaches nothing. */
+const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, body, action }) => (
+  <div className="mt-3 border-hairline p-4">
+    <div className="flex items-center gap-2">
+      <span aria-hidden="true" className="text-zinc-500">
+        {icon}
+      </span>
+      <h4 className="font-display text-sm text-zinc-100">{title}</h4>
+    </div>
+    <p className="mt-1.5 max-w-prose text-xs text-zinc-400">{body}</p>
+    {action && <div className="mt-3">{action}</div>}
+  </div>
+);
+
+const VaccineStatus: React.FC<{ status: ReturnType<typeof getVaccineStatus> }> = ({ status }) => {
+  // Colour marks the exception only: a current dose is quiet, a lapsed one is not.
+  const tone =
+    status.status === 'expired'
+      ? 'text-rose-400'
+      : status.status === 'expiring-soon'
+        ? 'text-amber-400'
+        : 'text-zinc-300';
+  const word =
+    status.status === 'expired' ? 'Expired' : status.status === 'expiring-soon' ? 'Due soon' : 'Current';
+  const detail =
+    status.status === 'expired'
+      ? `${Math.abs(status.daysRemaining)} days ago`
+      : status.status === 'expiring-soon'
+        ? `in ${status.daysRemaining} days`
+        : `${status.daysRemaining} days left`;
+
+  return (
+    <div className="text-xs">
+      <div className={`font-body font-semibold ${tone}`}>{word}</div>
+      <div className="data text-[11px] text-zinc-500">{detail}</div>
+    </div>
+  );
+};
+
 export const DogPassportView: React.FC<DogPassportViewProps> = ({
   dog,
   onUpdateDog,
   onOpenReconstruction,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'vaccines' | 'parasites' | 'history' | 'photos'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabKey>('overview');
   const [showAddVaccineModal, setShowAddVaccineModal] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  // New vaccine form state
-  const [vacName, setVacName] = useState('Rabies Booster');
-  const [vacDate, setVacDate] = useState('2026-10-28');
-  const [vacNextDue, setVacNextDue] = useState('2027-10-28');
-  const [vacBatch, setVacBatch] = useState('RB-2026-X');
-  const [vacClinic, setVacClinic] = useState('Thonglor Pet Hospital');
+  const recordRef = useRef<HTMLDivElement>(null);
+  const vaccineDialogRef = useRef<HTMLDialogElement>(null);
+  const lightboxRef = useRef<HTMLDialogElement>(null);
+  const tabRefs = useRef<Partial<Record<SubTabKey, HTMLButtonElement | null>>>({});
+
+  const [printedOn] = useState(() => formatDate(todayIso()));
+
+  // New vaccine form state. Nothing here is invented: the clinic is the dog's
+  // own clinic from the record, the date is today, and every other field is
+  // filled by the person recording the dose.
+  const [vacName, setVacName] = useState('');
+  const [vacType, setVacType] = useState<'core' | 'non-core'>('core');
+  const [vacDate, setVacDate] = useState(todayIso());
+  const [vacNextDue, setVacNextDue] = useState('');
+  const [vacBatch, setVacBatch] = useState('');
+  const [vacClinic, setVacClinic] = useState('');
+  const [vacVet, setVacVet] = useState('');
 
   const age = calculateDogAge(dog.birthDate, dog.weightKg);
+  const hasPortrait = Boolean(dog.primaryPhotoUrl);
+
+  const counts: Record<SubTabKey, number> = {
+    overview:
+      dog.distinctiveMarks.length +
+      dog.quirks.length +
+      dog.personalityTraits.length +
+      (dog.favoriteFood ? 1 : 0) +
+      (dog.favoriteToy ? 1 : 0) +
+      (dog.primaryVetClinic ? 1 : 0) +
+      (dog.emergencyPhone ? 1 : 0),
+    vaccines: dog.vaccinations.length,
+    parasites: dog.parasiteControl.length,
+    history: dog.medicalHistory.length,
+    photos: dog.photos.length,
+  };
+
+  // The record's own facts: what is written down, nothing more.
+  const facts: { label: string; mono: boolean; value: React.ReactNode }[] = [
+    {
+      label: 'Sex',
+      mono: false,
+      value: `${dog.sex}, ${dog.isNeutered ? 'neutered' : 'intact'}`,
+    },
+    { label: 'Weight', mono: true, value: `${dog.weightKg} kg` },
+    { label: 'Born', mono: true, value: formatDate(dog.birthDate) },
+    { label: 'Calendar age', mono: true, value: age.formattedCalendarAge },
+    { label: 'Dog years', mono: true, value: `about ${age.dogYears}` },
+    {
+      label: 'Next birthday',
+      mono: false,
+      value: age.isBirthdayToday ? (
+        <span className="font-body font-semibold text-accent">Today</span>
+      ) : (
+        <>
+          <span className="data">{age.daysUntilNextBirthday}</span>{' '}
+          <span className="font-body">days</span>
+        </>
+      ),
+    },
+    { label: 'Microchip', mono: true, value: dog.microchipId || 'Not recorded' },
+    { label: 'Coat', mono: false, value: dog.coatColor || 'Not recorded' },
+  ];
+
+  // Native <dialog> owns focus trapping and Escape-to-close; we only mirror state.
+  useEffect(() => {
+    const el = vaccineDialogRef.current;
+    if (!el) return;
+    if (showAddVaccineModal && !el.open) el.showModal();
+    if (!showAddVaccineModal && el.open) el.close();
+  }, [showAddVaccineModal]);
+
+  useEffect(() => {
+    const el = lightboxRef.current;
+    if (!el) return;
+    if (selectedPhoto && !el.open) el.showModal();
+    if (!selectedPhoto && el.open) el.close();
+  }, [selectedPhoto]);
+
+  /** Open a blank form — the clinic comes from this dog's record. */
+  const openVaccineDialog = () => {
+    setVacName('');
+    setVacType('core');
+    setVacDate(todayIso());
+    setVacNextDue('');
+    setVacBatch('');
+    setVacClinic(dog.primaryVetClinic ?? '');
+    setVacVet('');
+    setShowAddVaccineModal(true);
+  };
 
   const handleAddVaccine = (e: React.FormEvent) => {
     e.preventDefault();
     const newVac: Vaccination = {
-      id: `vac-${Date.now()}`,
-      name: vacName,
-      type: vacName.toLowerCase().includes('rabies') || vacName.toLowerCase().includes('dhpp') ? 'core' : 'non-core',
+      id: `vac-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: vacName.trim(),
+      type: vacType,
       dateAdministered: vacDate,
       nextDueDate: vacNextDue,
-      batchNumber: vacBatch,
-      clinic: vacClinic,
-      veterinarian: 'Attending DVM',
+      batchNumber: vacBatch.trim(),
+      clinic: vacClinic.trim(),
+      veterinarian: vacVet.trim(),
     };
 
     onUpdateDog({
@@ -71,517 +285,729 @@ export const DogPassportView: React.FC<DogPassportViewProps> = ({
     downloadAnchor.remove();
   };
 
+  /**
+   * Print the record, not the app. The chrome (header, footer, 3D stage) lives
+   * in App.tsx, so the record is printed in an isolated frame carrying the same
+   * stylesheets; only the passport container is copied into it.
+   */
   const handlePrintPassport = () => {
-    window.print();
+    const source = recordRef.current;
+    if (!source) {
+      window.print();
+      return;
+    }
+
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:1200px;height:1600px;border:0;';
+    document.body.appendChild(frame);
+
+    const doc = frame.contentDocument;
+    if (!doc) {
+      frame.remove();
+      window.print();
+      return;
+    }
+
+    const styles = Array.from(
+      document.head.querySelectorAll('link[rel="stylesheet"], style'),
+    )
+      .map((node) => node.outerHTML)
+      .join('');
+
+    doc.open();
+    doc.write(
+      `<!doctype html><html><head><base href=${JSON.stringify(document.baseURI)}><meta charset="utf-8">${styles}</head><body class="bg-white text-black">${source.outerHTML}</body></html>`,
+    );
+    doc.close();
+
+    const print = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    };
+
+    const images = Array.from(doc.images);
+    const unresolved = images.filter((img) => !img.complete);
+    if (unresolved.length === 0) {
+      setTimeout(print, 60);
+    } else {
+      let pending = unresolved.length;
+      unresolved.forEach((img) => {
+        img.addEventListener('load', () => {
+          pending -= 1;
+          if (pending === 0) setTimeout(print, 60);
+        });
+      });
+    }
+
+    frame.contentWindow?.addEventListener('afterprint', () => frame.remove());
+    setTimeout(() => frame.remove(), 15000);
+  };
+
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = SUB_TABS.findIndex((tab) => tab.key === activeSubTab);
+    let next = index;
+    if (e.key === 'ArrowRight') next = (index + 1) % SUB_TABS.length;
+    else if (e.key === 'ArrowLeft') next = (index - 1 + SUB_TABS.length) % SUB_TABS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = SUB_TABS.length - 1;
+    else return;
+
+    e.preventDefault();
+    const key = SUB_TABS[next].key;
+    setActiveSubTab(key);
+    tabRefs.current[key]?.focus();
+  };
+
+  const renderPanel = (key: SubTabKey) => {
+    switch (key) {
+      case 'overview':
+        return (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-6">
+              <section>
+                <h4 className="font-display text-sm text-zinc-100">Distinctive marks</h4>
+                {dog.distinctiveMarks.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-zinc-500">No marks recorded.</p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1">
+                    {dog.distinctiveMarks.map((mark, i) => (
+                      <li key={i} className="text-xs leading-relaxed text-zinc-300">
+                        {mark}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section>
+                <h4 className="font-display text-sm text-zinc-100">Daily habits and quirks</h4>
+                {dog.quirks.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-zinc-500">No habits recorded.</p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1">
+                    {dog.quirks.map((quirk, i) => (
+                      <li key={i} className="text-xs leading-relaxed text-zinc-300">
+                        {quirk}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+
+            <div className="space-y-6">
+              <section>
+                <h4 className="font-display text-sm text-zinc-100">Temperament</h4>
+                {dog.personalityTraits.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-zinc-500">No traits recorded.</p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1">
+                    {dog.personalityTraits.map((trait, i) => (
+                      <li key={i} className="text-xs leading-relaxed text-zinc-300">
+                        {trait}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section>
+                <h4 className="font-display text-sm text-zinc-100">Diet and toys</h4>
+                <dl className="mt-1.5 space-y-1.5">
+                  <DefRow label="Favorite food">{dog.favoriteFood || 'Not recorded'}</DefRow>
+                  <DefRow label="Favorite toy">{dog.favoriteToy || 'Not recorded'}</DefRow>
+                </dl>
+              </section>
+
+              <section>
+                <h4 className="font-display text-sm text-zinc-100">Veterinary contacts</h4>
+                <dl className="mt-1.5 space-y-1.5">
+                  <DefRow label="Primary clinic">{dog.primaryVetClinic || 'Not recorded'}</DefRow>
+                  <DefRow label="Emergency 24/7">
+                    <span className="data">{dog.emergencyPhone || 'Not recorded'}</span>
+                  </DefRow>
+                </dl>
+              </section>
+            </div>
+          </div>
+        );
+
+      case 'vaccines':
+        return (
+          <section aria-labelledby="vaccines-heading">
+            <div className="border-hairline-b pb-2">
+              <h3 id="vaccines-heading" className="font-display text-base text-zinc-100">
+                Vaccination passport
+              </h3>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Mandatory and preventative doses, with the date each one falls due
+              </p>
+            </div>
+
+            {dog.vaccinations.length === 0 ? (
+              <EmptyState
+                icon={<Syringe size={14} />}
+                title="No vaccinations recorded"
+                body="The passport is empty. Record the first dose — batch number, date given and next due date — to start the schedule."
+                action={
+                  <button
+                    type="button"
+                    onClick={openVaccineDialog}
+                    className="btn btn-accent no-print min-h-11"
+                  >
+                    <Plus size={13} aria-hidden="true" /> Record the first dose
+                  </button>
+                }
+              />
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[44rem] border-collapse text-left">
+                  <caption className="sr-only">
+                    Vaccinations for {dog.name}: batch, dates given and due, and current status.
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="label border-hairline-b py-2 pr-4 font-semibold">
+                        Vaccine
+                      </th>
+                      <th scope="col" className="label border-hairline-b py-2 pr-4 font-semibold">
+                        Batch
+                      </th>
+                      <th scope="col" className="label border-hairline-b py-2 pr-4 font-semibold">
+                        Given
+                      </th>
+                      <th scope="col" className="label border-hairline-b py-2 pr-4 font-semibold">
+                        Due
+                      </th>
+                      <th scope="col" className="label border-hairline-b py-2 font-semibold">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dog.vaccinations.map((vac) => {
+                      const status = getVaccineStatus(vac.nextDueDate);
+                      const meta = [
+                        vac.type === 'core' ? 'Core vaccine' : 'Non-core vaccine',
+                        vac.clinic,
+                        vac.veterinarian,
+                      ]
+                        .filter(Boolean)
+                        .join(', ');
+                      return (
+                        <tr key={vac.id} className="align-top">
+                          <td className="border-hairline-b py-2 pr-4">
+                            <div className="text-sm text-zinc-100">{vac.name}</div>
+                            {meta && <div className="text-xs text-zinc-500">{meta}</div>}
+                            {vac.notes && <div className="mt-0.5 text-xs text-zinc-400">{vac.notes}</div>}
+                          </td>
+                          <td className="border-hairline-b py-2 pr-4">
+                            <span className="data text-xs text-zinc-300">
+                              {vac.batchNumber || 'Not recorded'}
+                            </span>
+                          </td>
+                          <td className="border-hairline-b py-2 pr-4">
+                            <span className="data text-xs text-zinc-300">
+                              {formatDate(vac.dateAdministered)}
+                            </span>
+                          </td>
+                          <td className="border-hairline-b py-2 pr-4">
+                            <span className="data text-xs text-zinc-300">
+                              {formatDate(vac.nextDueDate)}
+                            </span>
+                          </td>
+                          <td className="border-hairline-b py-2">
+                            <VaccineStatus status={status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        );
+
+      case 'parasites':
+        return (
+          <section aria-labelledby="parasites-heading">
+            <div className="border-hairline-b pb-2">
+              <h3 id="parasites-heading" className="font-display text-base text-zinc-100">
+                Parasite control
+              </h3>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Flea, tick and heartworm prevention, with the date each dose falls due
+              </p>
+            </div>
+
+            {dog.parasiteControl.length === 0 ? (
+              <EmptyState
+                icon={<Pill size={14} />}
+                title="No parasite schedule"
+                body="Nothing is tracked yet. Add each monthly dose with its date given and the next due date so the interval never lapses."
+              />
+            ) : (
+              <div className="mt-1">
+                {dog.parasiteControl.map((pc) => (
+                  <article key={pc.id} className="border-hairline-b py-3 last:border-hairline-b-0">
+                    <h4 className="font-display text-sm text-zinc-100">{pc.brand}</h4>
+                    <dl className="mt-1.5 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-4">
+                      <FactCell label="Targets">
+                        {TARGET_LABEL[pc.target] ?? pc.target}
+                      </FactCell>
+                      <FactCell label="Last given">
+                        <span className="data">{formatDate(pc.dateAdministered)}</span>
+                      </FactCell>
+                      <FactCell label="Next due">
+                        <span className="data">{formatDate(pc.nextDueDate)}</span>
+                      </FactCell>
+                      <FactCell label="Given by">{pc.administeredBy || 'Not recorded'}</FactCell>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+
+      case 'history':
+        return (
+          <section aria-labelledby="history-heading">
+            <div className="border-hairline-b pb-2">
+              <h3 id="history-heading" className="font-display text-base text-zinc-100">
+                Medical logs
+              </h3>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Clinical exams, dental work and laboratory records, with the weight of the day
+              </p>
+            </div>
+
+            {dog.medicalHistory.length === 0 ? (
+              <EmptyState
+                icon={<Stethoscope size={14} />}
+                title="No medical records"
+                body="Exams, dental work and lab results collect here, each with the weight recorded on the day."
+              />
+            ) : (
+              <div className="mt-1">
+                {dog.medicalHistory.map((rec) => (
+                  <article key={rec.id} className="border-hairline-b py-3 last:border-hairline-b-0">
+                    <h4 className="font-display text-sm text-zinc-100">{rec.summary}</h4>
+                    {rec.vetNotes && (
+                      <p className="mt-1 text-xs leading-relaxed text-zinc-300">{rec.vetNotes}</p>
+                    )}
+                    <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-4">
+                      <FactCell label="Date">
+                        <span className="data">{formatDate(rec.date)}</span>
+                      </FactCell>
+                      <FactCell label="Type">
+                        {CATEGORY_LABEL[rec.category] ?? rec.category}
+                      </FactCell>
+                      <FactCell label="Clinic">{rec.clinic || 'Not recorded'}</FactCell>
+                      <FactCell label="Weight">
+                        <span className="data">{rec.weightAtTimeKg} kg</span>
+                      </FactCell>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+
+      case 'photos': {
+        const grid = photoGrid(dog.photos.length);
+        return (
+          <section aria-labelledby="photos-heading">
+            <div className="border-hairline-b pb-2">
+              <h3 id="photos-heading" className="font-display text-base text-zinc-100">
+                Photo archive
+              </h3>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Captured frames of {dog.name}, the only input the 3D pipeline can work from
+              </p>
+            </div>
+
+            {dog.photos.length === 0 ? (
+              <EmptyState
+                icon={<Camera size={14} />}
+                title="No photos captured"
+                body="The archive is empty. Capture a front, side and close-up frame to build the avatar mesh."
+                action={
+                  <button
+                    type="button"
+                    onClick={onOpenReconstruction}
+                    className="btn btn-accent no-print min-h-11"
+                  >
+                    <Sparkles size={13} aria-hidden="true" /> Open the 3D pipeline
+                  </button>
+                }
+              />
+            ) : (
+              <div className={`mt-3 grid gap-3 ${grid.cols}`}>
+                {dog.photos.map((p, i) => {
+                  const isLast = i === dog.photos.length - 1;
+                  const spans = grid.spanLast && isLast;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPhoto(p.url)}
+                      title={p.notes ? `${p.notes} — ${formatDate(p.dateTaken)}` : formatDate(p.dateTaken)}
+                      className={`block w-full flex-col items-stretch justify-start gap-0 border-hairline bg-black p-2 text-left hover:bg-zinc-900 ${
+                        spans ? 'col-span-full' : ''
+                      }`}
+                    >
+                      <span
+                        className={`relative mb-2 block w-full overflow-hidden bg-zinc-900 ${
+                          spans ? 'aspect-[16/9]' : 'aspect-square'
+                        }`}
+                      >
+                        <img
+                          src={p.url}
+                          alt={p.notes || `${dog.name}, ${ANGLE_LABEL[p.angle] ?? p.angle} view`}
+                          className="h-full w-full object-cover"
+                        />
+                      </span>
+                      <span className="line-clamp-2 font-body text-xs text-zinc-300">
+                        {p.notes || 'No note recorded'}
+                      </span>
+                      <span className="mt-1 block text-[11px] text-zinc-500">
+                        {ANGLE_LABEL[p.angle] ?? p.angle}
+                      </span>
+                      <span className="data block text-[11px] text-zinc-500">
+                        {formatDate(p.dateTaken)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      }
+    }
   };
 
   return (
-    <div className="w-full flex flex-col space-y-4">
-      {/* Dog Identity Header Card (Dieter Rams precision layout) */}
-      <div className="border-hairline bg-zinc-950 p-4">
-        <div className="flex flex-col md:flex-row gap-4 items-start justify-between">
-          {/* Photo & Core Name */}
-          <div className="flex items-start gap-4">
-            <div className="relative w-24 h-24 md:w-28 md:h-28 bg-zinc-900 border-hairline overflow-hidden shrink-0">
+    <div className="w-full">
+      <div ref={recordRef} className="print-sheet border-hairline bg-zinc-950">
+        {/* Print-only masthead: a printed record must say whose it is and when. */}
+        <div className="print-only border-hairline-b px-4 py-3">
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <div>
+              <h2 className="font-display text-2xl text-black">{dog.name}</h2>
+              <p className="text-sm text-zinc-700">
+                {dog.breed}
+                {dog.thaiBreed ? `, ${dog.thaiBreed}` : ''}
+              </p>
+            </div>
+            <dl className="flex gap-6">
+              <div>
+                <dt className="label">Microchip</dt>
+                <dd className="data text-sm text-zinc-900">{dog.microchipId || 'Not recorded'}</dd>
+              </div>
+              <div>
+                <dt className="label">Printed</dt>
+                <dd className="data text-sm text-zinc-900">{printedOn}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {/* Identity. The portrait fills its column of the grid, so it never sits
+            stranded beside a taller block of text. */}
+        <section
+          className={`grid grid-cols-1 gap-4 p-4 sm:gap-5 ${
+            hasPortrait ? 'sm:grid-cols-[6rem_minmax(0,1fr)]' : ''
+          }`}
+          aria-labelledby="identity-heading"
+        >
+          <div className="min-w-0 sm:col-start-2 sm:row-start-1">
+            <h2 id="identity-heading" className="font-display text-2xl text-white">
+              {dog.name}
+            </h2>
+            {dog.thaiName && (
+              <p className="mt-0.5 font-body text-base text-zinc-400">{dog.thaiName}</p>
+            )}
+            <p className="mt-1 text-sm text-zinc-300">
+              {dog.breed}
+              {dog.thaiBreed ? `, ${dog.thaiBreed}` : ''}
+            </p>
+            {dog.metaverseTribe && (
+              <p className="mt-1 text-xs text-zinc-400">{dog.metaverseTribe}</p>
+            )}
+          </div>
+
+          {hasPortrait && (
+            <button
+              type="button"
+              onClick={() => setSelectedPhoto(dog.primaryPhotoUrl)}
+              aria-label={`Open the full-size portrait of ${dog.name}`}
+              className="relative block min-h-[6rem] w-full overflow-hidden border-hairline bg-zinc-900 hover:bg-zinc-800 sm:col-start-1 sm:row-start-1"
+            >
               <img
                 src={dog.primaryPhotoUrl}
-                alt={dog.name}
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={() => setSelectedPhoto(dog.primaryPhotoUrl)}
+                alt={`${dog.name}, ${dog.breed}`}
+                className="absolute inset-0 h-full w-full object-cover object-top"
               />
-              <span className="absolute bottom-0 left-0 right-0 bg-black/80 font-mono text-[9px] text-center text-amber-400 py-0.5">
-                {dog.photos.length} PHOTOS
-              </span>
+            </button>
+          )}
+        </section>
+
+        {/* The record's facts, in columns that line up. */}
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-hairline-t px-4 py-4 sm:grid-cols-4">
+          {facts.map((fact) => (
+            <div key={fact.label}>
+              <dt className="label">{fact.label}</dt>
+              <dd className={`mt-0.5 text-sm text-zinc-100 ${fact.mono ? 'data' : ''}`}>
+                {fact.value}
+              </dd>
             </div>
+          ))}
+        </dl>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] text-amber-500 uppercase tracking-widest">
-                  OFFICIAL PASSPORT // TH-{dog.microchipId.slice(-6)}
-                </span>
-                <span className="status-dot w-2 h-2 bg-emerald-500" />
-              </div>
-
-              <div className="flex items-baseline gap-2">
-                <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-white">
-                  {dog.name}
-                </h2>
-                {dog.thaiName && (
-                  <span className="font-body text-base text-zinc-400">
-                    ({dog.thaiName})
-                  </span>
-                )}
-              </div>
-
-              <p className="text-xs text-zinc-300 font-mono">
-                {dog.breed} {dog.thaiBreed ? `· ${dog.thaiBreed}` : ''}
-              </p>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                <span className="font-mono text-[10px] bg-zinc-900 border-hairline px-2 py-0.5 text-zinc-300">
-                  SEX: {dog.sex.toUpperCase()} ({dog.isNeutered ? 'NEUTERED' : 'INTACT'})
-                </span>
-                <span className="font-mono text-[10px] bg-zinc-900 border-hairline px-2 py-0.5 text-zinc-300">
-                  WEIGHT: {dog.weightKg} KG
-                </span>
-                <span className="font-mono text-[10px] bg-zinc-900 border-hairline px-2 py-0.5 text-amber-400">
-                  TRIBE: {dog.metaverseTribe}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Age & Birthday Highlight Box */}
-          <div className="w-full md:w-auto border-hairline bg-black p-3 space-y-1.5 min-w-[220px]">
-            <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500 border-hairline-b pb-1">
-              <span>CANINE METRICS</span>
-              <span className="text-amber-500 font-bold">AGE CALCULATION</span>
-            </div>
-
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs text-zinc-400">CALENDAR AGE:</span>
-              <span className="font-mono text-sm font-semibold text-white">
-                {age.formattedCalendarAge}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs text-zinc-400">DOG YEARS:</span>
-              <span className="font-mono text-sm font-semibold text-amber-400">
-                ≈ {age.dogYears} yrs (Prime)
-              </span>
-            </div>
-
-            <div className="flex justify-between items-baseline pt-1 border-hairline-t">
-              <span className="text-[11px] text-zinc-400">NEXT BIRTHDAY:</span>
-              <span className="font-mono text-xs font-bold text-emerald-400">
-                {age.isBirthdayToday ? '🎉 TODAY!' : `IN ${age.daysUntilNextBirthday} DAYS`}
-              </span>
-            </div>
-
-            <span className="block font-mono text-[9px] text-zinc-500 text-right">
-              Born: {dog.birthDate} (Nov 17, 2021)
-            </span>
-          </div>
+        {/* Actions: one row, four controls, two columns on a narrow screen so
+            no control is ever left alone on the last row. */}
+        <div className="no-print grid grid-cols-2 gap-2 border-hairline-t px-4 py-3 sm:grid-cols-4">
+          <button type="button" onClick={openVaccineDialog} className="btn btn-accent min-h-11">
+            <Syringe size={13} aria-hidden="true" /> Record dose
+          </button>
+          <button type="button" onClick={onOpenReconstruction} className="btn min-h-11">
+            <Sparkles size={13} aria-hidden="true" /> 3D reconstruction
+          </button>
+          <button type="button" onClick={handleExportPassportJson} className="btn min-h-11">
+            <Download size={13} aria-hidden="true" /> Export JSON
+          </button>
+          <button type="button" onClick={handlePrintPassport} className="btn min-h-11">
+            <Printer size={13} aria-hidden="true" /> Print passport
+          </button>
         </div>
 
-        {/* Action Toolbar */}
-        <div className="mt-4 pt-3 border-hairline-t flex flex-wrap gap-2 justify-between items-center">
-          <div className="flex gap-2">
-            <button
-              onClick={onOpenReconstruction}
-              className="btn btn-accent text-[11px] py-1.5"
-            >
-              <Sparkles size={12} /> 3D PHOTO RECONSTRUCTION ({dog.photos.length} ANGLES)
-            </button>
-            <button
-              onClick={() => setShowAddVaccineModal(true)}
-              className="btn text-[11px] py-1.5"
-            >
-              <Plus size={12} /> RECORD VACCINE
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button onClick={handleExportPassportJson} className="btn text-[10px] py-1">
-              <Download size={11} /> EXPORT JSON
-            </button>
-            <button onClick={handlePrintPassport} className="btn text-[10px] py-1">
-              <Printer size={11} /> PRINT PASSPORT
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Subtabs Navigation */}
-      <div className="flex border-hairline bg-zinc-950 font-mono text-xs">
-        <button
-          onClick={() => setActiveSubTab('overview')}
-          className={`py-2 px-3 border-hairline-r ${
-            activeSubTab === 'overview' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          IDENTITY & QUIRKS
-        </button>
-        <button
-          onClick={() => setActiveSubTab('vaccines')}
-          className={`py-2 px-3 border-hairline-r ${
-            activeSubTab === 'vaccines' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          VACCINE PASSPORT ({dog.vaccinations.length})
-        </button>
-        <button
-          onClick={() => setActiveSubTab('parasites')}
-          className={`py-2 px-3 border-hairline-r ${
-            activeSubTab === 'parasites' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          PARASITE CONTROL ({dog.parasiteControl.length})
-        </button>
-        <button
-          onClick={() => setActiveSubTab('history')}
-          className={`py-2 px-3 border-hairline-r ${
-            activeSubTab === 'history' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          MEDICAL LOGS ({dog.medicalHistory.length})
-        </button>
-        <button
-          onClick={() => setActiveSubTab('photos')}
-          className={`py-2 px-3 ${
-            activeSubTab === 'photos' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          PHOTO VAULT ({dog.photos.length})
-        </button>
-      </div>
-
-      {/* Tab Panels */}
-      <div className="border-hairline bg-zinc-950 p-4">
-        {/* OVERVIEW PANEL */}
-        {activeSubTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left: Distinctive Marks & Breed Features */}
-            <div className="space-y-3">
-              <h4 className="font-display text-xs text-amber-500 uppercase tracking-widest border-hairline-b pb-1">
-                DISTINCTIVE PHYSICAL MARKS // BANGKAEW ATTRIBUTES
-              </h4>
-              <ul className="space-y-1.5 text-xs">
-                {dog.distinctiveMarks.map((mark, i) => (
-                  <li key={i} className="flex items-start gap-2 text-zinc-300">
-                    <span className="text-amber-500 font-mono text-[10px] mt-0.5">▪</span>
-                    <span>{mark}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <h4 className="font-display text-xs text-amber-500 uppercase tracking-widest border-hairline-b pb-1 pt-3">
-                DAILY HABITS & QUIRKS
-              </h4>
-              <ul className="space-y-1.5 text-xs">
-                {dog.quirks.map((q, i) => (
-                  <li key={i} className="flex items-start gap-2 text-zinc-300">
-                    <span className="text-amber-500 font-mono text-[10px] mt-0.5">▪</span>
-                    <span>{q}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Right: Personality Traits, Diet & Emergency Contacts */}
-            <div className="space-y-3">
-              <h4 className="font-display text-xs text-amber-500 uppercase tracking-widest border-hairline-b pb-1">
-                TEMPERAMENT & PERSONALITY
-              </h4>
-              <div className="flex flex-wrap gap-1.5">
-                {dog.personalityTraits.map((t, i) => (
-                  <span
-                    key={i}
-                    className="font-mono text-[10px] bg-zinc-900 border-hairline text-zinc-200 px-2 py-0.5"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-
-              <h4 className="font-display text-xs text-amber-500 uppercase tracking-widest border-hairline-b pb-1 pt-3">
-                DIETARY PREFERENCES & TOYS
-              </h4>
-              <div className="text-xs space-y-1">
-                <p>
-                  <span className="text-zinc-500 font-mono text-[10px]">FAVORITE FOOD: </span>
-                  <span className="text-zinc-200">{dog.favoriteFood}</span>
-                </p>
-                <p>
-                  <span className="text-zinc-500 font-mono text-[10px]">FAVORITE TOY: </span>
-                  <span className="text-zinc-200">{dog.favoriteToy}</span>
-                </p>
-              </div>
-
-              <h4 className="font-display text-xs text-amber-500 uppercase tracking-widest border-hairline-b pb-1 pt-3">
-                VETERINARY & EMERGENCY CONTACTS
-              </h4>
-              <div className="text-xs space-y-1 bg-black p-2.5 border-hairline font-mono">
-                <p className="flex justify-between">
-                  <span className="text-zinc-500 text-[10px]">PRIMARY CLINIC:</span>
-                  <span className="text-zinc-200">{dog.primaryVetClinic}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-zinc-500 text-[10px]">EMERGENCY 24/7:</span>
-                  <span className="text-amber-400">{dog.emergencyPhone}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-zinc-500 text-[10px]">MICROCHIP:</span>
-                  <span className="text-zinc-300">{dog.microchipId}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VACCINES PANEL */}
-        {activeSubTab === 'vaccines' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center border-hairline-b pb-2">
-              <span className="font-mono text-xs text-zinc-400">
-                OFFICIAL VACCINATION PASSPORT // MANDATORY & PREVENTATIVE
-              </span>
-              <button
-                onClick={() => setShowAddVaccineModal(true)}
-                className="btn btn-accent text-[10px] py-1"
-              >
-                <Plus size={11} /> RECORD NEW DOSE
-              </button>
-            </div>
-
-            <div className="divide-y divide-zinc-800">
-              {dog.vaccinations.map((vac) => {
-                const status = getVaccineStatus(vac.nextDueDate);
-                return (
-                  <div key={vac.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display text-sm font-semibold text-white">{vac.name}</span>
-                        <span className="font-mono text-[9px] bg-zinc-800 px-1.5 py-0.2 uppercase text-zinc-400">
-                          {vac.type}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400 font-mono">
-                        Batch: {vac.batchNumber} · Administered at {vac.clinic} ({vac.veterinarian})
-                      </p>
-                      {vac.notes && <p className="text-[11px] text-zinc-500 italic">{vac.notes}</p>}
-                    </div>
-
-                    <div className="text-right sm:shrink-0">
-                      <div className="font-mono text-xs">
-                        <span className="text-zinc-500 text-[10px] block">GIVEN: {vac.dateAdministered}</span>
-                        <span className="text-zinc-400 text-[10px] block">DUE: {vac.nextDueDate}</span>
-                      </div>
-                      <span
-                        className={`inline-block font-mono text-[9px] font-bold px-2 py-0.5 mt-1 border ${
-                          status.status === 'valid'
-                            ? 'border-emerald-500/60 text-emerald-400 bg-emerald-950/20'
-                            : status.status === 'expiring-soon'
-                            ? 'border-amber-500/60 text-amber-400 bg-amber-950/20'
-                            : 'border-rose-500/60 text-rose-400 bg-rose-950/20'
-                        }`}
-                      >
-                        {status.badgeLabel}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* PARASITE CONTROL PANEL */}
-        {activeSubTab === 'parasites' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center border-hairline-b pb-2">
-              <span className="font-mono text-xs text-zinc-400">
-                MONTHLY FLEA, TICK & HEARTWORM PREVENTATIVE CALENDAR
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {dog.parasiteControl.map((pc) => (
-                <div key={pc.id} className="border-hairline p-3 bg-black space-y-1">
-                  <div className="flex justify-between items-start">
-                    <span className="font-display text-sm font-semibold text-white">{pc.brand}</span>
-                    <span className="font-mono text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5">
-                      {pc.target.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="font-mono text-xs text-zinc-400 space-y-0.5 pt-1">
-                    <p className="flex justify-between">
-                      <span className="text-zinc-500 text-[10px]">LAST GIVEN:</span>
-                      <span>{pc.dateAdministered}</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-zinc-500 text-[10px]">NEXT DUE:</span>
-                      <span className="text-emerald-400 font-semibold">{pc.nextDueDate}</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-zinc-500 text-[10px]">GIVEN BY:</span>
-                      <span>{pc.administeredBy}</span>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* MEDICAL HISTORY PANEL */}
-        {activeSubTab === 'history' && (
-          <div className="space-y-3">
-            <div className="border-hairline-b pb-2">
-              <span className="font-mono text-xs text-zinc-400">
-                CLINICAL EXAMS, DENTAL WORK & LABORATORY RECORDS
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {dog.medicalHistory.map((rec) => (
-                <div key={rec.id} className="border-hairline p-3 bg-black space-y-1 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="font-mono text-[10px] text-amber-500 uppercase font-semibold">
-                      {rec.category.toUpperCase()} · {rec.date}
-                    </span>
-                    <span className="font-mono text-[10px] text-zinc-400">
-                      WEIGHT: {rec.weightAtTimeKg} KG
-                    </span>
-                  </div>
-                  <h5 className="font-display text-sm font-semibold text-white">{rec.summary}</h5>
-                  <p className="text-zinc-300 text-[11px] leading-relaxed">{rec.vetNotes}</p>
-                  <span className="font-mono text-[9px] text-zinc-500 block pt-1">
-                    Clinic: {rec.clinic}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* PHOTOS VAULT PANEL */}
-        {activeSubTab === 'photos' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center border-hairline-b pb-2">
-              <span className="font-mono text-xs text-zinc-400">
-                EXPO'S CAPTURED PHOTO ARCHIVE FOR 3D STITCHING
-              </span>
-              <button onClick={onOpenReconstruction} className="btn btn-accent text-[10px] py-1">
-                <Sparkles size={11} /> LAUNCH 3D PIPELINE
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {dog.photos.map((p) => (
-                <div
-                  key={p.id}
-                  className="border-hairline bg-black p-2 cursor-pointer group"
-                  onClick={() => setSelectedPhoto(p.url)}
-                >
-                  <div className="aspect-square bg-zinc-900 overflow-hidden mb-2 relative">
-                    <img
-                      src={p.url}
-                      alt={p.notes || dog.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                    <span className="absolute bottom-1 left-1 bg-black/80 font-mono text-[9px] text-amber-400 px-1 py-0.5">
-                      {p.angle.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="font-mono text-[10px] text-zinc-300 truncate">{p.notes}</p>
-                  <span className="font-mono text-[9px] text-zinc-500">{p.dateTaken}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Add Vaccine Modal */}
-      {showAddVaccineModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3">
-          <div className="bg-zinc-950 border border-amber-500/80 w-full max-w-md p-4 text-zinc-100 space-y-3">
-            <div className="flex justify-between items-center border-hairline-b pb-2">
-              <h4 className="font-display text-base text-white">RECORD VACCINE DOSE</h4>
-              <button onClick={() => setShowAddVaccineModal(false)} className="text-zinc-500 hover:text-white">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAddVaccine} className="space-y-3 text-xs">
-              <div>
-                <label className="font-mono text-[10px] text-zinc-400 block mb-1">VACCINE NAME</label>
-                <input
-                  type="text"
-                  value={vacName}
-                  onChange={(e) => setVacName(e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-mono text-[10px] text-zinc-400 block mb-1">DATE GIVEN</label>
-                  <input
-                    type="date"
-                    value={vacDate}
-                    onChange={(e) => setVacDate(e.target.value)}
-                    className="w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-zinc-400 block mb-1">NEXT DUE DATE</label>
-                  <input
-                    type="date"
-                    value={vacNextDue}
-                    onChange={(e) => setVacNextDue(e.target.value)}
-                    className="w-full"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-mono text-[10px] text-zinc-400 block mb-1">BATCH NUMBER</label>
-                  <input
-                    type="text"
-                    value={vacBatch}
-                    onChange={(e) => setVacBatch(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="font-mono text-[10px] text-zinc-400 block mb-1">CLINIC / VET</label>
-                  <input
-                    type="text"
-                    value={vacClinic}
-                    onChange={(e) => setVacClinic(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-hairline-t">
+        {/* Tabs */}
+        <div className="no-print border-hairline-t overflow-x-auto">
+          <div role="tablist" aria-label="Passport sections" className="flex w-max min-w-full">
+            {SUB_TABS.map((tab) => {
+              const selected = activeSubTab === tab.key;
+              const count = counts[tab.key];
+              return (
                 <button
+                  key={tab.key}
                   type="button"
-                  onClick={() => setShowAddVaccineModal(false)}
-                  className="btn text-xs py-1 px-3"
+                  role="tab"
+                  id={`tab-${tab.key}`}
+                  aria-selected={selected}
+                  aria-controls={`panel-${tab.key}`}
+                  tabIndex={selected ? 0 : -1}
+                  ref={(el) => {
+                    tabRefs.current[tab.key] = el;
+                  }}
+                  onClick={() => setActiveSubTab(tab.key)}
+                  onKeyDown={onTabKeyDown}
+                  aria-label={count > 0 ? `${tab.label}, ${count} ${tab.noun}` : tab.label}
+                  className={`flex min-h-11 shrink-0 items-baseline gap-1.5 whitespace-nowrap border-0 bg-transparent px-3 py-2 font-body text-xs hover:bg-zinc-900 hover:text-zinc-100 ${
+                    selected ? 'border-b-2 border-accent text-zinc-100' : 'text-zinc-400'
+                  }`}
                 >
-                  CANCEL
+                  {tab.label}
+                  {count > 0 && <span className="data text-[11px] text-zinc-500">{count}</span>}
                 </button>
-                <button type="submit" className="btn btn-accent text-xs py-1 px-3">
-                  SAVE TO PASSPORT
-                </button>
-              </div>
-            </form>
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* Photo Lightbox Modal */}
-      {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <div className="relative max-w-3xl max-h-[90vh]">
-            <img src={selectedPhoto} alt="Expo Full View" className="max-w-full max-h-[85vh] object-contain border-hairline" />
-            <span className="font-mono text-xs text-zinc-400 text-center block mt-2">
-              EXPO · THAI BANGKAEW · CLICK ANYWHERE TO CLOSE
-            </span>
-          </div>
+        {/* Panels */}
+        <div className="p-4">
+          {SUB_TABS.map((tab) => (
+            <div
+              key={tab.key}
+              role="tabpanel"
+              id={`panel-${tab.key}`}
+              aria-labelledby={`tab-${tab.key}`}
+              tabIndex={0}
+              // Inactive panels stay in the sheet so a printed record carries every section.
+              className={activeSubTab === tab.key ? '' : 'print-only'}
+            >
+              {renderPanel(tab.key)}
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Add vaccine modal */}
+      <dialog
+        ref={vaccineDialogRef}
+        onClose={() => setShowAddVaccineModal(false)}
+        onClick={(e) => {
+          // Backdrop clicks land on the dialog element itself.
+          if (e.target === e.currentTarget) setShowAddVaccineModal(false);
+        }}
+        aria-labelledby="vaccine-dialog-title"
+        className="m-auto max-h-[90vh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto border border-hairline bg-zinc-950 p-4 text-zinc-100 [&::backdrop]:bg-black"
+      >
+        <div className="flex items-start justify-between gap-3 border-hairline-b pb-2">
+          <h3 id="vaccine-dialog-title" className="font-display text-base text-white">
+            Record vaccine dose
+          </h3>
+          <button
+            type="button"
+            onClick={() => setShowAddVaccineModal(false)}
+            aria-label="Close the vaccine form"
+            className="btn-quiet min-h-11 min-w-11 p-1"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+
+        <form onSubmit={handleAddVaccine} className="mt-3 space-y-3">
+          <div>
+            <label htmlFor="vac-name" className="label mb-1 block">
+              Vaccine name
+            </label>
+            <input
+              id="vac-name"
+              type="text"
+              value={vacName}
+              onChange={(e) => setVacName(e.target.value)}
+              placeholder="e.g. Rabies booster"
+              className="w-full"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="vac-type" className="label mb-1 block">
+                Vaccine type
+              </label>
+              <select
+                id="vac-type"
+                value={vacType}
+                onChange={(e) => setVacType(e.target.value === 'non-core' ? 'non-core' : 'core')}
+                className="w-full"
+              >
+                <option value="core">Core</option>
+                <option value="non-core">Non-core</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="vac-batch" className="label mb-1 block">
+                Batch number
+              </label>
+              <input
+                id="vac-batch"
+                type="text"
+                value={vacBatch}
+                onChange={(e) => setVacBatch(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="vac-date" className="label mb-1 block">
+                Date given
+              </label>
+              <input
+                id="vac-date"
+                type="date"
+                value={vacDate}
+                onChange={(e) => setVacDate(e.target.value)}
+                className="w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="vac-next-due" className="label mb-1 block">
+                Next due date
+              </label>
+              <input
+                id="vac-next-due"
+                type="date"
+                value={vacNextDue}
+                onChange={(e) => setVacNextDue(e.target.value)}
+                className="w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="vac-clinic" className="label mb-1 block">
+                Clinic
+              </label>
+              <input
+                id="vac-clinic"
+                type="text"
+                value={vacClinic}
+                onChange={(e) => setVacClinic(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="vac-vet" className="label mb-1 block">
+                Veterinarian
+              </label>
+              <input
+                id="vac-vet"
+                type="text"
+                value={vacVet}
+                onChange={(e) => setVacVet(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-hairline-t pt-3">
+            <button type="button" onClick={() => setShowAddVaccineModal(false)} className="btn min-h-11">
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-accent min-h-11">
+              Save to passport
+            </button>
+          </div>
+        </form>
+      </dialog>
+
+      {/* Photo lightbox */}
+      <dialog
+        ref={lightboxRef}
+        onClose={() => setSelectedPhoto(null)}
+        onClick={(e) => {
+          // The backdrop closes; the photograph itself does not.
+          if (e.target === e.currentTarget) setSelectedPhoto(null);
+        }}
+        aria-labelledby="lightbox-caption"
+        className="m-auto max-h-[92vh] max-w-3xl border-0 bg-transparent p-0 [&::backdrop]:bg-black"
+      >
+        <div className="relative">
+          <img
+            src={selectedPhoto ?? ''}
+            alt={`${dog.name}, full view`}
+            className="max-h-[85vh] w-auto max-w-full border-hairline object-contain"
+          />
+          <button
+            type="button"
+            onClick={() => setSelectedPhoto(null)}
+            aria-label="Close the photo viewer"
+            className="btn btn-quiet absolute right-1 top-1 min-h-11 min-w-11 bg-black p-1"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+          <p id="lightbox-caption" className="mt-2 text-center font-body text-xs text-zinc-300">
+            {dog.name}
+            {dog.breed ? `, ${dog.breed}` : ''}
+            <span className="block text-zinc-500">
+              Press Escape or click outside to close.
+            </span>
+          </p>
+        </div>
+      </dialog>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
-import ReactDOM, { flushSync } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { App } from './App';
 import './index.css';
 

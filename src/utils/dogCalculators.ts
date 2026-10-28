@@ -10,9 +10,8 @@ export interface AgeCalculation {
   isBirthdayToday: boolean;
 }
 
-export function calculateDogAge(birthDateStr: string, weightKg: number = 24): AgeCalculation {
+export function calculateDogAge(birthDateStr: string, weightKg: number = 24, now: Date = new Date()): AgeCalculation {
   const birth = new Date(birthDateStr);
-  const now = new Date('2026-10-28T04:30:00+07:00'); // current workspace time anchor
 
   let years = now.getFullYear() - birth.getFullYear();
   let months = now.getMonth() - birth.getMonth();
@@ -65,13 +64,12 @@ export function calculateDogAge(birthDateStr: string, weightKg: number = 24): Ag
   };
 }
 
-export function getVaccineStatus(dueDateStr: string): {
+export function getVaccineStatus(dueDateStr: string, now: Date = new Date()): {
   status: 'valid' | 'expiring-soon' | 'expired';
   daysRemaining: number;
   badgeLabel: string;
 } {
   const due = new Date(dueDateStr);
-  const now = new Date('2026-10-28T04:30:00+07:00');
   const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) {

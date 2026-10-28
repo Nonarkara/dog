@@ -1,12 +1,34 @@
-import React from 'react';
-import { DogProfile, TamagotchiStats } from '../types/dog';
-import { Utensils, Heart, Zap, Sparkles, Footprints, HandMetal } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { DogProfile } from '../types/dog';
+import { Utensils, Brush, Footprints, HandMetal, Volleyball, Loader2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+type Action = 'pet' | 'feed' | 'play' | 'groom' | 'walk';
 
 interface TamagotchiControlsProps {
   dog: DogProfile;
-  onInteract: (action: 'pet' | 'feed' | 'play' | 'groom' | 'walk') => void;
+  onInteract: (action: Action) => void;
   isInteracting: boolean;
 }
+
+// Two columns, not four: this panel sits in a ~460px column, and four stats
+// across it collide the label with its own value.
+const STATS: { key: 'hunger' | 'happiness' | 'energy' | 'hygiene'; label: string }[] = [
+  { key: 'hunger', label: 'Hunger' },
+  { key: 'happiness', label: 'Happiness' },
+  { key: 'energy', label: 'Energy' },
+  { key: 'hygiene', label: 'Hygiene' },
+];
+
+const LOW_THRESHOLD = 30;
+
+const GERUND: Record<Action, string> = {
+  pet: 'Petting',
+  feed: 'Feeding',
+  play: 'Playing',
+  groom: 'Grooming',
+  walk: 'Walking',
+};
 
 export const TamagotchiControls: React.FC<TamagotchiControlsProps> = ({
   dog,
@@ -15,95 +37,115 @@ export const TamagotchiControls: React.FC<TamagotchiControlsProps> = ({
 }) => {
   const stats = dog.tamagotchi;
 
-  // Progress Bar Helper
-  const renderStatBar = (label: string, value: number, icon: React.ReactNode, alertThreshold = 30) => {
-    const isLow = value < alertThreshold;
+  // The parent says that something is happening but not what. Keeping the
+  // action here is what lets the pressed control show its own busy state.
+  const [pendingAction, setPendingAction] = useState<Action | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  const wasInteracting = useRef(isInteracting);
+
+  useEffect(() => {
+    if (wasInteracting.current && !isInteracting && pendingAction) {
+      setAnnouncement(`${GERUND[pendingAction]} ${dog.name} complete.`);
+    }
+    wasInteracting.current = isInteracting;
+    if (!isInteracting) setPendingAction(null);
+  }, [isInteracting, pendingAction, dog.name]);
+
+  const run = (action: Action) => {
+    if (isInteracting) return;
+    setPendingAction(action);
+    setAnnouncement(`${GERUND[action]} ${dog.name}`);
+    onInteract(action);
+  };
+
+  const renderAction = (action: Action, Icon: LucideIcon, label: string, primary = false) => {
+    const busy = isInteracting && pendingAction === action;
+    const text = busy ? `${GERUND[action]}…` : label;
     return (
-      <div className="space-y-1">
-        <div className="flex justify-between items-center text-[11px] font-mono">
-          <span className="text-zinc-400 flex items-center gap-1.5">
-            {icon} {label}
-          </span>
-          <span className={`font-semibold ${isLow ? 'text-rose-400' : 'text-amber-400'}`}>
-            {value}%
-          </span>
-        </div>
-        <div className="w-full h-2 bg-black border-hairline overflow-hidden">
-          <div
-            className={`h-full transition-all duration-300 ${
-              isLow ? 'bg-rose-500' : 'bg-amber-500'
-            }`}
-            style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-          />
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={() => run(action)}
+        disabled={isInteracting}
+        aria-busy={busy || undefined}
+        aria-label={busy ? `${GERUND[action]} ${dog.name}` : `${label} ${dog.name}`}
+        className={[
+          'btn',
+          primary ? 'btn-accent w-full' : 'btn-quiet border-hairline hover:border-accent',
+          // The disabled state is kept for every control, but the one that is
+          // working stays at full opacity so the row does not read as dead.
+          busy ? 'opacity-100' : '',
+        ].join(' ')}
+      >
+        {busy ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
+        {text}
+      </button>
     );
   };
 
   return (
-    <div className="border-hairline bg-zinc-950 p-3 space-y-3">
-      <div className="flex items-center justify-between border-hairline-b pb-2">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          <span className="font-mono text-xs text-zinc-300 uppercase tracking-wider font-semibold">
-            TAMAGOTCHI PET CARE DECK
-          </span>
+    <div className="@container border-hairline bg-zinc-950 p-3 space-y-3">
+      <header className="space-y-1 border-hairline-b pb-2.5">
+        <h2 className="font-display text-[15px] leading-none text-zinc-100">Pet care deck</h2>
+        {/* No live dot: there is no server. The values live on this device and
+            decay on a local timer, so the line says exactly that. */}
+        <p className="text-[11px] leading-snug text-faint">
+          {dog.name}&apos;s care stats, kept on this device. Hunger, energy and hygiene drift down
+          on their own.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {STATS.map(({ key, label }) => {
+          const value = stats[key];
+          const isLow = value < LOW_THRESHOLD;
+          return (
+            <div key={key} className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="label">{label}</span>
+                {/* The low state is named, not only coloured. */}
+                {isLow && <span className="label text-rose-400">Low</span>}
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`data text-[20px] leading-none ${isLow ? 'text-rose-400' : 'text-zinc-100'}`}
+                >
+                  {value}
+                </span>
+                <span className="data text-[11px] leading-none text-faint">%</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={value}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${label}, ${value} percent${isLow ? ', low' : ''}`}
+                className="h-1 w-full overflow-hidden bg-zinc-900"
+              >
+                <div
+                  className={`h-full ${isLow ? 'bg-rose-500' : 'bg-accent'}`}
+                  style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="space-y-2 border-hairline-t pt-3">
+        {renderAction('pet', HandMetal, 'Pet', true)}
+        {/* The four secondary actions sit 2x2 until the column is wide enough
+            to hold four of them side by side without crowding. */}
+        <div className="grid grid-cols-2 gap-2 @min-[420px]:grid-cols-4">
+          {renderAction('feed', Utensils, 'Feed')}
+          {renderAction('play', Volleyball, 'Play')}
+          {renderAction('walk', Footprints, 'Walk')}
+          {renderAction('groom', Brush, 'Groom')}
         </div>
-        <span className="font-mono text-[9px] text-zinc-500">
-          REAL-TIME BIOMETRICS
-        </span>
       </div>
 
-      {/* 4 Core Stat Bars */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-black/60 p-2.5 border-hairline">
-        {renderStatBar('HUNGER', stats.hunger, <Utensils size={11} className="text-amber-500" />)}
-        {renderStatBar('HAPPINESS', stats.happiness, <Heart size={11} className="text-amber-500" />)}
-        {renderStatBar('ENERGY', stats.energy, <Zap size={11} className="text-amber-500" />)}
-        {renderStatBar('HYGIENE', stats.hygiene, <Sparkles size={11} className="text-amber-500" />)}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-        <button
-          onClick={() => onInteract('pet')}
-          disabled={isInteracting}
-          className="btn btn-accent text-[10px] py-2"
-        >
-          <HandMetal size={12} /> PET EXPO
-        </button>
-
-        <button
-          onClick={() => onInteract('feed')}
-          disabled={isInteracting}
-          className="btn text-[10px] py-2"
-        >
-          <Utensils size={12} /> FEED BONE
-        </button>
-
-        <button
-          onClick={() => onInteract('play')}
-          disabled={isInteracting}
-          className="btn text-[10px] py-2"
-        >
-          <Heart size={12} /> TENNIS BALL
-        </button>
-
-        <button
-          onClick={() => onInteract('walk')}
-          disabled={isInteracting}
-          className="btn text-[10px] py-2"
-        >
-          <Footprints size={12} /> TAKE WALK
-        </button>
-
-        <button
-          onClick={() => onInteract('groom')}
-          disabled={isInteracting}
-          className="btn text-[10px] py-2"
-        >
-          <Sparkles size={12} /> BRUSH RUFF
-        </button>
-      </div>
+      <p aria-live="polite" role="status" className="sr-only">
+        {announcement}
+      </p>
     </div>
   );
 };

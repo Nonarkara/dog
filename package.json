@@ -7,6 +7,7 @@
     "dev": "vite --port 3100",
     "build": "vite build",
     "preview": "vite preview",
+    "test:domain": "esbuild src/domain/selftest.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/selftest.mjs --log-level=error && node node_modules/.cache/selftest.mjs",
     "deploy": "vite build && wrangler deploy"
   },
   "dependencies": {

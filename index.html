@@ -4,15 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CANINE // DOG.NONARKARA.ORG</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Josefin+Sans:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
+    <title>Canine OS — dog.nonarkara.org</title>
+    <meta
+      name="description"
+      content="A dog's health record, care deck and park, kept on your own device. Canine OS holds the passport, the vaccine schedule, the 3D avatar and the park for Expo the Thai Bangkaew."
     />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#09090b" />
+
+    <!-- The fonts are served from this origin. A third-party stylesheet is a
+         render-blocking request to somebody else's server, and this app
+         stores a life on one device — it has no business phoning home to
+         render a label. -->
+    <link rel="preload" href="/fonts/josefin-sans-variable-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-sans-3-variable-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-mono-variable-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
-  <body class="bg-black text-zinc-100 antialiased selection:bg-amber-500 selection:text-black">
+  <body class="bg-black text-zinc-100 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

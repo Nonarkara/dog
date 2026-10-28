@@ -3,23 +3,42 @@ import * as THREE from 'three';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 import { METAVERSE_NEIGHBORS } from '../data/defaultDogs';
 import { sound } from '../utils/proceduralAudio';
-import { ShieldCheck, Sparkles, MessageSquare, Compass, Eye } from 'lucide-react';
+import { Sparkles, MessageSquare, Compass, X } from 'lucide-react';
 
 interface MetaversePark3DProps {
   myDog: DogProfile;
 }
+
+interface ParkMessage {
+  sender: string;
+  text: string;
+  /** Only real messages carry a clock time. Seeded lines are older than the session. */
+  time?: string;
+}
+
+// The park is local: three lines of scene furniture, and the selected dog
+// already in the scene. No clock times — these did not happen at 04:15.
+const seedMessages = (dog: DogProfile): ParkMessage[] => [
+  {
+    sender: 'Somtum (Thai Ridgeback)',
+    text: 'Just finished five laps around the agility ramp.',
+  },
+  {
+    sender: 'Waffles (Pembroke Corgi)',
+    text: 'Anyone dropping cheese at the water fountain?',
+  },
+  {
+    sender: `${dog.name} (${dog.breed})`,
+    text: 'Claimed the quiet spot by the pavilion. Settling in for a watch.',
+  },
+];
 
 export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
   const [selectedDog, setSelectedDog] = useState<MetaverseNeighborDog | null>(null);
-  const [activeTribeFilter, setActiveTribeFilter] = useState<string>('ALL');
-  const [chatLog, setChatLog] = useState<Array<{ sender: string; text: string; time: string }>>([
-    { sender: 'Somtum (Thai Ridgeback)', text: 'Just finished 5 laps around the agility ramp! 🐾', time: '04:15' },
-    { sender: 'Waffles (Corgi)', text: 'Anyone dropping cheese at the water fountain?', time: '04:22' },
-    { sender: 'Expo (Bangkaew)', text: 'Perimeter secured. Bolster resting station established.', time: '04:28' },
-  ]);
+  const [chatLog, setChatLog] = useState<ParkMessage[]>(() => seedMessages(myDog));
   const [chatInput, setChatInput] = useState('');
 
   const myDogPos = useRef<{ x: number; z: number; targetX: number; targetZ: number; angle: number }>({
@@ -30,8 +49,13 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     angle: 0,
   });
 
+  // Re-seed the feed when the selected dog changes: the park is about that dog.
+  useEffect(() => {
+    setChatLog(seedMessages(myDog));
+  }, [myDog.id]);
+
   const broadcastBark = (text?: string) => {
-    const msg = text || (chatInput.trim() ? chatInput.trim() : 'Woof! (Greetings from Expo)');
+    const msg = text || (chatInput.trim() ? chatInput.trim() : `Woof! (greetings from ${myDog.name})`);
     sound.bark();
     setChatLog((prev) => [
       ...prev.slice(-8),
@@ -83,7 +107,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     sun.shadow.camera.bottom = -25;
     scene.add(sun);
 
-    // Terrain: The Canine Commons Park Ground
+    // Terrain: the park ground
     const groundGeo = new THREE.PlaneGeometry(60, 60, 32, 32);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x141416, // Dark slate turf
@@ -94,8 +118,9 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Grid Floor lines (Vignelli / architectural grid)
-    const grid = new THREE.GridHelper(60, 30, 0xf59e0b, 0x27272a);
+    // Grid floor lines (Vignelli / architectural grid). Dim neutral on both
+    // axes — a full-bleed amber grid decorates the floor and steals the accent.
+    const grid = new THREE.GridHelper(60, 30, 0x27272a, 0x27272a);
     grid.position.y = 0.01;
     scene.add(grid);
 
@@ -134,41 +159,47 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     scene.add(bowl);
 
     // ==========================================
-    // SPAWN MY DOG (EXPO)
+    // SPAWN THE SELECTED DOG
     // ==========================================
     const myDogGroup = new THREE.Group();
     scene.add(myDogGroup);
 
-    // Expo low-poly mesh for metaverse
-    const expoBodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.2);
-    const expoBodyMat = new THREE.MeshStandardMaterial({ color: 0x2b2623 });
-    const expoBody = new THREE.Mesh(expoBodyGeo, expoBodyMat);
-    expoBody.position.y = 0.65;
-    expoBody.castShadow = true;
-    myDogGroup.add(expoBody);
+    // The coat comes from the dog's own avatar config, so the mesh in the
+    // park is the dog the operator selected — not a fixed pet.
+    const coatMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(myDog.avatarConfig.baseColor || '#2b2623'),
+    });
+    const ruffMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(myDog.avatarConfig.secondaryColor || '#f4ede6'),
+    });
 
-    // White ruff
-    const expoRuffGeo = new THREE.BoxGeometry(0.9, 0.7, 0.4);
-    const expoRuffMat = new THREE.MeshStandardMaterial({ color: 0xf4ede6 });
-    const expoRuff = new THREE.Mesh(expoRuffGeo, expoRuffMat);
-    expoRuff.position.set(0, 0.75, 0.5);
-    myDogGroup.add(expoRuff);
+    const dogBodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.2);
+    const dogBody = new THREE.Mesh(dogBodyGeo, coatMat);
+    dogBody.position.y = 0.65;
+    dogBody.castShadow = true;
+    myDogGroup.add(dogBody);
+
+    // Light ruff
+    const dogRuffGeo = new THREE.BoxGeometry(0.9, 0.7, 0.4);
+    const dogRuff = new THREE.Mesh(dogRuffGeo, ruffMat);
+    dogRuff.position.set(0, 0.75, 0.5);
+    myDogGroup.add(dogRuff);
 
     // Head
-    const expoHeadGeo = new THREE.BoxGeometry(0.55, 0.5, 0.5);
-    const expoHead = new THREE.Mesh(expoHeadGeo, expoBodyMat);
-    expoHead.position.set(0, 1.15, 0.65);
-    myDogGroup.add(expoHead);
+    const dogHeadGeo = new THREE.BoxGeometry(0.55, 0.5, 0.5);
+    const dogHead = new THREE.Mesh(dogHeadGeo, coatMat);
+    dogHead.position.set(0, 1.15, 0.65);
+    myDogGroup.add(dogHead);
 
     // Ears
     const earGeo = new THREE.ConeGeometry(0.12, 0.28, 4);
-    const earL = new THREE.Mesh(earGeo, expoBodyMat);
+    const earL = new THREE.Mesh(earGeo, coatMat);
     earL.position.set(-0.2, 1.5, 0.65);
-    const earR = new THREE.Mesh(earGeo, expoBodyMat);
+    const earR = new THREE.Mesh(earGeo, coatMat);
     earR.position.set(0.2, 1.5, 0.65);
     myDogGroup.add(earL, earR);
 
-    // Amber halo marker above my dog
+    // Amber halo marker above my dog — the accent marks the dog, nothing else
     const haloGeo = new THREE.RingGeometry(0.5, 0.6, 16);
     const haloMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
     const halo = new THREE.Mesh(haloGeo, haloMat);
@@ -247,7 +278,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
         }
       }
 
-      // Check hit on ground to command Expo to run there
+      // Check hit on ground to command the dog to run there
       const groundHits = raycaster.intersectObject(ground);
       if (groundHits.length > 0) {
         const pt = groundHits[0].point;
@@ -259,7 +290,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
 
     renderer.domElement.addEventListener('click', handleCanvasClick);
 
-    // Keyboard WASD Controls for Expo
+    // Keyboard WASD controls for the selected dog
     const keysPressed: Record<string, boolean> = {};
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed[e.key.toLowerCase()] = true;
@@ -326,12 +357,12 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
       // Trotting bounce animation
       const isMoving = Math.abs(myDogPos.current.targetX - myDogPos.current.x) > 0.1 || manualMove;
       if (isMoving) {
-        expoBody.position.y = 0.65 + Math.abs(Math.sin(elapsed * 12)) * 0.1;
+        dogBody.position.y = 0.65 + Math.abs(Math.sin(elapsed * 12)) * 0.1;
       } else {
-        expoBody.position.y = 0.65;
+        dogBody.position.y = 0.65;
       }
 
-      // Smooth camera follows Expo with gentle offset
+      // Smooth camera follows the dog with gentle offset
       camera.position.x += (myDogPos.current.x - camera.position.x) * 0.05;
       camera.position.z += (myDogPos.current.z + 18 - camera.position.z) * 0.05;
       camera.lookAt(myDogPos.current.x, 0.8, myDogPos.current.z);
@@ -386,76 +417,76 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     };
   }, [myDog]);
 
+  const dogCount = METAVERSE_NEIGHBORS.length + 1;
+
   return (
     <div className="relative w-full h-[520px] bg-black border-hairline overflow-hidden flex flex-col md:flex-row">
-      {/* 3D WebGL Canvas for the Metaverse Park */}
+      {/* 3D WebGL Canvas for the park scene */}
       <div className="relative flex-1 h-full min-h-[340px]">
         <div ref={mountRef} className="w-full h-full cursor-crosshair" />
 
-        {/* Metaverse HUD Header */}
-        <div className="absolute top-2 left-2 flex items-center gap-2 pointer-events-none bg-black/80 px-2 py-1 border-hairline">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-          <span className="font-mono text-[10px] text-zinc-300 tracking-wider">
-            CANINE COMMONS // BARK PARK SECTOR 01
-          </span>
-          <span className="text-[10px] text-amber-500 font-mono">
-            [ONLINE: {METAVERSE_NEIGHBORS.length + 1} DOGS]
-          </span>
+        {/* One readout strip across the top edge — the only overlay chrome.
+            Identity, scene size and the control hint live on one rule. */}
+        <div className="absolute top-0 left-0 right-0 bg-black/90 border-hairline-b px-3 py-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pointer-events-none">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="font-display text-[11px] uppercase tracking-[0.14em] text-zinc-100">
+              Canine Commons
+            </span>
+            {/* The scene note and its divider collapse on narrow screens so the
+                strip stays two tidy rows instead of orphaning a rule. */}
+            <span className="hidden h-3.5 w-px bg-zinc-700 sm:block" aria-hidden="true" />
+            <span className="label hidden sm:inline">Local park scene</span>
+            <span className="h-3.5 w-px bg-zinc-700" aria-hidden="true" />
+            <span className="flex items-baseline gap-1.5">
+              <span className="label">Dogs in scene</span>
+              <span className="data text-[11px] text-zinc-200">{dogCount}</span>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="label">With</span>
+              <span className="font-display text-[11px] text-accent">{myDog.name}</span>
+            </span>
+          </div>
+          <span className="label">WASD / click to run</span>
         </div>
 
-        {/* Navigation Instructions */}
-        <div className="absolute bottom-2 left-2 pointer-events-none bg-black/85 px-2 py-1 border-hairline">
-          <span className="font-mono text-[10px] text-zinc-400">
-            CONTROLS: <span className="text-amber-500 font-bold">WASD</span> / CLICK TO RUN · CLICK DOG TO INSPECT PASSPORT
-          </span>
-        </div>
-
-        {/* Quick Bark Action */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
-          <button
-            onClick={() => broadcastBark()}
-            className="btn btn-accent text-[10px] py-1 px-2.5 h-7"
-          >
-            <MessageSquare size={12} /> BARK / GREET PARK
-          </button>
-        </div>
-
-        {/* Selected Neighbor Dog Detail Card Modal / Overlay */}
+        {/* Neighbour inspection card — one hairline, the same surfaces as the
+            rest of the console, anchored to the stage it describes. */}
         {selectedDog && (
-          <div className="absolute top-10 left-2 right-2 md:left-auto md:right-4 md:w-80 bg-zinc-950/95 border border-amber-500/50 p-3.5 z-20 backdrop-blur-md">
-            <div className="flex items-start justify-between border-hairline-b pb-2 mb-2">
-              <div>
-                <span className="font-mono text-[9px] text-amber-500 uppercase tracking-widest block">
-                  METAVERSE PASSPORT // ENCOUNTER
-                </span>
+          <div
+            role="dialog"
+            aria-label={`${selectedDog.name} details`}
+            className="absolute left-3 right-3 bottom-3 md:left-auto md:right-4 md:w-80 bg-zinc-950 border-hairline p-3.5 z-20"
+          >
+            <div className="flex items-start justify-between gap-2 border-hairline-b pb-2 mb-2">
+              <div className="min-w-0">
+                <span className="label block">Park neighbour</span>
                 <h4 className="font-display text-base text-zinc-100">{selectedDog.name}</h4>
                 <p className="text-[11px] text-zinc-400">{selectedDog.breed}</p>
               </div>
               <button
                 onClick={() => setSelectedDog(null)}
-                className="text-zinc-500 hover:text-zinc-100 text-xs px-1"
+                aria-label={`Close details for ${selectedDog.name}`}
+                className="btn btn-quiet w-7 h-7 min-h-0 p-0 shrink-0"
               >
-                ✕
+                <X size={14} />
               </button>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between py-1 border-hairline-b">
-                <span className="text-zinc-500 font-mono text-[10px]">TRIBE</span>
-                <span className="text-amber-400 font-mono text-[11px] font-semibold">{selectedDog.tribe}</span>
+              <div className="flex justify-between items-baseline gap-3 py-1 border-hairline-b">
+                <span className="label">Tribe</span>
+                <span className="text-[12px] text-zinc-200 text-right">{selectedDog.tribe}</span>
               </div>
-              <div className="flex justify-between py-1 border-hairline-b">
-                <span className="text-zinc-500 font-mono text-[10px]">OWNER</span>
-                <span className="text-zinc-200 font-mono text-[11px]">{selectedDog.ownerName}</span>
+              <div className="flex justify-between items-baseline gap-3 py-1 border-hairline-b">
+                <span className="label">Owner</span>
+                <span className="text-[12px] text-zinc-200">{selectedDog.ownerName}</span>
               </div>
-              <div className="flex justify-between py-1 border-hairline-b">
-                <span className="text-zinc-500 font-mono text-[10px]">VACCINES</span>
-                <span className="text-emerald-400 font-mono text-[10px] flex items-center gap-1">
-                  <ShieldCheck size={11} /> VERIFIED CURRENT
-                </span>
+              <div className="flex justify-between items-baseline gap-3 py-1 border-hairline-b">
+                <span className="label">Vaccines</span>
+                <span className="text-[11px] text-faint">Not on record</span>
               </div>
-              <div className="pt-1 text-[11px] text-zinc-300 italic">
-                "{selectedDog.personality}"
+              <div className="pt-1 text-[11px] text-zinc-400 italic">
+                &ldquo;{selectedDog.personality}&rdquo;
               </div>
 
               <div className="pt-2 flex gap-1.5">
@@ -464,16 +495,16 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
                     broadcastBark(`*sniffs ${selectedDog.name} respectfully*`);
                     sound.happyYip();
                   }}
-                  className="btn btn-accent flex-1 text-[10px] py-1"
+                  className="btn btn-accent flex-1 text-[11px]"
                 >
-                  <Sparkles size={11} /> SNIFF & GREET
+                  <Sparkles size={12} /> SNIFF &amp; GREET
                 </button>
                 <button
                   onClick={() => {
-                    broadcastBark(`Invited ${selectedDog.name} to race around agility ramp!`);
+                    broadcastBark(`Invited ${selectedDog.name} to race around the agility ramp!`);
                     sound.bark();
                   }}
-                  className="btn flex-1 text-[10px] py-1"
+                  className="btn flex-1 text-[11px]"
                 >
                   PLAY CHASE
                 </button>
@@ -483,44 +514,66 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
         )}
       </div>
 
-      {/* Sidebar: Live Bark Feed & Tribe Rosters */}
+      {/* Sidebar: the park's comms. Stacked under the stage on narrow
+          screens (top rule), a column beside it from md up (left rule). */}
       <div className="w-full md:w-72 bg-zinc-950 border-hairline-t md:border-hairline-t-0 md:border-hairline-l flex flex-col h-[200px] md:h-full">
-        <div className="p-2 border-hairline-b bg-zinc-900/50 flex items-center justify-between">
-          <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Compass size={12} className="text-amber-500" /> LIVE PARK COMMS
-          </span>
-          <span className="font-mono text-[9px] text-zinc-500">REALTIME</span>
+        <div className="px-2 py-1.5 border-hairline-b bg-zinc-900 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="label flex items-center gap-1.5">
+              <Compass size={12} className="text-accent" /> Park comms
+            </span>
+            <span className="label">Local only</span>
+          </div>
+          <button
+            onClick={() => broadcastBark()}
+            aria-label="Bark at the park"
+            className="btn btn-accent text-[10px] py-1 px-2 min-h-0 shrink-0"
+          >
+            <MessageSquare size={12} /> BARK
+          </button>
         </div>
 
         {/* Chat Feed */}
         <div className="flex-1 overflow-y-auto p-2 space-y-2 text-xs">
           {chatLog.map((c, idx) => (
-            <div key={idx} className="border-hairline-b pb-1.5">
-              <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-0.5">
-                <span className="text-amber-400/90 font-semibold">{c.sender}</span>
-                <span>{c.time}</span>
+            <div key={idx} className="border-hairline-b pb-1.5 last:border-hairline-b-0">
+              <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                <span
+                  className={`text-[11px] font-semibold truncate ${
+                    c.sender.startsWith(myDog.name) ? 'text-accent' : 'text-zinc-200'
+                  }`}
+                >
+                  {c.sender}
+                </span>
+                {c.time && <span className="data text-[10px] text-faint shrink-0">{c.time}</span>}
               </div>
-              <p className="text-zinc-300 text-[11px] leading-relaxed">{c.text}</p>
+              <p className="text-[11px] leading-relaxed text-zinc-400">{c.text}</p>
             </div>
           ))}
         </div>
 
-        {/* Comms Input */}
-        <div className="p-2 border-hairline-t bg-black flex gap-1.5">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && broadcastBark()}
-            placeholder="Type a bark or message..."
-            className="flex-1 text-xs py-1 px-2 min-h-[30px]"
-          />
-          <button
-            onClick={() => broadcastBark()}
-            className="btn btn-accent text-[10px] py-1 px-2.5 min-h-[30px]"
+        {/* Comms Input — one control: field and send share a single edge. */}
+        <div className="p-2 border-hairline-t bg-black">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              broadcastBark();
+            }}
           >
-            SEND
-          </button>
+            <div className="flex">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                aria-label="Message to park comms"
+                placeholder="Write a message to the park"
+                className="flex-1 min-w-0 text-xs px-2 min-h-[34px] border-r-0"
+              />
+              <button type="submit" className="btn btn-accent text-[11px] px-3 shrink-0">
+                SEND
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
