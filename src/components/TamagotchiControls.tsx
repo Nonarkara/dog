@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { DogProfile } from '../types/dog';
-import { Utensils, Brush, Footprints, HandMetal, Volleyball, Loader2 } from 'lucide-react';
+import type { PetState } from '../domain/types';
+import { Utensils, Brush, Footprints, HandMetal, Volleyball, Loader2, MessageSquare, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 type Action = 'pet' | 'feed' | 'play' | 'groom' | 'walk';
 
 interface TamagotchiControlsProps {
   dog: DogProfile;
+  petState: PetState;
   onInteract: (action: Action) => void;
+  onCommunicate: (cue: string) => void;
+  communicationNote: string;
   isInteracting: boolean;
 }
 
@@ -32,10 +36,21 @@ const GERUND: Record<Action, string> = {
 
 export const TamagotchiControls: React.FC<TamagotchiControlsProps> = ({
   dog,
+  petState,
   onInteract,
+  onCommunicate,
+  communicationNote,
   isInteracting,
 }) => {
   const stats = dog.tamagotchi;
+  const [cueText, setCueText] = useState('');
+
+  const sendCue = () => {
+    const cue = cueText.trim();
+    if (!cue || isInteracting) return;
+    onCommunicate(cue);
+    setCueText('');
+  };
 
   // The parent says that something is happening but not what. Keeping the
   // action here is what lets the pressed control show its own busy state.
@@ -141,6 +156,38 @@ export const TamagotchiControls: React.FC<TamagotchiControlsProps> = ({
           {renderAction('walk', Footprints, 'Walk')}
           {renderAction('groom', Brush, 'Groom')}
         </div>
+      </div>
+
+      {/* ---- talk to Expo -------------------------------------------------- */}
+      <div className="space-y-2 border-hairline-t pt-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="label">Say to Expo</span>
+          <span className="label text-xs text-faint">
+            {Math.round(petState.trust)} trust · {Math.round(petState.arousal)} arousal
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={cueText}
+            onChange={(e) => setCueText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendCue()}
+            placeholder="e.g. dinner, come, good boy"
+            className="flex-1 min-w-0 border-hairline bg-black px-2 py-1.5 text-xs text-zinc-100"
+          />
+          <button
+            onClick={sendCue}
+            disabled={isInteracting || !cueText.trim()}
+            className="btn btn-accent text-[10px] px-3 shrink-0 disabled:opacity-40"
+          >
+            SAY
+          </button>
+        </div>
+        {communicationNote && (
+          <p className="text-[11px] leading-relaxed text-zinc-300">
+            {communicationNote}
+          </p>
+        )}
       </div>
 
       <p aria-live="polite" role="status" className="sr-only">

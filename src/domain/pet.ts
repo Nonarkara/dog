@@ -60,6 +60,8 @@ export function createPetState(now: number = Date.now()): PetState {
     associations: {},
     lastCareAt: now,
     lastRealSessionAt: undefined,
+    lastCue: undefined,
+    lastCueAt: undefined,
   };
 }
 
@@ -77,6 +79,12 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
     },
     trust: clamp(state.trust - (TRUST_DECAY_PER_DAY * factor) / 24),
   };
+  // A spoken cue expires if nothing follows it — classical conditioning
+  // needs the cue and the outcome close together in time.
+  if (state.lastCueAt && now - state.lastCueAt > 5 * 60_000) {
+    next.lastCue = undefined;
+    next.lastCueAt = undefined;
+  }
   next.behaviours = Object.fromEntries(
     Object.entries(state.behaviours).map(([name, b]) => [name, decayBehaviour(b, now)])
   );
@@ -124,7 +132,7 @@ export function interact(
   action: Interaction,
   now: number = Date.now()
 ): InteractionResult {
-  const next: PetState = {
+  let next: PetState = {
     ...state,
     needs: { ...state.needs },
     personality: { ...state.personality },
@@ -184,6 +192,52 @@ export function interact(
       note = 'Walked. Arousal down, legs exercised.';
       break;
     }
+  }
+
+  // Pair the last spoken cue with this outcome (classical conditioning):
+  // say "dinner", then feed, and Expo learns "dinner" means food is coming.
+  if (state.lastCue && state.lastCueAt && now - state.lastCueAt <= 30_000) {
+    next = strengthenAssociation(next, state.lastCue, 0.06);
+  }
+
+  return { state: next, note };
+}
+
+/**
+ * COMMUNICATE — classical conditioning in one action.
+ *
+ * You say a word to Expo. If that word has been paired with food, petting or
+ * play often enough, Expo responds: ears prick, tail wags, he looks at you.
+ * If the word is new, he tilts his head and waits for you to show him what it
+ * means. The word is stored as `lastCue` so the next care action can pair with
+ * it and strengthen the association.
+ */
+export function communicate(
+  state: PetState,
+  cue: string,
+  now: number = Date.now()
+): InteractionResult {
+  const clean = cue.trim().toLowerCase();
+  const strength = associationStrength(state, clean);
+
+  const next: PetState = {
+    ...state,
+    updatedAt: now,
+    arousal: clamp(state.arousal + 5),
+    lastCue: clean,
+    lastCueAt: now,
+  };
+
+  let note = '';
+  if (clean === '') {
+    note = "You said nothing. Expo blinked at you.";
+  } else if (strength >= 0.5) {
+    next.trust = clamp(state.trust + 1);
+    note = `Expo knows "${clean}". His ears prick and he looks at you, waiting.`;
+  } else if (strength > 0) {
+    note = `Expo recognizes "${clean}" a little. He tilts his head, not quite sure what it means yet.`;
+  } else {
+    note = `Expo doesn't know "${clean}" yet. He looks at you, waiting for you to show him.`;
   }
 
   return { state: next, note };
@@ -254,6 +308,13 @@ export function strengthenAssociation(
       [key]: clamp((state.associations[key] ?? 0) + amount),
     },
   };
+}
+
+/** How strongly this dog associates a cue word with an outcome, 0..1. */
+export function associationStrength(state: PetState, cue: string): number {
+  const key = cue.trim().toLowerCase();
+  if (!key) return 0;
+  return state.associations[key] ?? 0;
 }
 
 /** Extinction: a behaviour nobody rewards stops, and spikes first. */

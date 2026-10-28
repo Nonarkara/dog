@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 import { METAVERSE_NEIGHBORS } from '../data/defaultDogs';
 import { sound } from '../utils/proceduralAudio';
-import { Sparkles, MessageSquare, Compass, X } from 'lucide-react';
+import { Sparkles, MessageSquare, Compass, X, Upload, User } from 'lucide-react';
 
 interface MetaversePark3DProps {
   myDog: DogProfile;
@@ -14,6 +14,11 @@ interface ParkMessage {
   text: string;
   /** Only real messages carry a clock time. Seeded lines are older than the session. */
   time?: string;
+}
+
+interface VisitorImport {
+  file: File;
+  preview: string;
 }
 
 // The park is local: three lines of scene furniture, and the selected dog
@@ -33,6 +38,34 @@ const seedMessages = (dog: DogProfile): ParkMessage[] => [
   },
 ];
 
+const PARK_ACTIONS: MetaverseNeighborDog['action'][] = [
+  'sniffing', 'walking', 'sitting', 'barking', 'running',
+];
+
+const randomPosition = (): [number, number, number] => [
+  (Math.random() - 0.5) * 40,
+  0,
+  (Math.random() - 0.5) * 40,
+];
+
+const dogProfileToNeighbor = (dog: DogProfile): MetaverseNeighborDog => ({
+  id: `visitor-${dog.id}`,
+  name: dog.name,
+  breed: dog.breed,
+  tribe: dog.metaverseTribe || 'Visiting Pack',
+  ownerName: 'A friend',
+  personality: dog.metaverseBio || 'A visiting dog in the park.',
+  avatarColors: {
+    base: dog.avatarConfig.baseColor,
+    secondary: dog.avatarConfig.secondaryColor,
+    mask: dog.avatarConfig.maskColor,
+  },
+  earShape: dog.avatarConfig.earShape === 'semi-pricked' ? 'pricked' : dog.avatarConfig.earShape,
+  position: randomPosition(),
+  action: PARK_ACTIONS[Math.floor(Math.random() * PARK_ACTIONS.length)],
+  speed: 0.01 + Math.random() * 0.03,
+});
+
 export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
@@ -40,6 +73,19 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
   const [selectedDog, setSelectedDog] = useState<MetaverseNeighborDog | null>(null);
   const [chatLog, setChatLog] = useState<ParkMessage[]>(() => seedMessages(myDog));
   const [chatInput, setChatInput] = useState('');
+  const [visitorDogs, setVisitorDogs] = useState<MetaverseNeighborDog[]>([]);
+  const [importPreview, setImportPreview] = useState<VisitorImport | null>(null);
+
+  // Refs that the animation loop reads directly — so dogs added after the
+  // scene is set up still move, wag, and breathe.
+  const neighborMeshesRef = useRef<Array<{
+    data: MetaverseNeighborDog;
+    group: THREE.Group;
+    dir: THREE.Vector3;
+  }>>([]);
+
+  // Allows the import handler (outside the effect) to spawn a dog in the scene.
+  const spawnNeighborRef = useRef<((nbr: MetaverseNeighborDog) => void) | null>(null);
 
   const myDogPos = useRef<{ x: number; z: number; targetX: number; targetZ: number; angle: number }>({
     x: 0,
@@ -66,6 +112,41 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
       },
     ]);
     setChatInput('');
+  };
+
+  const handleImportVisitor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const dog: DogProfile = JSON.parse(ev.target?.result as string);
+        const neighbor = dogProfileToNeighbor(dog);
+        setVisitorDogs((prev) => [...prev, neighbor]);
+        setImportPreview({ file, preview: URL.createObjectURL(file) });
+        spawnNeighborRef.current?.(neighbor);
+        sound.bark();
+        setChatLog((prev) => [
+          ...prev.slice(-8),
+          {
+            sender: 'Park',
+            text: `${dog.name} the ${dog.breed} has entered the park.`,
+          },
+        ]);
+      } catch {
+        // Invalid file — silently ignore so the park stays usable.
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const clearVisitors = () => {
+    // Visitors remain in the scene (we don't dispose meshes mid-session),
+    // but they're removed from the list and the import preview is cleared.
+    setVisitorDogs([]);
+    setImportPreview(null);
   };
 
   useEffect(() => {
@@ -210,13 +291,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
     // ==========================================
     // SPAWN NEIGHBOR DOGS FROM TRIBES
     // ==========================================
-    const neighborMeshes: Array<{
-      data: MetaverseNeighborDog;
-      group: THREE.Group;
-      dir: THREE.Vector3;
-    }> = [];
-
-    METAVERSE_NEIGHBORS.forEach((nbr) => {
+    const spawnNeighbor = (nbr: MetaverseNeighborDog) => {
       const group = new THREE.Group();
       group.position.set(nbr.position[0], 0, nbr.position[2]);
 
@@ -229,33 +304,39 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
       group.add(body);
 
       const headMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(nbr.avatarColors.secondary),
+        color: new THREE.Color(nbr.avatarColors.secondary ?? nbr.avatarColors.base),
       });
       const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.45, 0.45), headMat);
       head.position.set(0, 0.95, 0.5);
       group.add(head);
 
-      const nEarGeo = new THREE.ConeGeometry(0.1, 0.24, 4);
+      const nEarGeo = new THREE.ConeGeometry(0.1, 0.24, 8);
       const nEarL = new THREE.Mesh(nEarGeo, bodyMat);
       nEarL.position.set(-0.16, 1.25, 0.5);
       const nEarR = new THREE.Mesh(nEarGeo, bodyMat);
       nEarR.position.set(0.16, 1.25, 0.5);
       group.add(nEarL, nEarR);
 
-      // Name tag beacon
+      // Name tag beacon — amber for visitors, neutral for seeded neighbors.
+      const isVisitor = nbr.id.startsWith('visitor-');
       const beaconGeo = new THREE.SphereGeometry(0.08, 8, 8);
-      const beaconMat = new THREE.MeshBasicMaterial({ color: 0x71717a });
+      const beaconMat = new THREE.MeshBasicMaterial({
+        color: isVisitor ? 0xf59e0b : 0x71717a,
+      });
       const beacon = new THREE.Mesh(beaconGeo, beaconMat);
       beacon.position.set(0, 1.6, 0);
       group.add(beacon);
 
       scene.add(group);
-      neighborMeshes.push({
+      neighborMeshesRef.current.push({
         data: nbr,
         group,
         dir: new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize(),
       });
-    });
+    };
+
+    METAVERSE_NEIGHBORS.forEach((nbr) => spawnNeighbor(nbr));
+    spawnNeighborRef.current = spawnNeighbor;
 
     // Raycasting for clicking ground or dogs
     const raycaster = new THREE.Raycaster();
@@ -269,7 +350,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
       raycaster.setFromCamera(mouse, camera);
 
       // Check hit on neighbor dogs
-      for (const nbr of neighborMeshes) {
+      for (const nbr of neighborMeshesRef.current) {
         const hits = raycaster.intersectObjects(nbr.group.children, true);
         if (hits.length > 0) {
           setSelectedDog(nbr.data);
@@ -371,7 +452,7 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
       halo.rotation.z = elapsed * 1.5;
 
       // Animate neighbor dogs wandering
-      neighborMeshes.forEach((nbr, i) => {
+      neighborMeshesRef.current.forEach((nbr, i) => {
         if (nbr.data.action === 'sitting') return;
 
         // Roam
@@ -550,6 +631,46 @@ export const MetaversePark3D: React.FC<MetaversePark3DProps> = ({ myDog }) => {
               <p className="text-[11px] leading-relaxed text-zinc-400">{c.text}</p>
             </div>
           ))}
+        </div>
+
+        {/* Visitor dogs — friends' dogs brought into the park. */}
+        <div className="p-2 border-hairline-t bg-zinc-900 space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="btn btn-quiet border-hairline text-[10px] px-2 py-1.5 shrink-0 cursor-pointer">
+              <Upload size={10} aria-hidden="true" />
+              Import visitor
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportVisitor}
+                className="hidden"
+                aria-label="Import a friend's dog profile (JSON)"
+              />
+            </label>
+            {importPreview && (
+              <button
+                onClick={clearVisitors}
+                className="btn-quiet text-[10px] px-1.5 text-rose-400 hover:text-rose-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {visitorDogs.length > 0 && (
+            <div className="space-y-1">
+              {visitorDogs.map((v) => (
+                <div key={v.id} className="border-hairline p-1 text-xs">
+                  <div className="font-semibold text-zinc-200">{v.name}</div>
+                  <div className="text-[10px] text-faint">{v.breed} · {v.tribe}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {visitorDogs.length === 0 && !importPreview && (
+            <p className="text-[10px] text-faint">
+              Import a friend&apos;s exported dog JSON to meet them here.
+            </p>
+          )}
         </div>
 
         {/* Comms Input — one control: field and send share a single edge. */}

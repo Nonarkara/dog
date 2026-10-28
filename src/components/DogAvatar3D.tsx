@@ -1,16 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { DogProfile } from '../types/dog';
+import type { PetState } from '../domain/types';
 import { sound } from '../utils/proceduralAudio';
 
 interface DogAvatar3DProps {
   dog: DogProfile;
-  interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | null;
+  petState: PetState;
+  interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | 'communicate' | null;
   onInteractionEnd?: () => void;
 }
 
 export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   dog,
+  petState,
   interactionTrigger,
   onInteractionEnd,
 }) => {
@@ -35,7 +38,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   } | null>(null);
 
   const interactionState = useRef<{
-    type: 'idle' | 'pet' | 'feed' | 'play' | 'groom';
+    type: 'idle' | 'pet' | 'feed' | 'play' | 'groom' | 'communicate';
     timer: number;
     intensity: number;
   }>({
@@ -63,6 +66,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       sound.bark();
       spawnBall();
     } else if (interactionTrigger === 'groom') {
+      sound.happyYip();
+    } else if (interactionTrigger === 'communicate') {
       sound.happyYip();
     }
 
@@ -245,41 +250,47 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const torso = new THREE.Group();
     torso.position.y = 0.65;
 
-    // Saddle / Back (Dark Sable)
-    const backGeo = new THREE.BoxGeometry(0.72, 0.58, 1.15);
+    // Main body: a rounded cylinder reads as fur, not a block.
+    const bodyGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.05, 16);
+    const bodyMesh = new THREE.Mesh(bodyGeo, darkFurMat);
+    bodyMesh.castShadow = true;
+    bodyMesh.position.y = 0.05;
+    torso.add(bodyMesh);
+
+    // Saddle / Back (Dark Sable) — a darker band along the spine.
+    const backGeo = new THREE.BoxGeometry(0.72, 0.34, 1.0);
     const backMesh = new THREE.Mesh(backGeo, darkFurMat);
     backMesh.castShadow = true;
+    backMesh.position.y = 0.22;
+    backMesh.position.z = 0.02;
     torso.add(backMesh);
 
     // Belly & Chest undercoat (White)
-    const bellyGeo = new THREE.BoxGeometry(0.68, 0.3, 1.1);
+    const bellyGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.95, 16);
     const bellyMesh = new THREE.Mesh(bellyGeo, whiteFurMat);
-    bellyMesh.position.y = -0.22;
-    bellyMesh.position.z = 0.02;
+    bellyMesh.position.y = -0.18;
+    bellyMesh.position.z = 0.05;
     torso.add(bellyMesh);
 
     // Bangkaew Signature: Lion Mane / Collar Ruff (แผงคอสิงโต)
     //
     // The ruff is a collar AROUND the neck, not a bib covering the chest.
-    // The first cut made it a 0.86-wide slab that spanned the whole
-    // front of the body, so from the front the dog read as one white
-    // shape. Narrowed and pulled back, it frames the dark face instead
-    // of hiding it.
+    // Narrowed and pulled back, it frames the dark face instead of hiding it.
     const ruffGroup = new THREE.Group();
     ruffGroup.position.set(0, 0.12, 0.55);
 
-    const ruffCoreGeo = new THREE.BoxGeometry(0.7, 0.6, 0.34);
+    const ruffCoreGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.3, 12);
     const ruffCore = new THREE.Mesh(ruffCoreGeo, whiteFurMat);
     ruffGroup.add(ruffCore);
 
-    // Fluffy side facets
-    const ruffSideGeo = new THREE.ConeGeometry(0.32, 0.45, 5);
+    // Fluffy side facets — more segments, softer shape.
+    const ruffSideGeo = new THREE.ConeGeometry(0.36, 0.5, 8);
     const ruffL = new THREE.Mesh(ruffSideGeo, whiteFurMat);
     ruffL.rotation.z = Math.PI / 2.8;
-    ruffL.position.set(-0.46, -0.05, 0);
+    ruffL.position.set(-0.5, -0.05, 0);
     const ruffR = new THREE.Mesh(ruffSideGeo, whiteFurMat);
     ruffR.rotation.z = -Math.PI / 2.8;
-    ruffR.position.set(0.46, -0.05, 0);
+    ruffR.position.set(0.5, -0.05, 0);
     ruffGroup.add(ruffL, ruffR);
 
     torso.add(ruffGroup);
@@ -289,120 +300,164 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const head = new THREE.Group();
     head.position.set(0, 1.05, 0.65);
 
-    // Skull
-    const skullGeo = new THREE.BoxGeometry(0.52, 0.44, 0.48);
+    // Skull — a rounded dome instead of a box.
+    const skullGeo = new THREE.SphereGeometry(0.26, 16, 12);
     const skullMesh = new THREE.Mesh(skullGeo, maskMat);
     skullMesh.castShadow = true;
+    skullMesh.position.y = 0.06;
+    skullMesh.position.z = -0.02;
     head.add(skullMesh);
 
     // Cheeks (White fluff)
-    const cheekGeo = new THREE.BoxGeometry(0.64, 0.28, 0.32);
+    const cheekGeo = new THREE.SphereGeometry(0.3, 12, 10);
     const cheekMesh = new THREE.Mesh(cheekGeo, whiteFurMat);
-    cheekMesh.position.set(0, -0.08, -0.02);
+    cheekMesh.position.set(0, -0.12, -0.08);
     head.add(cheekMesh);
 
-    // Snout / Muzzle
-    const snoutGeo = new THREE.BoxGeometry(0.28, 0.22, 0.36);
+    // Snout / Muzzle — tapered, not a block.
+    const snoutGeo = new THREE.CylinderGeometry(0.14, 0.09, 0.34, 12);
     const snoutMesh = new THREE.Mesh(snoutGeo, whiteFurMat);
-    snoutMesh.position.set(0, -0.08, 0.35);
+    snoutMesh.position.set(0, -0.12, 0.32);
+    snoutMesh.rotation.x = -0.15;
     snoutMesh.castShadow = true;
     head.add(snoutMesh);
 
     // White blaze along nose ridge
-    const blazeGeo = new THREE.BoxGeometry(0.08, 0.24, 0.36);
+    const blazeGeo = new THREE.BoxGeometry(0.06, 0.2, 0.34);
     const blazeMesh = new THREE.Mesh(blazeGeo, whiteFurMat);
-    blazeMesh.position.set(0, 0.06, 0.24);
+    blazeMesh.position.set(0, 0.02, 0.28);
     head.add(blazeMesh);
 
     // Black Nose
-    const noseGeo = new THREE.BoxGeometry(0.12, 0.08, 0.06);
+    const noseGeo = new THREE.CylinderGeometry(0.07, 0.05, 0.07, 10);
     const noseMesh = new THREE.Mesh(noseGeo, noseMat);
-    noseMesh.position.set(0, -0.02, 0.54);
+    noseMesh.position.set(0, -0.08, 0.56);
     head.add(noseMesh);
 
-    // Eyes (with white specular gleam)
-    const eyeGeo = new THREE.SphereGeometry(0.05, 12, 12);
+    // Eyes with eyelids — a soft ring around each eye makes them read as eyes,
+    // not just dark dots.
+    const eyeGeo = new THREE.SphereGeometry(0.055, 14, 14);
+    const eyelidGeo = new THREE.RingGeometry(0.07, 0.09, 16);
+    const eyelidMat = new THREE.MeshBasicMaterial({ color: 0x1c1815 });
+
     const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeL.position.set(-0.16, 0.06, 0.24);
+    eyeL.position.set(-0.17, 0.04, 0.26);
+    const eyeLidL = new THREE.Mesh(eyelidGeo, eyelidMat);
+    eyeLidL.position.set(-0.17, 0.04, 0.26);
+    eyeLidL.rotation.x = Math.PI / 2;
+    head.add(eyeLidL, eyeL);
+
     const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeR.position.set(0.16, 0.06, 0.24);
-    head.add(eyeL, eyeR);
+    eyeR.position.set(0.17, 0.04, 0.26);
+    const eyeLidR = new THREE.Mesh(eyelidGeo, eyelidMat);
+    eyeLidR.position.set(0.17, 0.04, 0.26);
+    eyeLidR.rotation.x = Math.PI / 2;
+    head.add(eyeLidR, eyeR);
 
     // Tiny pink tongue (Expo's adorable relaxed tongue peek!)
-    const tongueGeo = new THREE.BoxGeometry(0.09, 0.03, 0.12);
+    const tongueGeo = new THREE.BoxGeometry(0.1, 0.04, 0.14);
     const tongue = new THREE.Mesh(tongueGeo, tongueMat);
-    tongue.position.set(0, -0.19, 0.44);
-    tongue.rotation.x = 0.2;
+    tongue.position.set(0, -0.22, 0.5);
+    tongue.rotation.x = 0.25;
     head.add(tongue);
 
     // Ears (Triangular pricked Bangkaew ears with dark tips)
     const leftEar = new THREE.Group();
-    leftEar.position.set(-0.2, 0.24, -0.04);
-    const earGeo = new THREE.ConeGeometry(0.13, 0.26, 4);
+    leftEar.position.set(-0.22, 0.28, -0.06);
+    const earGeo = new THREE.ConeGeometry(0.14, 0.3, 8);
     const earLMesh = new THREE.Mesh(earGeo, maskMat);
     earLMesh.rotation.y = Math.PI / 4;
+    earLMesh.rotation.z = -0.1;
     leftEar.add(earLMesh);
     // Inner ear white fluff
-    const earInnerGeo = new THREE.ConeGeometry(0.09, 0.2, 4);
+    const earInnerGeo = new THREE.ConeGeometry(0.095, 0.22, 8);
     const earLInner = new THREE.Mesh(earInnerGeo, whiteFurMat);
     earLInner.position.set(0.01, -0.02, 0.04);
     earLInner.rotation.y = Math.PI / 4;
+    earLInner.rotation.z = -0.1;
     leftEar.add(earLInner);
 
     const rightEar = new THREE.Group();
-    rightEar.position.set(0.2, 0.24, -0.04);
+    rightEar.position.set(0.22, 0.28, -0.06);
     const earRMesh = new THREE.Mesh(earGeo, maskMat);
     earRMesh.rotation.y = Math.PI / 4;
+    earRMesh.rotation.z = 0.1;
     rightEar.add(earRMesh);
     const earRInner = new THREE.Mesh(earInnerGeo, whiteFurMat);
     earRInner.position.set(-0.01, -0.02, 0.04);
     earRInner.rotation.y = Math.PI / 4;
+    earRInner.rotation.z = 0.1;
     rightEar.add(earRInner);
 
     head.add(leftEar, rightEar);
     dogRoot.add(head);
 
-    // 3. Bangkaew Plumed Tail (Curled proudly over back)
+    // 3. Bangkaew Plumed Tail (Curled proudly over back) — three segments
+    // for a smooth curl instead of two stiff blocks.
     const tail = new THREE.Group();
     tail.position.set(0, 0.85, -0.58);
 
-    const tailSeg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.3, 6), darkFurMat);
-    tailSeg1.position.set(0, 0.12, -0.06);
-    tailSeg1.rotation.x = -Math.PI / 3;
+    const tailSeg1 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.09, 0.32, 8),
+      darkFurMat
+    );
+    tailSeg1.position.set(0, 0.1, -0.05);
+    tailSeg1.rotation.x = -Math.PI / 3.5;
 
-    const tailSeg2 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.45, 6), whiteFurMat);
-    tailSeg2.position.set(0, 0.32, 0.08);
-    tailSeg2.rotation.x = Math.PI / 2.5;
+    const tailSeg2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.08, 0.32, 8),
+      darkFurMat
+    );
+    tailSeg2.position.set(0, 0.26, -0.1);
+    tailSeg2.rotation.x = -Math.PI / 2.5;
 
-    tail.add(tailSeg1, tailSeg2);
+    const tailPlume = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, 10), whiteFurMat);
+    tailPlume.position.set(0, 0.42, -0.05);
+    tailPlume.rotation.x = Math.PI / 2.2;
+
+    tail.add(tailSeg1, tailSeg2, tailPlume);
     dogRoot.add(tail);
 
-    // 4. Legs & Paws (White front stockings/socks)
-    const legGeo = new THREE.BoxGeometry(0.16, 0.5, 0.16);
-    const pawGeo = new THREE.BoxGeometry(0.18, 0.1, 0.22);
-
+    // 4. Legs & Paws (White front stockings/socks) — tapered cylinders with
+    // individual toes instead of boxes.
     const createLeg = (x: number, z: number, isFront: boolean) => {
       const legGroup = new THREE.Group();
       legGroup.position.set(x, 0.35, z);
 
       const upperMat = isFront ? whiteFurMat : darkFurMat;
+      const legGeo = new THREE.CylinderGeometry(0.14, 0.11, 0.5, 10);
       const legMesh = new THREE.Mesh(legGeo, upperMat);
       legMesh.castShadow = true;
       legGroup.add(legMesh);
 
+      const pawGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.1, 10);
       const pawMesh = new THREE.Mesh(pawGeo, whiteFurMat);
-      pawMesh.position.set(0, -0.25, 0.03);
+      pawMesh.position.set(0, -0.28, 0.02);
       pawMesh.castShadow = true;
       legGroup.add(pawMesh);
+
+      // Four little toes.
+      const toeGeo = new THREE.SphereGeometry(0.045, 6, 4);
+      const toePositions = [
+        [-0.06, 0, 0.06],
+        [-0.02, 0, 0.075],
+        [0.02, 0, 0.075],
+        [0.06, 0, 0.06],
+      ];
+      toePositions.forEach(([tx, ty, tz]) => {
+        const toe = new THREE.Mesh(toeGeo, whiteFurMat);
+        toe.position.set(tx, -0.3, tz);
+        legGroup.add(toe);
+      });
 
       dogRoot.add(legGroup);
       return legGroup;
     };
 
-    const frontLeftLeg = createLeg(-0.25, 0.4, true);
-    const frontRightLeg = createLeg(0.25, 0.4, true);
-    const backLeftLeg = createLeg(-0.25, -0.38, false);
-    const backRightLeg = createLeg(0.25, -0.38, false);
+    const frontLeftLeg = createLeg(-0.26, 0.42, true);
+    const frontRightLeg = createLeg(0.26, 0.42, true);
+    const backLeftLeg = createLeg(-0.26, -0.4, false);
+    const backRightLeg = createLeg(0.26, -0.4, false);
 
     // Hearts group for petting feedback
     const heartsGroup = new THREE.Group();
@@ -488,17 +543,33 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
+      // ---- Mood from the dog's inner state ---------------------------------
+      const trust = petState.trust / 100;        // 0..1 — how much Expo trusts you
+      const arousal = petState.arousal / 100;    // 0..1 — how excited he is
+      const hunger = 1 - petState.needs.hunger / 100; // 0..1, 1 = very hungry
+      const energy = petState.needs.energy / 100; // 0..1
+
+      // Friendly = trusts you and isn't starving. Alert = aroused + trusting.
+      const friendly = Math.max(0, trust * 0.7 + (1 - hunger * 0.5) * 0.3);
+      const alert = Math.min(1, arousal * 0.6 + trust * 0.4);
+      const tired = 1 - energy;
+
       // Smooth camera / podium orbit interpolation
       dogRoot.rotation.y += (targetRotationY - dogRoot.rotation.y) * 0.1;
       dogRoot.rotation.x += (targetRotationX - dogRoot.rotation.x) * 0.1;
 
-      // 1. Idle breathing
-      const breath = Math.sin(elapsed * 2.8) * 0.02;
+      // 1. Idle breathing — faster when excited, slower when tired.
+      const breathRate = 2.8 + arousal * 2.0;
+      const breathAmp = 0.02 + energy * 0.02;
+      const breath = Math.sin(elapsed * breathRate) * breathAmp;
       torso.scale.set(1 + breath, 1 + breath * 0.8, 1);
 
-      // 2. Tail Wagging dynamics
-      let wagFreq = 4.0;
-      let wagAmp = 0.25;
+      // 2. Tail Wagging dynamics — mood-driven when idle, interaction-driven
+      // when you're engaging with him.
+      let wagFreq = 4.0 + friendly * 8.0 + alert * 4.0 - tired * 3.0;
+      let wagAmp = 0.25 + friendly * 0.35 + alert * 0.15 - tired * 0.2;
+      wagFreq = Math.max(1.0, wagFreq);
+      wagAmp = Math.max(0.05, wagAmp);
 
       if (interactionState.current.type === 'pet' || interactionState.current.type === 'feed') {
         wagFreq = 14.0;
@@ -506,18 +577,28 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       } else if (interactionState.current.type === 'play') {
         wagFreq = 18.0;
         wagAmp = 0.7;
+      } else if (interactionState.current.type === 'communicate') {
+        wagFreq = trust > 0.6 ? 12.0 : 2.0;
+        wagAmp = trust > 0.6 ? 0.5 : 0.1;
       }
       tail.rotation.y = Math.sin(elapsed * wagFreq) * wagAmp;
       tail.rotation.z = Math.cos(elapsed * wagFreq * 0.5) * 0.1;
 
-      // 3. Head & ear listening twitches
-      head.rotation.y = Math.sin(elapsed * 0.8) * 0.08;
+      // 3. Head & ear listening twitches — ears flatten when nervous or tired.
+      const earFlatten = (1 - trust) * 0.35 + tired * 0.15;
+      const headLift = friendly * 0.04 - tired * 0.04;
+      head.position.y = 1.05 + headLift;
+      head.rotation.y = Math.sin(elapsed * 0.8) * 0.08 * (1 - alert * 0.5);
       head.rotation.z = Math.sin(elapsed * 1.4) * 0.04;
-      leftEar.rotation.z = Math.sin(elapsed * 3.5) * 0.06;
-      rightEar.rotation.z = -Math.cos(elapsed * 3.2) * 0.06;
+      if (interactionState.current.type === 'communicate' && trust < 0.6) {
+        head.rotation.z = 0.18; // head tilt: "I don't know that word"
+      }
+      leftEar.rotation.z = Math.sin(elapsed * 3.5) * 0.06 - earFlatten;
+      rightEar.rotation.z = -Math.cos(elapsed * 3.2) * 0.06 + earFlatten;
 
-      // 4. Tongue peek bob
-      tongue.position.y = -0.19 + Math.sin(elapsed * 2.8) * 0.01;
+      // 4. Tongue peek bob — more tongue when relaxed and friendly.
+      const tongueOut = friendly * 0.02;
+      tongue.position.y = -0.19 + tongueOut + Math.sin(elapsed * 2.8) * 0.01;
 
       // 5. Interaction actions
       if (interactionState.current.timer > 0) {

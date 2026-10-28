@@ -1,13 +1,16 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
+import type { PetState } from './domain/types';
 import { DEFAULT_DOGS } from './data/defaultDogs';
-import { loadStoredDogs, saveDogs, loadActiveDogId, saveActiveDogId, calculateDogAge } from './utils/dogCalculators';
+import { loadStoredDogs, saveDogs, loadActiveDogId, saveActiveDogId, calculateDogAge, loadPetState, savePetState } from './utils/dogCalculators';
 import { TamagotchiControls } from './components/TamagotchiControls';
 import { DogPassportView } from './components/DogPassportView';
 import { ClinicalArchiveView } from './components/ClinicalArchiveView';
 import { ReconstructionPipelineModal } from './components/ReconstructionPipelineModal';
+import { TrainingView } from './components/TrainingView';
 import { sound } from './utils/proceduralAudio';
-import { Dog, Globe, Plus, FileSpreadsheet, Shield, X, ChevronDown } from 'lucide-react';
+import { Dog, Globe, Plus, FileSpreadsheet, Shield, X, ChevronDown, Target } from 'lucide-react';
+import { createPetState, interact, communicate, associationStrength } from './domain/pet';
 
 /**
  * THE TWO 3D SCENES ARE LOADED ON DEMAND.
@@ -42,12 +45,13 @@ const MetaversePark3D = lazy(() =>
  * space, and that is exactly the failure the spatial law names.
  */
 
-type Mode = 'command' | 'metaverse' | 'clinical';
+type Mode = 'command' | 'metaverse' | 'clinical' | 'training';
 
 const MODES: { id: Mode; label: string; icon: React.ReactNode }[] = [
   { id: 'command', label: 'Command', icon: <Shield size={13} aria-hidden="true" /> },
   { id: 'metaverse', label: 'Commons', icon: <Globe size={13} aria-hidden="true" /> },
   { id: 'clinical', label: 'Clinical', icon: <FileSpreadsheet size={13} aria-hidden="true" /> },
+  { id: 'training', label: 'Train', icon: <Target size={13} aria-hidden="true" /> },
 ];
 
 export const App: React.FC = () => {
@@ -55,9 +59,26 @@ export const App: React.FC = () => {
   const [activeDogId, setActiveDogId] = useState<string>(() => loadActiveDogId(DEFAULT_DOGS[0].id));
   const [activeMode, setActiveMode] = useState<Mode>('command');
 
+  // The dog's inner life — trust, arousal, personality, associations, and the
+  // ledger of behaviours being taught. One state per dog, so Expo, Mali and
+  // Bangal never share a memory. Loaded when you switch dogs, saved when it
+  // changes.
+  const [petState, setPetState] = useState<PetState>(() => loadPetState(activeDogId));
+
+  useEffect(() => {
+    setPetState(loadPetState(activeDogId));
+  }, [activeDogId]);
+
+  useEffect(() => {
+    savePetState(activeDogId, petState);
+  }, [petState, activeDogId]);
+
   // Interactive 3D triggers
-  const [interactionTrigger, setInteractionTrigger] = useState<'pet' | 'feed' | 'play' | 'groom' | null>(null);
+  const [interactionTrigger, setInteractionTrigger] = useState<'pet' | 'feed' | 'play' | 'groom' | 'communicate' | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
+
+  // The last thing Expo "said" back — the reaction note from communicate.
+  const [communicationNote, setCommunicationNote] = useState('');
 
   // Modals
   const [isReconstructionOpen, setIsReconstructionOpen] = useState(false);
@@ -110,45 +131,35 @@ export const App: React.FC = () => {
       sound.happyYip();
     }
 
+    // Run the domain model: needs decay, trust, arousal, personality, and the
+    // classical-conditioning pairing of the last spoken cue with this outcome.
+    const result = interact(petState, action);
+    setPetState(result.state);
+
+    // Sync the visible tamagotchi bars from the domain state, keeping the
+    // happiness delta that isn't part of the domain model yet.
+    let deltaHappy = 0;
+    if (action === 'pet') deltaHappy = 12;
+    else if (action === 'feed') deltaHappy = 8;
+    else if (action === 'play') deltaHappy = 25;
+    else if (action === 'groom') deltaHappy = 10;
+    else if (action === 'walk') deltaHappy = 30;
+
     setDogs((prev) =>
       prev.map((d) => {
         if (d.id !== activeDogId) return d;
-        const cur = d.tamagotchi;
-        let deltaHunger = 0;
-        let deltaHappy = 0;
-        let deltaEnergy = 0;
-        let deltaHygiene = 0;
-
-        if (action === 'pet') {
-          deltaHappy = 12;
-        } else if (action === 'feed') {
-          deltaHunger = 25;
-          deltaHappy = 8;
-        } else if (action === 'play') {
-          deltaHappy = 25;
-          deltaEnergy = -12;
-          deltaHunger = -5;
-        } else if (action === 'walk') {
-          deltaHappy = 30;
-          deltaEnergy = -20;
-          deltaHunger = -10;
-        } else if (action === 'groom') {
-          deltaHygiene = 35;
-          deltaHappy = 10;
-        }
-
         return {
           ...d,
           tamagotchi: {
-            ...cur,
-            hunger: Math.min(100, Math.max(0, cur.hunger + deltaHunger)),
-            happiness: Math.min(100, Math.max(0, cur.happiness + deltaHappy)),
-            energy: Math.min(100, Math.max(0, cur.energy + deltaEnergy)),
-            hygiene: Math.min(100, Math.max(0, cur.hygiene + deltaHygiene)),
-            lastFed: action === 'feed' ? Date.now() : cur.lastFed,
-            lastPlayed: action === 'play' ? Date.now() : cur.lastPlayed,
-            lastWalked: action === 'walk' ? Date.now() : cur.lastWalked,
-            lastGroomed: action === 'groom' ? Date.now() : cur.lastGroomed,
+            ...d.tamagotchi,
+            hunger: result.state.needs.hunger,
+            energy: result.state.needs.energy,
+            hygiene: result.state.needs.hygiene,
+            happiness: Math.min(100, Math.max(0, d.tamagotchi.happiness + deltaHappy)),
+            lastFed: action === 'feed' ? Date.now() : d.tamagotchi.lastFed,
+            lastPlayed: action === 'play' ? Date.now() : d.tamagotchi.lastPlayed,
+            lastWalked: action === 'walk' ? Date.now() : d.tamagotchi.lastWalked,
+            lastGroomed: action === 'groom' ? Date.now() : d.tamagotchi.lastGroomed,
           },
         };
       })
@@ -158,6 +169,22 @@ export const App: React.FC = () => {
       setIsInteracting(false);
       setInteractionTrigger(null);
     }, 2000);
+  };
+
+  const handleCommunicate = (cue: string) => {
+    const result = communicate(petState, cue);
+    setPetState(result.state);
+    setCommunicationNote(result.note);
+
+    // A recognised cue triggers a visible happy reaction in the 3D scene.
+    if (result.note.includes('knows')) {
+      setInteractionTrigger('communicate');
+      setIsInteracting(true);
+      setTimeout(() => {
+        setIsInteracting(false);
+        setInteractionTrigger(null);
+      }, 2000);
+    }
   };
 
   const handleUpdateCurrentDog = (updated: DogProfile) => {
@@ -377,6 +404,7 @@ export const App: React.FC = () => {
                 <Suspense fallback={null}>
                   <DogAvatar3D
                     dog={currentDog}
+                    petState={petState}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />
@@ -386,7 +414,10 @@ export const App: React.FC = () => {
               <div className="lg:col-span-5 flex flex-col gap-4">
                 <TamagotchiControls
                   dog={currentDog}
+                  petState={petState}
                   onInteract={handleInteract}
+                  onCommunicate={handleCommunicate}
+                  communicationNote={communicationNote}
                   isInteracting={isInteracting}
                 />
 
@@ -429,6 +460,15 @@ export const App: React.FC = () => {
           <ClinicalArchiveView
             dog={currentDog}
             onOpenReconstruction={() => setIsReconstructionOpen(true)}
+          />
+        )}
+
+        {activeMode === 'training' && (
+          <TrainingView
+            dog={currentDog}
+            petState={petState}
+            onPetStateChange={setPetState}
+            onInteract={handleInteract}
           />
         )}
       </main>

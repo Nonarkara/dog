@@ -130,4 +130,8 @@ export interface PetState {
   associations: Record<string, number>;
   lastCareAt: number;
   lastRealSessionAt?: number;
+  /** The last cue word the owner said, for classical-conditioning pairing. */
+  lastCue?: string;
+  /** When the last cue was said. */
+  lastCueAt?: number;
 }

@@ -1,4 +1,6 @@
 import { DogProfile, Vaccination } from '../types/dog';
+import type { PetState } from '../domain/types';
+import { createPetState } from '../domain/pet';
 
 export interface AgeCalculation {
   years: number;
@@ -95,6 +97,7 @@ export function getVaccineStatus(dueDateStr: string, now: Date = new Date()): {
 
 const STORAGE_KEY = 'canine_os_dogs_v1';
 const ACTIVE_DOG_KEY = 'canine_os_active_dog_id';
+const PET_STATE_KEY = 'canine_os_pet_states_v1';
 
 export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
   try {
@@ -130,4 +133,43 @@ export function saveActiveDogId(id: string) {
   } catch (e) {
     console.error(e);
   }
+}
+
+/**
+ * PER-DOG INNER LIFE STORAGE.
+ *
+ * Each dog carries their own trust, arousal, personality, associations, and
+ * behaviour ledger. Keyed by dog id so Expo, Mali and Bangal never share a
+ * state.
+ */
+export function loadStoredPetStates(): Record<string, PetState> {
+  try {
+    const raw = localStorage.getItem(PET_STATE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch (e) {
+    console.warn('Failed to load pet states from localStorage', e);
+  }
+  return {};
+}
+
+export function savePetStates(states: Record<string, PetState>) {
+  try {
+    localStorage.setItem(PET_STATE_KEY, JSON.stringify(states));
+  } catch (e) {
+    console.error('Failed to save pet states to localStorage', e);
+  }
+}
+
+export function loadPetState(dogId: string, now: number = Date.now()): PetState {
+  const states = loadStoredPetStates();
+  if (states[dogId]) return states[dogId];
+  return createPetState(now);
+}
+
+export function savePetState(dogId: string, state: PetState) {
+  const states = loadStoredPetStates();
+  states[dogId] = state;
+  savePetStates(states);
 }
