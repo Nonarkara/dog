@@ -15,8 +15,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     weightKg: 24.8,
     coatColor: 'White with black-tan saddle and mask (ขาว-ดำ)',
     distinctiveMarks: [
-      'Mostly white coat with a black, brown-tipped saddle over the back',
-      'Dark mask around the eyes with tan cheeks; white muzzle and chin',
+      'Mostly white; black brown-tipped saddle; dark mask with tan cheeks',
       'Crisp white vertical blaze running up the muzzle to the forehead',
       'Enormous white lion mane / chest ruff (แผงคอสิงโต)',
       'White plumed tail, grey on top, carried curled over the back',

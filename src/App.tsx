@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
 import type { AvatarPose } from './components/DogAvatar3D';
+import { CALL_TEXT, addTogether, answerCall, tickCall } from './domain/attention';
+import type { CoatPattern } from './domain/coat';
 import { DEFAULT_DOGS } from './data/defaultDogs';
 import {
   loadStoredDogs,
@@ -62,6 +64,15 @@ const CoachPanel = lazy(() =>
 const RecordPanel = lazy(() =>
   import('./components/RecordPanel').then((m) => ({ default: m.RecordPanel }))
 );
+
+/** Coat starting points for a new dog; every colour can then be changed. */
+const COAT_PRESETS: { label: string; coat: { pattern: CoatPattern; base: string; light: string; dark: string; point: string } }[] = [
+  { label: 'Bangkaew', coat: { pattern: 'bangkaew', base: '#ece7de', light: '#f8f6f1', dark: '#211c18', point: '#9a6c43' } },
+  { label: 'Solid', coat: { pattern: 'solid', base: '#d9a441', light: '#f5e6c8', dark: '#5a3a1a', point: '#d9a441' } },
+  { label: 'Saddle', coat: { pattern: 'saddle', base: '#8a4a22', light: '#f0e2d0', dark: '#2b1a0e', point: '#8a4a22' } },
+  { label: 'Mask', coat: { pattern: 'mask', base: '#c98a2e', light: '#f7efe2', dark: '#2a1a10', point: '#c98a2e' } },
+  { label: 'Spotted', coat: { pattern: 'spotted', base: '#f2efe8', light: '#ffffff', dark: '#1d1a17', point: '#f2efe8' } },
+];
 
 type RegionKey = 'care' | 'coach' | 'record' | 'commons';
 
@@ -133,8 +144,29 @@ export const App: React.FC = () => {
   const [newDogName, setNewDogName] = useState('');
   const [newDogBreed, setNewDogBreed] = useState('');
   const [newDogBirth, setNewDogBirth] = useState('2023-01-01');
+  const [newDogSex, setNewDogSex] = useState<'male' | 'female'>('male');
+  const [newDogCoat, setNewDogCoat] = useState(COAT_PRESETS[1].coat);
 
   const currentDog = dogs.find((d) => d.id === activeDogId) || dogs[0];
+  // While a new dog is being enrolled, the stage shows the coat being chosen.
+  const previewDog: DogProfile = {
+    ...currentDog,
+    id: 'preview',
+    name: newDogName.trim() || 'New dog',
+    breed: newDogBreed.trim() || 'Your dog',
+    avatarConfig: {
+      ...currentDog.avatarConfig,
+      pattern: newDogCoat.pattern,
+      baseColor: newDogCoat.base,
+      secondaryColor: newDogCoat.light,
+      maskColor: newDogCoat.dark,
+      pointColor: newDogCoat.point,
+      furFluff: 0.6,
+      customModelUrl: undefined,
+    },
+  };
+  const currentDogRef = useRef(currentDog);
+  currentDogRef.current = currentDog;
   const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
   const subject = { name: currentDog.name, sex: currentDog.sex } as const;
 
@@ -175,13 +207,46 @@ export const App: React.FC = () => {
         if (willSettle(drifted)) {
           const settled = settleSleep(drifted);
           if (settled.note) say(settled.note);
-          return settled.state;
+          return { ...settled.state, call: undefined };
         }
-        return drifted;
+        // HE CALLS YOU. A need runs low, or nobody has been near him for a
+        // while, and he asks. Ignored, the call fades on its own.
+        const { call, started } = tickCall(drifted);
+        if (started && call) say(`${currentDogRef.current.name} ${CALL_TEXT[call.reason]}.`);
+        return { ...drifted, call };
       });
     }, 60_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  /**
+   * TIME TOGETHER — the currency.
+   *
+   * Counted in 15-second slices, and only while the page is in front of you
+   * and you have touched it in the last half minute. Leaving the tab open
+   * overnight earns nothing.
+   */
+  useEffect(() => {
+    let lastActive = Date.now();
+    const touch = () => (lastActive = Date.now());
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    const SLICE = 15;
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastActive > 30_000) return;
+      setPetState((prev) => ({ ...prev, together: addTogether(prev.together, SLICE) }));
+    }, SLICE * 1000);
+    return () => {
+      window.clearInterval(id);
+      events.forEach((e) => window.removeEventListener(e, touch));
+    };
+  }, []);
+
+  // A call shows in the tab title too, so it reaches you in another tab.
+  useEffect(() => {
+    const base = 'Canine OS — dog.nonarkara.org';
+    document.title = petState.call ? `● ${currentDog.name} is calling — ${base}` : base;
+  }, [petState.call, currentDog.name]);
 
   /** Say a note once, and then let the content back. */
   const say = (text: string) => {
@@ -228,9 +293,13 @@ export const App: React.FC = () => {
     // The domain model: decay, trust, arousal, personality, and the
     // classical-conditioning pairing of the last spoken cue with this outcome.
     const result = interact(petState, action, Date.now(), subject);
-    setPetState(result.state);
-    syncDisplay(result.state);
-    say(result.note);
+    const answer = answerCall(petState, action);
+    const next = answer.answered
+      ? { ...result.state, call: undefined, trust: Math.min(100, result.state.trust + answer.trustBonus) }
+      : result.state;
+    setPetState(next);
+    syncDisplay(next);
+    say(answer.answered ? `${result.note} You came when ${subject.sex === 'female' ? 'she' : 'he'} called. Trust +${answer.trustBonus}.` : result.note);
 
     window.setTimeout(() => {
       setIsInteracting(false);
@@ -303,11 +372,11 @@ export const App: React.FC = () => {
       callName: newDogName.trim(),
       breed: newDogBreed.trim() || 'Mixed Breed',
       birthDate: newDogBirth || '2023-01-01',
-      sex: 'male',
+      sex: newDogSex,
       isNeutered: true,
       microchipId: `TH-${Math.floor(10000000 + Math.random() * 90000000)}`,
       weightKg: 20,
-      coatColor: 'Custom Coat',
+      coatColor: `${COAT_PRESETS.find((c) => c.coat.pattern === newDogCoat.pattern)?.label ?? 'Custom'} coat`,
       distinctiveMarks: ['Healthy coat', 'Bright eyes'],
       personalityTraits: ['Playful', 'Alert'],
       favoriteFood: 'Fresh meats & kibble',
@@ -333,11 +402,13 @@ export const App: React.FC = () => {
       metaverseTribe: 'The Roaming Pack',
       metaverseBio: 'Ready to explore the canine commons.',
       avatarConfig: {
-        baseColor: '#854d0e',
-        secondaryColor: '#fef3c7',
-        maskColor: '#451a03',
-        furFluff: 0.5,
-        earShape: 'floppy',
+        pattern: newDogCoat.pattern,
+        baseColor: newDogCoat.base,
+        secondaryColor: newDogCoat.light,
+        maskColor: newDogCoat.dark,
+        pointColor: newDogCoat.point,
+        furFluff: 0.6,
+        earShape: 'pricked',
         tailShape: 'curl',
       },
     };
@@ -526,7 +597,7 @@ export const App: React.FC = () => {
           <div className="panel-body">
             <div className="stage-frame">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>
-                {currentDog.avatarConfig.customModelUrl ? (
+                {!isAddDogOpen && currentDog.avatarConfig.customModelUrl ? (
                   <RiggedAvatar
                     dog={currentDog}
                     petState={petState}
@@ -536,9 +607,10 @@ export const App: React.FC = () => {
                   />
                 ) : (
                   <DogAvatar3D
-                    dog={currentDog}
+                    dog={isAddDogOpen ? previewDog : currentDog}
                     petState={petState}
                     pose={avatarPose}
+                    onPet={() => handleInteract('pet')}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />
@@ -641,6 +713,43 @@ export const App: React.FC = () => {
                 className="px-2 py-1 text-xs shrink-0"
                 required
               />
+              <select
+                value={newDogSex}
+                onChange={(e) => setNewDogSex(e.target.value as 'male' | 'female')}
+                aria-label="Sex"
+                className="px-2 py-1 text-xs shrink-0"
+              >
+                <option value="male">He</option>
+                <option value="female">She</option>
+              </select>
+            </div>
+            {/* The coat, previewed on the stage as you choose it. */}
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <span className="label shrink-0">Coat</span>
+              {COAT_PRESETS.map((c) => (
+                <button
+                  key={c.label}
+                  type="button"
+                  onClick={() => setNewDogCoat(c.coat)}
+                  aria-pressed={newDogCoat.pattern === c.coat.pattern}
+                  className={`btn min-h-0 h-[24px] px-2 py-0 text-[10px] ${
+                    newDogCoat.pattern === c.coat.pattern ? 'btn-accent' : 'btn-quiet border-hairline'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+              {(['base', 'light', 'dark', 'point'] as const).map((k) => (
+                <label key={k} className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  {k === 'base' ? 'Main' : k === 'light' ? 'Light' : k === 'dark' ? 'Dark' : 'Tan'}
+                  <input
+                    type="color"
+                    value={newDogCoat[k]}
+                    onChange={(e) => setNewDogCoat({ ...newDogCoat, [k]: e.target.value })}
+                    className="h-[24px] w-[28px] p-0 border-hairline bg-transparent"
+                  />
+                </label>
+              ))}
             </div>
             <div className="flex items-center justify-end gap-2">
               <button

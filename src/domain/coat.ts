@@ -98,6 +98,9 @@ export function coatColorAt(
   const tanPoints = pattern === 'bangkaew';
 
   let c: RGB = base;
+  // Patches for a spotted coat, laid over whatever the part would be.
+  const spot = (x2: RGB): RGB =>
+    pattern === 'spotted' ? mix(x2, dark, smooth(0.56, 0.6, noise3(x * 4 + 7, y * 4, z * 4))) : x2;
 
   switch (part) {
     case 'torso': {
@@ -112,20 +115,19 @@ export function coatColorAt(
         // A tan wash low on the haunch, where the saddle fades out.
         if (tanPoints) c = mix(c, point, smooth(-0.25, -0.55, z) * smooth(0.25, 0, Math.abs(y)) * 0.45 * (1 - s));
       }
-      if (pattern === 'spotted') c = mix(c, dark, smooth(0.6, 0.66, noise3(x * 3, y * 3, z * 3)));
-      return c;
+      return spot(c);
     }
     case 'mane': {
       // The mane is light in front; on a saddled dog its back joins the saddle.
       c = mix(base, light, smooth(-0.05, 0.25, z) * 0.85 + 0.15);
       // Expo's saddle runs up the back of the neck to the head.
       if (hasSaddle) c = mix(c, tipped, smooth(0.12, -0.12, z) * smooth(-0.02, 0.22, y));
-      return c;
+      return spot(c);
     }
     case 'head': {
       if (!hasMask) {
         c = mix(base, light, smooth(0.0, -0.22, y) * smooth(0.12, 0.3, z));
-        return c;
+        return spot(c);
       }
       // Dark skull and eye patches, tipped with tan.
       c = tipped;
@@ -153,7 +155,7 @@ export function coatColorAt(
     case 'thigh': {
       c = pattern === 'solid' || pattern === 'mask' ? base : light;
       if (hasSaddle) c = mix(c, tanPoints ? mix(point, dark, grain * 0.5) : tipped, smooth(0.0, 0.16, y) * smooth(-0.02, 0.12, x) * 0.85);
-      return c;
+      return spot(c);
     }
     case 'tail': {
       // Light plume; on a saddled dog the top of the base is grey-dark.

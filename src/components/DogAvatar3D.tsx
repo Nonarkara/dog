@@ -15,6 +15,8 @@ interface DogAvatar3DProps {
   interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null;
   onInteractionEnd?: () => void;
   pose?: AvatarPose;
+  /** He was petted by hand (a tap or a stroke on his body). */
+  onPet?: () => void;
 }
 
 /**
@@ -42,6 +44,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   interactionTrigger,
   onInteractionEnd,
   pose = 'stand',
+  onPet,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
@@ -63,6 +66,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   petStateRef.current = petState;
   const poseRef = useRef(pose);
   poseRef.current = pose;
+  const onPetRef = useRef(onPet);
+  onPetRef.current = onPet;
 
   const dogParts = useRef<{
     root: THREE.Group;
@@ -328,11 +333,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       new THREE.SphereGeometry(1, w, h).scale(sx, sy, sz);
 
     /** One furry mesh: a skin plus its shells, all sharing one geometry. */
-    const furry = (geo: THREE.BufferGeometry, shells = true) => {
+    const skins: THREE.Mesh[] = [];
+    const furry = (geo: THREE.BufferGeometry, shells = true, region = 'body') => {
       const group = new THREE.Group();
       const skin = new THREE.Mesh(geo, skinMat);
       skin.castShadow = true;
-      skin.userData.skin = true;
+      skin.userData.region = region;
+      skins.push(skin);
       group.add(skin);
       if (shells) {
         for (const m of shellMats) group.add(new THREE.Mesh(geo, m));
@@ -372,7 +379,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const cheekL = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(0.17, -0.09, 0.05);
     const cheekR = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(-0.17, -0.09, 0.05);
     const muzzleGeo = paint(blob(0.13, 0.1, 0.15, 28, 20), 'muzzle', 0.012).translate(0, -0.09, 0.24);
-    head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo])!));
+    head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo])!, true, 'head'));
 
     const glossy = (color: number, roughness = 0.2) => new THREE.MeshStandardMaterial({ color, roughness });
     const nose = new THREE.Mesh(blob(0.058, 0.042, 0.042, 20, 14), glossy(0x121010, 0.25));
@@ -413,7 +420,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const ear = new THREE.Group();
       ear.position.set(0.16 * side, 0.2, -0.03);
       const outer = paint(new THREE.ConeGeometry(0.12, 0.24, 24, 6).scale(1, 1, 0.55), 'ear', 0.018).translate(0, 0.12, 0);
-      ear.add(furry(outer));
+      ear.add(furry(outer, true, 'head'));
       const inner = new THREE.Mesh(
         new THREE.ConeGeometry(0.07, 0.15, 16).scale(1, 1, 0.3),
         new THREE.MeshStandardMaterial({ color: 0x9c7468, roughness: 0.95 })
@@ -439,7 +446,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
             .translate(0.03 * side, 0.03, 0)
         );
       }
-      const leg = furry(mergeGeometries(parts)!);
+      const leg = furry(mergeGeometries(parts)!, true, 'leg');
       const pivot = new THREE.Group();
       pivot.add(leg);
       if (hind) {
@@ -476,7 +483,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         paint(blob(r, r, r, 22, 16), 'tail', 0.13 + t * 0.05, (lx, ly) => [lx, ly, t]).translate(p.x, p.y, p.z)
       );
     }
-    tail.add(furry(mergeGeometries(tailParts)!));
+    tail.add(furry(mergeGeometries(tailParts)!, true, 'tail'));
 
     const heartsGroup = new THREE.Group();
     scene.add(heartsGroup);
@@ -484,9 +491,45 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     dogParts.current = { root: dogRoot, head, heartsGroup, foodItem: null, ballItem: null };
 
     // ==========================================
-    // ORBIT, AND PETTING BY CLICK (A CLICK IS A PRESS THAT DID NOT DRAG)
+    // ORBIT, AND PETTING BY HAND
     // ==========================================
-    let dragging = false;
+    //
+    // Press on HIM and you are petting him: stroke and he reacts to where
+    // your hand is. Press on the space around him and you turn the stage.
+    // The same gesture never means both.
+    type Spot = 'head' | 'chin' | 'chest' | 'back' | 'other';
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const hitLocal = new THREE.Vector3();
+    const spotAt = (clientX: number, clientY: number): Spot | null => {
+      const r = domElem.getBoundingClientRect();
+      ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      const hit = raycaster.intersectObjects(skins, false)[0];
+      if (!hit) return null;
+      const region = hit.object.userData.region as string;
+      if (region === 'head') {
+        head.worldToLocal(hitLocal.copy(hit.point));
+        return hitLocal.y < -0.08 && hitLocal.z > 0.05 ? 'chin' : 'head';
+      }
+      if (region === 'body') {
+        chassis.worldToLocal(hitLocal.copy(hit.point));
+        return hitLocal.z + HIP.z > 0.15 ? 'chest' : 'back';
+      }
+      return 'other';
+    };
+
+    const petting = { spot: null as Spot | null, until: 0, strokeTime: 0, lastReport: 0, melt: 0 };
+    const reportPet = () => {
+      const now = performance.now();
+      if (now - petting.lastReport < 2500) return;
+      petting.lastReport = now;
+      sound.happyYip();
+      spawnHeart();
+      onPetRef.current?.();
+    };
+
+    let mode: 'none' | 'orbit' | 'stroke' = 'none';
     let downX = 0;
     let downY = 0;
     let lastX = 0;
@@ -496,24 +539,38 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const domElem = renderer.domElement;
 
     const onDown = (e: PointerEvent) => {
-      dragging = true;
       downX = lastX = e.clientX;
       downY = lastY = e.clientY;
+      const spot = spotAt(e.clientX, e.clientY);
+      mode = spot ? 'stroke' : 'orbit';
+      if (spot) {
+        petting.spot = spot;
+        petting.until = performance.now() + 900;
+      }
     };
     const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
-      targetYaw += (e.clientX - lastX) * 0.008;
-      targetTilt = Math.max(-0.15, Math.min(0.3, targetTilt + (e.clientY - lastY) * 0.004));
+      if (mode === 'orbit') {
+        targetYaw += (e.clientX - lastX) * 0.008;
+        targetTilt = Math.max(-0.15, Math.min(0.3, targetTilt + (e.clientY - lastY) * 0.004));
+      } else if (mode === 'stroke') {
+        const spot = spotAt(e.clientX, e.clientY);
+        if (spot) {
+          const moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+          petting.spot = spot;
+          petting.until = performance.now() + 900;
+          petting.strokeTime += Math.min(moved, 40) / 200; // ~200px of stroking = 1 s
+          if (petting.strokeTime > 1) reportPet();
+        }
+      }
       lastX = e.clientX;
       lastY = e.clientY;
     };
     const onUp = (e: PointerEvent) => {
-      if (dragging && Math.hypot(e.clientX - downX, e.clientY - downY) < 6) {
+      if (mode === 'stroke' && Math.hypot(e.clientX - downX, e.clientY - downY) < 6) {
         interactionState.current = { type: 'pet', timer: 1 };
-        sound.happyYip();
-        spawnHeart();
+        reportPet();
       }
-      dragging = false;
+      mode = 'none';
     };
     domElem.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
@@ -547,7 +604,18 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const acting = act.timer > 0 ? act.type : 'idle';
 
       // Ease toward the pose. Sleep wins over anything training asked for.
-      const target = POSES[asleep ? 'sleep' : poseRef.current];
+      // Stroked long enough, he melts: sinks into a down, eyes shut, head tipped.
+      const now = performance.now();
+      const beingPetted = petting.spot !== null && now < petting.until;
+      if (!beingPetted) petting.spot = null;
+      if (petting.strokeTime > 5 && petting.melt === 0) petting.melt = now + 4000;
+      if (petting.melt && now > petting.melt) {
+        petting.melt = 0;
+        petting.strokeTime = 0;
+      }
+      if (!beingPetted && petting.strokeTime > 0 && !petting.melt) petting.strokeTime = Math.max(0, petting.strokeTime - dt * 0.5);
+      const melting = petting.melt > 0 && !asleep;
+      const target = POSES[asleep ? 'sleep' : melting ? 'down' : poseRef.current];
       const ease = 1 - Math.exp(-dt * 6);
       for (const k of Object.keys(cur) as (keyof typeof cur)[]) cur[k] += (target[k] - cur[k]) * ease;
 
@@ -582,11 +650,21 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const gaze = asleep ? 0 : Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
       head.position.set(HEAD_REST.x, HEAD_REST.y + cur.headY + (friendly * 0.03 - tired * 0.03), HEAD_REST.z);
       head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 - head.rotation.y) * 0.08;
-      head.rotation.x = cur.headPitch - cur.pitch * 0.9 + (acting === 'feed' ? Math.max(0, Math.sin(t * 12)) * 0.15 : 0);
-      head.rotation.z = acting === 'communicate' && trust < 0.6 ? 0.2 : Math.sin(t * 1.3) * 0.04;
+      const spot = beingPetted ? petting.spot : null;
+      head.rotation.x =
+        cur.headPitch - cur.pitch * 0.9 +
+        (acting === 'feed' ? Math.max(0, Math.sin(t * 12)) * 0.15 : 0) +
+        (spot === 'chin' ? -0.32 : 0); // chin scratch: nose to the sky
+      head.rotation.z =
+        acting === 'communicate' && trust < 0.6
+          ? 0.2
+          : spot === 'chest' || melting
+            ? 0.18 // leans his head into your hand
+            : Math.sin(t * 1.3) * 0.04;
 
       // Ears flatten when unsure or sleepy; they flick when alert.
-      const flat = asleep ? 0.7 : (1 - trust) * 0.45 + tired * 0.2;
+      // Ears go soft and back under a hand on his head.
+      const flat = asleep ? 0.7 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
       ears.forEach((ear, i) => {
         const s = i === 0 ? 1 : -1;
         ear.rotation.x = -flat * 0.8;
@@ -600,7 +678,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         nextBlink = 2.5 + Math.random() * 4;
       }
       blink = Math.max(0, blink - dt);
-      const lid = asleep ? 0.08 : blink > 0 ? 0.12 : acting === 'pet' ? 0.45 : 1;
+      const lid = asleep ? 0.08 : blink > 0 ? 0.12 : melting ? 0.1 : spot ? 0.35 : acting === 'pet' ? 0.45 : 1;
       eyes.forEach((e) => {
         e.scale.y += (lid - e.scale.y) * 0.4;
         e.children.forEach((c) => c.userData.glint && (c.visible = e.scale.y > 0.3));
@@ -613,7 +691,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       // Tail: the plume wags from its root; asleep it lies wrapped.
       let wagF = Math.max(1, 3 + friendly * 7 + alert * 3 - tired * 3);
       let wagA = Math.max(0.05, 0.18 + friendly * 0.28 + alert * 0.1 - tired * 0.15);
-      if (acting === 'pet' || acting === 'feed') {
+      if (acting === 'pet' || acting === 'feed' || spot === 'back' || spot === 'chest') {
         wagF = 13;
         wagA = 0.5;
       } else if (acting === 'play') {
@@ -692,7 +770,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       strandTex.dispose();
       renderer.dispose();
     };
-  }, [dog]);
+    // Rebuilt only when the dog or the coat changes. Care actions rewrite
+    // the dog's record every time; rebuilding the scene for each one used to
+    // throw away the animation he was in the middle of.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dog.id, JSON.stringify(dog.avatarConfig)]);
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden select-none">
@@ -720,7 +802,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
             {dog.breed}
           </p>
           <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
-            Drag to orbit, tap to pet
+            Stroke him to pet, drag around him to turn
           </p>
         </>
       )}

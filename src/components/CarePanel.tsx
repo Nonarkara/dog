@@ -2,6 +2,7 @@ import React from 'react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import { happiness, readiness, temperament } from '../domain/pet';
+import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
 
 interface CarePanelProps {
   dog: DogProfile;
@@ -148,9 +149,20 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
         {/* The sentence. One of them, said once, in the reading voice. */}
         <div className="border-hairline-t pt-2">
           <p className="label">Now</p>
-          <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
+          {petState.call ? (
+            <p className="text-[12px] leading-snug text-accent mt-0.5" role="status">
+              {dog.name} {CALL_TEXT[petState.call.reason]}. Answer with {ANSWERS[petState.call.reason].join(' or ')}.
+            </p>
+          ) : (
+            <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
+          )}
           <p className="data text-[10px] text-faint mt-1">
             Ready to work {Math.round(ready * 100)}% · {temperament(petState)}
+          </p>
+          {/* The currency: time actually spent with him. */}
+          <p className="data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
+            Together today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
+            {minutes(petState.together?.totalSec ?? 0)} in all
           </p>
         </div>
 

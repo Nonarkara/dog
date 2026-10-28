@@ -12,6 +12,7 @@ import { createPetState, decay, decayBehaviour, interact, observe, performChance
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
 import { coatColorAt } from './coat';
+import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
 import { dogResponds, newLesson, scoreTrial, type Lesson } from './lesson';
 
 let failures = 0;
@@ -300,6 +301,12 @@ ok('Expo is white at the chest', lum(coatColorAt('mane', 0, 0, 0.3, 'bangkaew', 
 ok('Expo is dark on the saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'bangkaew', expoCoat)) < 0.35);
 ok('the blaze is white between the eyes', lum(coatColorAt('head', 0, 0.15, 0.25, 'bangkaew', expoCoat)) > 0.7);
 ok('a solid dog has no saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'solid', expoCoat)) > 0.8);
+let darkSpots = 0;
+for (let i = 0; i < 400; i++) {
+  const [x, y, z] = [((i * 37) % 20) / 25 - 0.4, ((i * 13) % 20) / 25 - 0.4, ((i * 7) % 20) / 25 - 0.4];
+  if (lum(coatColorAt('mane', x, y, z, 'spotted', expoCoat)) < 0.4) darkSpots++;
+}
+ok('a spotted coat has spots, and is mostly not spots', darkSpots > 20 && darkSpots < 250, `${darkSpots}/400 dark`);
 
 console.log('\nTHE PRACTICE FIELD');
 const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
@@ -320,6 +327,24 @@ let up: Lesson = { ...newLesson(), stage: 1, skill: 0.79 };
 for (let i = 0; i < 6; i++) up = scoreTrial(up, { responded: true, cueCount: 1, markDelayMs: 80, treatDelayMs: 500 }).lesson;
 ok('five clean reps at 80% move up a stage', up.stage === 2);
 ok('a lure works far more often than a new word', dogResponds({ ...newLesson(), stage: 0 }, 0.8, 0.6).responds && !dogResponds({ ...newLesson(), stage: 3 }, 0.8, 0.6).responds);
+
+console.log('\nATTENTION');
+const noon = new Date(2026, 9, 29, 12).getTime();
+const t1 = addTogether(undefined, 60, noon);
+const t2 = addTogether(t1, 60, noon + 1000);
+const t3 = addTogether(t2, 15, noon + 86_400_000);
+const t4 = addTogether(t3, 15, noon + 3 * 86_400_000);
+ok('time adds up within a day', t2.todaySec === 120 && t2.totalSec === 120);
+ok('the next day continues the streak and resets today', t3.streak === 2 && t3.todaySec === 15 && t3.totalSec === 135);
+ok('a missed day breaks the streak', t4.streak === 1);
+const callingDog: PetState = { ...createPetState(noon), needs: { hunger: 20, energy: 80, hygiene: 80 } };
+const called = tickCall(callingDog, noon);
+ok('a hungry dog calls you', called.started && called.call?.reason === 'hungry');
+const withCall: PetState = { ...callingDog, call: called.call };
+ok('feeding him answers the call, with a bonus for coming quickly', answerCall(withCall, 'feed', noon + 60_000).trustBonus === 3);
+ok('petting him does not answer a hungry call', !answerCall(withCall, 'pet', noon).answered);
+ok('an ignored call fades, unpunished', tickCall(withCall, noon + CALL_FADES_MS + 1).call === undefined);
+ok('a sleeping dog does not call', !tickCall({ ...callingDog, sleep: { ...callingDog.sleep, asleep: true } }, noon).started);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {
