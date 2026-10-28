@@ -6,14 +6,15 @@ import { DogAvatar3D } from './components/DogAvatar3D';
 import { TamagotchiControls } from './components/TamagotchiControls';
 import { DogPassportView } from './components/DogPassportView';
 import { MetaversePark3D } from './components/MetaversePark3D';
+import { ClinicalArchiveView } from './components/ClinicalArchiveView';
 import { ReconstructionPipelineModal } from './components/ReconstructionPipelineModal';
 import { sound } from './utils/proceduralAudio';
-import { Dog, Globe, Sparkles, Plus, Shield, RefreshCw } from 'lucide-react';
+import { Dog, Globe, Sparkles, Plus, FileSpreadsheet, Shield } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [dogs, setDogs] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
   const [activeDogId, setActiveDogId] = useState<string>(() => loadActiveDogId(DEFAULT_DOGS[0].id));
-  const [activeMode, setActiveMode] = useState<'tamagotchi' | 'metaverse'>('tamagotchi');
+  const [activeMode, setActiveMode] = useState<'command' | 'metaverse' | 'clinical'>('command');
 
   // Interactive 3D triggers
   const [interactionTrigger, setInteractionTrigger] = useState<'pet' | 'feed' | 'play' | 'groom' | null>(null);
@@ -55,7 +56,7 @@ export const App: React.FC = () => {
           };
         })
       );
-    }, 60000); // decay slightly every 1 minute
+    }, 60000);
     return () => clearInterval(interval);
   }, [activeDogId]);
 
@@ -203,9 +204,9 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-black text-zinc-100 flex flex-col font-body selection:bg-amber-500 selection:text-black">
       {/* Top Application Bar (Dieter Rams Planar Grid) */}
       <header className="border-hairline-b bg-zinc-950 px-3 py-2 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
           {/* Logo & Protocol Title */}
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-amber-500 rounded-full" />
               <h1 className="font-display text-sm tracking-widest font-bold text-white">
@@ -213,12 +214,12 @@ export const App: React.FC = () => {
               </h1>
             </div>
             <span className="font-mono text-[9px] text-zinc-500 border-hairline px-1.5 py-0.5">
-              MVP V1.0 · SHIPPED
+              MVP V1.2 · 1440×900
             </span>
           </div>
 
-          {/* Dog Switcher & Add Dog */}
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+          {/* Dog Switcher */}
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 md:pb-0">
             {dogs.map((dog) => (
               <button
                 key={dog.id}
@@ -242,40 +243,50 @@ export const App: React.FC = () => {
             </button>
           </div>
 
-          {/* Mode Switcher: Tamagotchi vs Metaverse */}
+          {/* 3-Way Mode Switcher: Command vs Commons vs Clinical */}
           <div className="flex border-hairline bg-black p-0.5 font-mono text-[10px]">
             <button
-              onClick={() => setActiveMode('tamagotchi')}
-              className={`py-1 px-3 ${
-                activeMode === 'tamagotchi'
+              onClick={() => setActiveMode('command')}
+              className={`py-1 px-2.5 ${
+                activeMode === 'command'
                   ? 'bg-amber-500 text-black font-bold'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              3D TAMAGOTCHI & RECORD
+              01. COMMAND
             </button>
             <button
               onClick={() => setActiveMode('metaverse')}
-              className={`py-1 px-3 flex items-center gap-1.5 ${
+              className={`py-1 px-2.5 flex items-center gap-1 ${
                 activeMode === 'metaverse'
                   ? 'bg-amber-500 text-black font-bold'
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <Globe size={11} /> METAVERSE PARK
+              <Globe size={11} /> 02. COMMONS
+            </button>
+            <button
+              onClick={() => setActiveMode('clinical')}
+              className={`py-1 px-2.5 flex items-center gap-1 ${
+                activeMode === 'clinical'
+                  ? 'bg-amber-500 text-black font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <FileSpreadsheet size={11} /> 03. CLINICAL
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Body */}
+      {/* Main Content Viewport */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 space-y-4">
-        {/* MODE 1: 3D TAMAGOTCHI & RECORD PASSPORT */}
-        {activeMode === 'tamagotchi' && (
+        {/* VIEW 01: THE COMMAND DECK (Option 1) */}
+        {activeMode === 'command' && (
           <div className="space-y-4">
             {/* Top Deck: 3D Avatar Canvas + Tamagotchi Controls */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-              {/* Left/Main: 3D Interactive WebGL Avatar */}
+              {/* Left 7 Cols: 3D Interactive WebGL Avatar */}
               <div className="lg:col-span-7 h-[360px] lg:h-[400px]">
                 <DogAvatar3D
                   dog={currentDog}
@@ -284,7 +295,7 @@ export const App: React.FC = () => {
                 />
               </div>
 
-              {/* Right: Tamagotchi Status & Action Deck */}
+              {/* Right 5 Cols: Tamagotchi Care Deck & Photogrammetry Hook */}
               <div className="lg:col-span-5 flex flex-col justify-between">
                 <TamagotchiControls
                   dog={currentDog}
@@ -292,7 +303,7 @@ export const App: React.FC = () => {
                   isInteracting={isInteracting}
                 />
 
-                {/* 3D Reconstruction Callout Card */}
+                {/* 3D Photogrammetry Callout Card */}
                 <div className="border-hairline bg-zinc-950 p-3 mt-3 flex items-center justify-between">
                   <div className="space-y-0.5">
                     <span className="font-mono text-[9px] text-amber-500 uppercase tracking-widest block font-semibold">
@@ -315,7 +326,7 @@ export const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Bottom: Comprehensive Dog Passport & Health Vault */}
+            {/* Bottom: Comprehensive Dog Passport & Health Ledger */}
             <DogPassportView
               dog={currentDog}
               onUpdateDog={handleUpdateCurrentDog}
@@ -324,7 +335,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* MODE 2: THE CANINE METAVERSE PARK */}
+        {/* VIEW 02: THE SPATIAL COMMONS (Option 2 - Metaverse Park) */}
         {activeMode === 'metaverse' && (
           <div className="space-y-3">
             <div className="border-hairline bg-zinc-950 p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -342,15 +353,23 @@ export const App: React.FC = () => {
               </div>
 
               <button
-                onClick={() => setActiveMode('tamagotchi')}
+                onClick={() => setActiveMode('command')}
                 className="btn text-xs py-1 px-3"
               >
-                RETURN TO PASSPORT
+                RETURN TO COMMAND DECK
               </button>
             </div>
 
             <MetaversePark3D myDog={currentDog} />
           </div>
+        )}
+
+        {/* VIEW 03: CLINICAL ARCHIVE (Option 3 - Tri-Column Studio) */}
+        {activeMode === 'clinical' && (
+          <ClinicalArchiveView
+            dog={currentDog}
+            onOpenReconstruction={() => setIsReconstructionOpen(true)}
+          />
         )}
       </main>
 
