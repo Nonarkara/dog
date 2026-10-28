@@ -792,19 +792,12 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         </div>
       )}
 
-      {/* What the reader is looking at, and what they can do to it. Said
-          once, where the scene does not cover it. */}
+      {/* What the reader can do to him. His name is already in the header,
+          so the stage says only this, once, where the scene does not cover it. */}
       {!webglError && (
-        <>
-          <p className="absolute bottom-2 left-2 max-w-[70%] text-[11px] leading-tight text-zinc-300 pointer-events-none">
-            {dog.name}
-            <span className="text-zinc-500"> / </span>
-            {dog.breed}
-          </p>
-          <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
-            Stroke him to pet, drag around him to turn
-          </p>
-        </>
+        <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
+          Stroke him to pet · drag around him to turn
+        </p>
       )}
     </div>
   );

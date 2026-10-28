@@ -108,14 +108,16 @@ export const CommandBar: React.FC<CommandBarProps> = ({
                 busy ? 'btn-accent opacity-100' : 'btn-quiet border-hairline',
               ].join(' ')}
             >
-              <Icon size={12} aria-hidden="true" />
+              <Icon size={12} aria-hidden="true" className="hidden sm:block" />
               {busy ? GERUND[action] : label}
             </button>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+      {/* On a phone the word field takes its own row: five actions, a field
+          and Bed do not fit in 390px, and Bed was being pushed off the edge. */}
+      <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
         <label htmlFor="cmd-cue" className="label shrink-0 hidden sm:block">
           Say
         </label>
@@ -159,7 +161,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         aria-label={asleep ? `${dog.name} is asleep` : `Put ${dog.name} to bed`}
         title={asleep ? `${dog.name} is asleep` : 'Put him to bed (6)'}
       >
-        <Moon size={12} aria-hidden="true" />
+        <Moon size={12} aria-hidden="true" className="hidden sm:block" />
         {asleep ? 'Asleep' : 'Bed'}
       </button>
 
