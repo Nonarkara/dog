@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
+import type { AvatarPose } from './components/DogAvatar3D';
 import { DEFAULT_DOGS } from './data/defaultDogs';
 import {
   loadStoredDogs,
@@ -114,6 +115,8 @@ export const App: React.FC = () => {
   const isWide = useWide();
 
   // Interactive 3D triggers
+  /** What the practice field asked the dog's body to do. */
+  const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
   const [interactionTrigger, setInteractionTrigger] = useState<
     'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null
   >(null);
@@ -375,6 +378,7 @@ export const App: React.FC = () => {
               dog={currentDog}
               petState={petState}
               onPetStateChange={setPetState}
+              onPose={setAvatarPose}
             />
           </Suspense>
         );
@@ -534,6 +538,7 @@ export const App: React.FC = () => {
                   <DogAvatar3D
                     dog={currentDog}
                     petState={petState}
+                    pose={avatarPose}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />

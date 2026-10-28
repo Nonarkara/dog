@@ -36,11 +36,15 @@ import {
   setCue,
   timingVerdict,
 } from '../domain/training';
+import { PracticeDeck } from './PracticeDeck';
+import type { AvatarPose } from './DogAvatar3D';
 
 export interface CoachPanelProps {
   dog: DogProfile;
   petState: PetState;
   onPetStateChange: (state: PetState) => void;
+  /** The practice field moves the dog on the stage. */
+  onPose?: (pose: AvatarPose) => void;
 }
 
 /** Where a rep is in its life. */
@@ -84,7 +88,9 @@ const clock = (iso: string): string => {
 const signed = (value: number): string =>
   `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)}`;
 
-export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange }) => {
+export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange, onPose }) => {
+  /** PRACTICE trains the dog on the stage; LOG records reps with the real one. */
+  const [mode, setMode] = useState<'practice' | 'log'>('practice');
   const [behaviourName, setBehaviourName] = useState<BehaviourName>('sit');
   const [cueText, setCueText] = useState('');
   const [phase, setPhase] = useState<RepPhase>('idle');
@@ -310,6 +316,21 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex items-center">
+            {(['practice', 'log'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                aria-pressed={mode === m}
+                className={`btn ${TINY_BTN} ${mode === m ? 'btn-accent' : 'btn-quiet border-hairline'}`}
+                title={m === 'practice' ? 'Train the dog on the stage' : `Log reps with the real ${dog.name}`}
+              >
+                {m === 'practice' ? 'PRACTICE' : 'REAL LOG'}
+              </button>
+            ))}
+          </div>
+          {mode === 'log' && (
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => setReal(true)}
@@ -327,12 +348,18 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
               REHEARSAL
             </button>
           </div>
+          )}
+          {mode === 'log' && (
           <span className="data text-[13px] leading-none text-accent" title="Strength of this behaviour">
             {Math.round(behaviour.strength * 100)}%
           </span>
+          )}
         </div>
       </div>
 
+      {mode === 'practice' ? (
+        <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (() => {})} />
+      ) : (
       <div className="panel-body">
         {/* ---- all eight behaviours ----------------------------------------- */}
         <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
@@ -693,6 +720,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

@@ -12,6 +12,7 @@ import { createPetState, decay, decayBehaviour, interact, observe, performChance
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
 import { coatColorAt } from './coat';
+import { dogResponds, newLesson, scoreTrial, type Lesson } from './lesson';
 
 let failures = 0;
 let checks = 0;
@@ -299,6 +300,26 @@ ok('Expo is white at the chest', lum(coatColorAt('mane', 0, 0, 0.3, 'bangkaew', 
 ok('Expo is dark on the saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'bangkaew', expoCoat)) < 0.35);
 ok('the blaze is white between the eyes', lum(coatColorAt('head', 0, 0.15, 0.25, 'bangkaew', expoCoat)) > 0.7);
 ok('a solid dog has no saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'solid', expoCoat)) > 0.8);
+
+console.log('\nTHE PRACTICE FIELD');
+const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
+const clean = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100, treatDelayMs: 800 });
+ok('cue once, mark on time, treat on time: full marks', clean.score === 1 && clean.lesson.skill > L.skill);
+const early = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: -200, treatDelayMs: 800 });
+ok('a marker before he finishes pays for "almost"', early.score < 0.2 && early.lesson.skill < L.skill);
+const twice = scoreTrial(L, { responded: true, cueCount: 2, markDelayMs: 100, treatDelayMs: 800 });
+ok('saying the cue twice costs you', twice.score < clean.score && twice.lesson.skill < clean.lesson.skill);
+const noTreat = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100 });
+ok('a marker with no treat breaks the promise', noTreat.score < 0.3 && noTreat.trustDelta < 0);
+const tooLate = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 900, treatDelayMs: 800 });
+ok("a marker far too late teaches nothing", tooLate.score === 0 && tooLate.lesson.skill === L.skill);
+const miss1 = scoreTrial(L, { responded: false, cueCount: 1 });
+const miss2 = scoreTrial(miss1.lesson, { responded: false, cueCount: 1 });
+ok('two misses in a row step back a stage', miss2.lesson.stage === 2 && miss2.stageChange === -1);
+let up: Lesson = { ...newLesson(), stage: 1, skill: 0.79 };
+for (let i = 0; i < 6; i++) up = scoreTrial(up, { responded: true, cueCount: 1, markDelayMs: 80, treatDelayMs: 500 }).lesson;
+ok('five clean reps at 80% move up a stage', up.stage === 2);
+ok('a lure works far more often than a new word', dogResponds({ ...newLesson(), stage: 0 }, 0.8, 0.6).responds && !dogResponds({ ...newLesson(), stage: 3 }, 0.8, 0.6).responds);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

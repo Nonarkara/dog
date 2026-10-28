@@ -240,4 +240,6 @@ export interface PetState {
   lastCue?: string;
   /** When the last cue was said. */
   lastCueAt?: number;
+  /** Practice-field progress per behaviour, with the dog on the stage. */
+  lessons?: Record<string, import('./lesson').Lesson>;
 }

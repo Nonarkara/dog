@@ -15,10 +15,11 @@ export const DEFAULT_DOGS: DogProfile[] = [
     weightKg: 24.8,
     coatColor: 'White with black-tan saddle and mask (ขาว-ดำ)',
     distinctiveMarks: [
-      'Soft charcoal wolf-sable mask across the muzzle and around the eyes',
+      'Mostly white coat with a black, brown-tipped saddle over the back',
+      'Dark mask around the eyes with tan cheeks; white muzzle and chin',
       'Crisp white vertical blaze running up the muzzle to the forehead',
-      'Enormous cream-white lion mane / chest ruff (แผงคอสิงโต)',
-      'Great cream plumed tail carried curled up over the back',
+      'Enormous white lion mane / chest ruff (แผงคอสิงโต)',
+      'White plumed tail, grey on top, carried curled over the back',
       'Warm amber-brown watchful eyes',
     ],
     personalityTraits: [
