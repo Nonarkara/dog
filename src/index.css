@@ -62,6 +62,34 @@
     border-radius: 0 !important;
   }
 
+  /*
+    THE DOCUMENT DOES NOT SCROLL.
+
+    A Tamagotchi had one screen and no scroll: everything the animal needed was
+    on that screen, and anything that came up came up as a bar. A page that
+    scrolls down forever is a page whose contents were never decided — the
+    reader is shown a slice and told to come back for the rest.
+
+    So the root is exactly one viewport tall, and the layout inside it is a
+    fixed frame. Every region is measured against the space it was given, and
+    nothing is allowed to push the frame taller.
+
+    `overflow: hidden` on the root is not a CSS detail, it is the law made
+    enforceable: if a region tries to grow, it is CLIPPED, and the spatial
+    gate catches the clip.
+  */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html,
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     background-color: var(--bg-main);
     color: var(--text-main);
@@ -206,6 +234,209 @@
     color: var(--text-main);
   }
 
+  /* ---- the cockpit --------------------------------------------------------
+     ONE SCREEN.
+
+     The frame never changes: a header band, a workspace of regions, and a
+     command bar docked at the bottom. A wide screen shows every region at
+     once — a dashboard. A narrow screen shows the animal and one region at a
+     time. Neither scrolls, and neither grows.
+
+     Every region is a `.panel`: a head that names the region, and a body that
+     holds exactly as much as it was given. Nothing inside a region is allowed
+     to push the frame taller, so the law is enforced by the flexbox, not by
+     good intentions.
+     ------------------------------------------------------------------------- */
+  .cockpit {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .cockpit-workspace {
+    flex: 1 1 0%;
+    min-height: 0;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* A wide screen is a dashboard: five regions at once, none of them a mode. */
+  .cockpit-workspace--wide {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  /* A narrow screen is one column: the animal, a strip, then one region. */
+  .cockpit-workspace--tall {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  /* The regions are placed by hand, not by auto-flow: auto-flow would put a
+     region wherever it happened to fit, which is how a dashboard turns into a
+     queue. */
+  @media (min-width: 1024px) {
+    .region-stage {
+      grid-column: 1 / 6;
+      grid-row: 1 / 3;
+    }
+    .region-care {
+      grid-column: 6 / 9;
+      grid-row: 1;
+    }
+    .region-coach {
+      grid-column: 9 / 13;
+      grid-row: 1;
+    }
+    .region-commons {
+      grid-column: 6 / 9;
+      grid-row: 2;
+    }
+    .region-record {
+      grid-column: 9 / 13;
+      grid-row: 2;
+    }
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-dim);
+  }
+
+  .panel-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border-dim);
+    background: var(--bg-elevated);
+  }
+
+  .panel-body {
+    flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+    /* A region that has more content than it was given SCROLLS. It does not
+       hide the overflow. A panel that cuts its own content off is worse than a
+       page that scrolls: the reader loses the bottom of a table, a note or a
+       form, and never learns that it is missing.
+
+       The frame itself still never scrolls — the cockpit is one screen. This
+       is the region saying "there is more of me", with a scrollbar, in the
+       one place where the reader can see it. */
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    /* A bar inside a region anchors to that region, not to the window. */
+    position: relative;
+  }
+
+  /* The one place a list may scroll, and only when a list is genuinely longer
+     than the space it was given. Everything else fits. */
+  .panel-scroll {
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* The holder for a region on a narrow screen, where only one region is on
+     screen at a time. It is the grid item, so it takes the row's height, and
+     the region inside it takes that in turn. */
+  .region-frame {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .region-frame > * {
+    flex: 1 1 0%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* The scene's box.
+     On a wide screen it fills the region, because the region is tall and the
+     camera's field of view is vertical. On a narrow screen the region is a
+     row of its own, so the box carries its own aspect ratio and the row is
+     sized by it — the animal keeps its proportions on every screen. */
+  .stage-frame {
+    flex: 1 1 0%;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media (max-width: 1023px) {
+    .stage-frame {
+      flex: 0 0 auto;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+    }
+  }
+
+  /* ---- the command bar ----------------------------------------------------
+     The controls that are always available, wherever the reader is. On a
+     Tamagotchi the buttons never left the screen; here they never leave the
+     bottom of it.
+     ------------------------------------------------------------------------- */
+  .command-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-top: 1px solid var(--border-dim);
+    background: var(--bg-surface);
+  }
+
+  /* ---- the bar ------------------------------------------------------------
+     Anything that comes up comes up as a BAR: one row, anchored to the
+     bottom of the workspace, over the content and never over the controls.
+     A modal that covers the screen is a screen inside a screen, and the
+     reader loses the animal while they use it.
+     ------------------------------------------------------------------------- */
+  .bar {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent-border);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.55);
+  }
+
+  /* The two-row form: a field row and its actions. Still a bar. */
+  .bar--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  /* The transient note — what the dog just did, said once and dismissed. */
+  .bar--note {
+    border-color: var(--border-strong);
+    box-shadow: none;
+  }
+
   /* ---- inputs ------------------------------------------------------------ */
 
   input,
@@ -281,6 +512,10 @@
   border-bottom: 0;
 }
 
+@utility border-hairline-r-0 {
+  border-right: 0;
+}
+
 /* --- Print -----------------------------------------------------------------
    "PRINT PASSPORT" prints the record. A record is not the interface around
    it: no 3D stage, no navigation, no action buttons, no footer chrome.
@@ -297,6 +532,19 @@
 
   .no-print {
     display: none !important;
+  }
+
+  /* The cockpit is a screen, and a screen is not a document. On paper the
+     frame is released: the record prints at its own height, on white. */
+  .cockpit {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .cockpit-workspace {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   .print-only {

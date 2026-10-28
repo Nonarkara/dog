@@ -1,69 +1,139 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
 import { DEFAULT_DOGS } from './data/defaultDogs';
-import { loadStoredDogs, saveDogs, loadActiveDogId, saveActiveDogId, calculateDogAge, loadPetState, savePetState } from './utils/dogCalculators';
-import { TamagotchiControls } from './components/TamagotchiControls';
-import { DogPassportView } from './components/DogPassportView';
-import { ClinicalArchiveView } from './components/ClinicalArchiveView';
-import { ReconstructionPipelineModal } from './components/ReconstructionPipelineModal';
-import { TrainingView } from './components/TrainingView';
-import { sound } from './utils/proceduralAudio';
-import { Dog, Globe, Plus, FileSpreadsheet, Shield, X, ChevronDown, Target } from 'lucide-react';
-import { createPetState, interact, communicate, associationStrength } from './domain/pet';
+import {
+  loadStoredDogs,
+  saveDogs,
+  loadActiveDogId,
+  saveActiveDogId,
+  calculateDogAge,
+  loadPetState,
+  savePetState,
+} from './utils/dogCalculators';
+import { CommandBar } from './components/CommandBar';
+import type { CareAction } from './components/CommandBar';
+import { CarePanel } from './components/CarePanel';
+import { Dog, Plus, X, ChevronDown, RotateCcw } from 'lucide-react';
+import {
+  createPetState,
+  interact,
+  communicate,
+  decay,
+  happiness,
+  settleSleep,
+  willSettle,
+} from './domain/pet';
 
 /**
- * THE TWO 3D SCENES ARE LOADED ON DEMAND.
+ * THE COCKPIT.
  *
- * three.js is 600 kB of the bundle, and it is used for two things only: the
- * avatar in the command deck, and the park in the commons. Loading it with
- * the interface means the reader waits for a library they may never use
- * before the page says anything. Loading it when the scene is asked for means
- * the record, the passport and the care panel are on screen first.
+ * ONE SCREEN. The document does not scroll, because a Tamagotchi did not
+ * scroll: the animal, the indicators and the buttons were all there, and
+ * anything that came up came up as a bar.
  *
- * The stage is sized by its own aspect ratio, not by the scene inside it, so
- * the box a reader sees does not change when the scene arrives.
+ * So this is a fixed frame with three parts and nothing else:
+ *
+ *   HEADER      one band — what this is, which dog, which facts.
+ *   WORKSPACE   the regions. On a wide screen all five are on screen at once,
+ *               which is what a dashboard is. On a narrow screen the animal is
+ *               on top and one region is below it, chosen from a strip.
+ *   COMMAND BAR the five things you can do to a dog, and the one thing you
+ *               can say. They never leave the bottom of the frame.
+ *
+ * There is no page to scroll to, because there is no second page.
  */
+
 const DogAvatar3D = lazy(() =>
   import('./components/DogAvatar3D').then((m) => ({ default: m.DogAvatar3D }))
 );
-const MetaversePark3D = lazy(() =>
-  import('./components/MetaversePark3D').then((m) => ({ default: m.MetaversePark3D }))
+// A REAL MODEL, when the record has one attached. The drawn animal is the
+// fallback, so a record with no model still gets a dog.
+const RiggedAvatar = lazy(() =>
+  import('./components/RiggedAvatar').then((m) => ({ default: m.RiggedAvatar }))
+);
+const CommonsPanel = lazy(() =>
+  import('./components/CommonsPanel').then((m) => ({ default: m.CommonsPanel }))
+);
+const CoachPanel = lazy(() =>
+  import('./components/CoachPanel').then((m) => ({ default: m.CoachPanel }))
+);
+const RecordPanel = lazy(() =>
+  import('./components/RecordPanel').then((m) => ({ default: m.RecordPanel }))
 );
 
-/**
- * THE HEADER IS ONE BAND.
- *
- * It used to be three stacked rows — identity, dog switcher, mode switcher —
- * each on its own line, which made the chrome taller than the work above the
- * fold and turned the top of every page into a directory of the app. One row:
- * what this is, which dog, which view. Everything else is content.
- *
- * The one loud control in the header is the active VIEW. The active dog is
- * marked by an accent rule and colour, not by a second amber chip: two amber
- * chips at opposite ends of a row are two controls shouting across an empty
- * space, and that is exactly the failure the spatial law names.
- */
+type RegionKey = 'care' | 'coach' | 'record' | 'commons';
 
-type Mode = 'command' | 'metaverse' | 'clinical' | 'training';
-
-const MODES: { id: Mode; label: string; icon: React.ReactNode }[] = [
-  { id: 'command', label: 'Command', icon: <Shield size={13} aria-hidden="true" /> },
-  { id: 'metaverse', label: 'Commons', icon: <Globe size={13} aria-hidden="true" /> },
-  { id: 'clinical', label: 'Clinical', icon: <FileSpreadsheet size={13} aria-hidden="true" /> },
-  { id: 'training', label: 'Train', icon: <Target size={13} aria-hidden="true" /> },
+const REGIONS: { key: RegionKey; label: string }[] = [
+  { key: 'care', label: 'Care' },
+  { key: 'coach', label: 'Coach' },
+  { key: 'record', label: 'Record' },
+  { key: 'commons', label: 'Commons' },
 ];
+
+/** How long a note stays on screen before it lets the content back. */
+const NOTE_TTL_MS = 7000;
+
+/**
+ * TRUE when the frame is wide enough to be a dashboard.
+ *
+ * The width is read from `innerWidth` rather than a media query, because a
+ * media query is a statement about the LAYOUT, and what this needs to know is
+ * how much room the frame has been given. They usually agree; when they do
+ * not, the frame is the truth.
+ */
+function useWide(): boolean {
+  // The dashboard needs WIDTH and HEIGHT. Five regions side by side is a
+  // dashboard; five regions in a 768px-tall window are five letterboxes,
+  // each one scrolling to show what it was built to show. So the switch is
+  // made on the space the frame was actually given, not on the width alone.
+  const read = () =>
+    typeof window === 'undefined'
+      ? true
+      : window.innerWidth >= 1024 && window.innerHeight >= 820;
+  const [wide, setWide] = useState(read);
+  useEffect(() => {
+    const onResize = () => setWide(read());
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return wide;
+}
 
 export const App: React.FC = () => {
   const [dogs, setDogs] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
   const [activeDogId, setActiveDogId] = useState<string>(() => loadActiveDogId(DEFAULT_DOGS[0].id));
-  const [activeMode, setActiveMode] = useState<Mode>('command');
+  const [activeRegion, setActiveRegion] = useState<RegionKey>('care');
 
-  // The dog's inner life — trust, arousal, personality, associations, and the
-  // ledger of behaviours being taught. One state per dog, so Expo, Mali and
-  // Bangal never share a memory. Loaded when you switch dogs, saved when it
-  // changes.
+  // The dog's inner life — trust, arousal, personality, associations, the
+  // observation log and the ledger of behaviours being taught. One state per
+  // dog, so Expo, Mali and Bangal never share a memory.
   const [petState, setPetState] = useState<PetState>(() => loadPetState(activeDogId));
+
+  const isWide = useWide();
+
+  // Interactive 3D triggers
+  const [interactionTrigger, setInteractionTrigger] = useState<
+    'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null
+  >(null);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<CareAction | null>(null);
+
+  // The note — what the dog just did, said once, under the animal.
+  const [note, setNote] = useState<{ text: string; id: number } | null>(null);
+  const noteTimer = useRef<number | null>(null);
+
+  const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
+  const [isAddDogOpen, setIsAddDogOpen] = useState(false);
+
+  const [newDogName, setNewDogName] = useState('');
+  const [newDogBreed, setNewDogBreed] = useState('');
+  const [newDogBirth, setNewDogBirth] = useState('2023-01-01');
+
+  const currentDog = dogs.find((d) => d.id === activeDogId) || dogs[0];
+  const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
+  const subject = { name: currentDog.name, sex: currentDog.sex } as const;
 
   useEffect(() => {
     setPetState(loadPetState(activeDogId));
@@ -73,26 +143,6 @@ export const App: React.FC = () => {
     savePetState(activeDogId, petState);
   }, [petState, activeDogId]);
 
-  // Interactive 3D triggers
-  const [interactionTrigger, setInteractionTrigger] = useState<'pet' | 'feed' | 'play' | 'groom' | 'communicate' | null>(null);
-  const [isInteracting, setIsInteracting] = useState(false);
-
-  // The last thing Expo "said" back — the reaction note from communicate.
-  const [communicationNote, setCommunicationNote] = useState('');
-
-  // Modals
-  const [isReconstructionOpen, setIsReconstructionOpen] = useState(false);
-  const [isAddDogOpen, setIsAddDogOpen] = useState(false);
-  const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
-
-  // New dog form
-  const [newDogName, setNewDogName] = useState('');
-  const [newDogBreed, setNewDogBreed] = useState('');
-  const [newDogBirth, setNewDogBirth] = useState('2023-01-01');
-
-  const currentDog = dogs.find((d) => d.id === activeDogId) || dogs[0];
-  const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
-
   useEffect(() => {
     saveDogs(dogs);
   }, [dogs]);
@@ -101,50 +151,54 @@ export const App: React.FC = () => {
     saveActiveDogId(activeDogId);
   }, [activeDogId]);
 
-  // Periodic stat decay for Tamagotchi realism
+  /**
+   * THE DRIFT.
+   *
+   * One model governs the needs, and it is the model's own: the dog drifts
+   * whether anyone is watching. The old build ran a second, simpler timer
+   * that subtracted a point a minute from a different copy of the same
+   * numbers, and the two fought. Now there is one decay, applied here and
+   * again on load, so the figures on screen are the figures for right now.
+   */
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDogs((prev) =>
-        prev.map((d) => {
-          if (d.id !== activeDogId) return d;
-          return {
-            ...d,
-            tamagotchi: {
-              ...d.tamagotchi,
-              hunger: Math.max(0, d.tamagotchi.hunger - 1),
-              energy: Math.max(0, d.tamagotchi.energy - 1),
-              hygiene: Math.max(0, d.tamagotchi.hygiene - 1),
-            },
-          };
-        })
-      );
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [activeDogId]);
+    const interval = window.setInterval(() => {
+      setPetState((prev) => {
+        const drifted = decay(prev);
+        // HE GOES TO BED ON HIS OWN.
+        //
+        // A Tamagotchi does not wait to be put down: at night, or when he is
+        // spent, he finds his bed. You can wake him — and pay for it — but
+        // you cannot make him stay awake.
+        if (willSettle(drifted)) {
+          const settled = settleSleep(drifted);
+          if (settled.note) say(settled.note);
+          return settled.state;
+        }
+        return drifted;
+      });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
-  const handleInteract = (action: 'pet' | 'feed' | 'play' | 'groom' | 'walk') => {
-    setIsInteracting(true);
+  /** Say a note once, and then let the content back. */
+  const say = (text: string) => {
+    setNote({ text, id: Date.now() });
+    if (noteTimer.current) window.clearTimeout(noteTimer.current);
+    noteTimer.current = window.setTimeout(() => setNote(null), NOTE_TTL_MS);
+  };
 
-    if (action === 'pet' || action === 'feed' || action === 'play' || action === 'groom') {
-      setInteractionTrigger(action);
-    } else if (action === 'walk') {
-      sound.happyYip();
-    }
+  useEffect(() => () => {
+    if (noteTimer.current) window.clearTimeout(noteTimer.current);
+  }, []);
 
-    // Run the domain model: needs decay, trust, arousal, personality, and the
-    // classical-conditioning pairing of the last spoken cue with this outcome.
-    const result = interact(petState, action);
-    setPetState(result.state);
-
-    // Sync the visible tamagotchi bars from the domain state, keeping the
-    // happiness delta that isn't part of the domain model yet.
-    let deltaHappy = 0;
-    if (action === 'pet') deltaHappy = 12;
-    else if (action === 'feed') deltaHappy = 8;
-    else if (action === 'play') deltaHappy = 25;
-    else if (action === 'groom') deltaHappy = 10;
-    else if (action === 'walk') deltaHappy = 30;
-
+  /**
+   * THE VISIBLE MIRROR OF THE STATE.
+   *
+   * The dog's record carries the meters too, and the record is what gets
+   * exported. So the record follows the model — it is a copy of the truth,
+   * written when the truth changes, never a second opinion about it.
+   */
+  const syncDisplay = (state: PetState) => {
     setDogs((prev) =>
       prev.map((d) => {
         if (d.id !== activeDogId) return d;
@@ -152,39 +206,67 @@ export const App: React.FC = () => {
           ...d,
           tamagotchi: {
             ...d.tamagotchi,
-            hunger: result.state.needs.hunger,
-            energy: result.state.needs.energy,
-            hygiene: result.state.needs.hygiene,
-            happiness: Math.min(100, Math.max(0, d.tamagotchi.happiness + deltaHappy)),
-            lastFed: action === 'feed' ? Date.now() : d.tamagotchi.lastFed,
-            lastPlayed: action === 'play' ? Date.now() : d.tamagotchi.lastPlayed,
-            lastWalked: action === 'walk' ? Date.now() : d.tamagotchi.lastWalked,
-            lastGroomed: action === 'groom' ? Date.now() : d.tamagotchi.lastGroomed,
+            hunger: state.needs.hunger,
+            energy: state.needs.energy,
+            hygiene: state.needs.hygiene,
+            happiness: Math.round(happiness(state)),
           },
         };
       })
     );
+  };
 
-    setTimeout(() => {
+  const handleInteract = (action: CareAction) => {
+    if (isInteracting) return;
+    setIsInteracting(true);
+    setPendingAction(action);
+    setInteractionTrigger(action);
+
+    // The domain model: decay, trust, arousal, personality, and the
+    // classical-conditioning pairing of the last spoken cue with this outcome.
+    const result = interact(petState, action, Date.now(), subject);
+    setPetState(result.state);
+    syncDisplay(result.state);
+    say(result.note);
+
+    window.setTimeout(() => {
       setIsInteracting(false);
+      setPendingAction(null);
       setInteractionTrigger(null);
     }, 2000);
   };
 
   const handleCommunicate = (cue: string) => {
-    const result = communicate(petState, cue);
+    const result = communicate(petState, cue, Date.now(), subject);
     setPetState(result.state);
-    setCommunicationNote(result.note);
+    syncDisplay(result.state);
+    say(result.note);
 
-    // A recognised cue triggers a visible happy reaction in the 3D scene.
+    // A recognised cue triggers a visible reaction in the scene.
     if (result.note.includes('knows')) {
       setInteractionTrigger('communicate');
       setIsInteracting(true);
-      setTimeout(() => {
+      window.setTimeout(() => {
         setIsInteracting(false);
         setInteractionTrigger(null);
       }, 2000);
     }
+  };
+
+  /**
+   * PUT HIM TO BED.
+   *
+   * Sometimes he will not go down — he is too wound up, or he has been woken
+   * too many times tonight. The control says so rather than failing quietly,
+   * because "he will not settle" is something you can act on.
+   */
+  const handleBed = () => {
+    const result = settleSleep(petState, Date.now(), subject);
+    if (result.state !== petState) {
+      setPetState(result.state);
+      syncDisplay(result.state);
+    }
+    say(result.note);
   };
 
   const handleUpdateCurrentDog = (updated: DogProfile) => {
@@ -192,17 +274,20 @@ export const App: React.FC = () => {
   };
 
   const handleAddPhotoToDog = (url: string, angle: 'front' | 'side' | 'closeup' | 'body') => {
-    const newPhoto = {
-      id: `photo-${Date.now()}`,
-      url,
-      angle,
-      dateTaken: new Date().toISOString().split('T')[0],
-      notes: `User uploaded ${angle} view`,
-    };
     handleUpdateCurrentDog({
       ...currentDog,
-      photos: [...currentDog.photos, newPhoto],
+      photos: [
+        ...currentDog.photos,
+        {
+          id: `photo-${Date.now()}`,
+          url,
+          angle,
+          dateTaken: new Date().toISOString().split('T')[0],
+          notes: `User uploaded ${angle} view`,
+        },
+      ],
     });
+    say('Photo stored on the record.');
   };
 
   const handleCreateNewDog = (e: React.FormEvent) => {
@@ -211,9 +296,9 @@ export const App: React.FC = () => {
 
     const newDog: DogProfile = {
       id: `dog-${Date.now()}`,
-      name: newDogName,
-      callName: newDogName,
-      breed: newDogBreed || 'Mixed Breed',
+      name: newDogName.trim(),
+      callName: newDogName.trim(),
+      breed: newDogBreed.trim() || 'Mixed Breed',
       birthDate: newDogBirth || '2023-01-01',
       sex: 'male',
       isNeutered: true,
@@ -256,29 +341,73 @@ export const App: React.FC = () => {
 
     setDogs((prev) => [...prev, newDog]);
     setActiveDogId(newDog.id);
+    setPetState(createPetState());
     setIsAddDogOpen(false);
     setNewDogName('');
     setNewDogBreed('');
+    say(`${newDog.name.trim()} is enrolled.`);
   };
 
   const resetToFactoryDefaults = () => {
-    if (window.confirm(`Reset all dog profiles to the factory defaults?`)) {
+    if (window.confirm('Reset all dog profiles to the factory defaults?')) {
       setDogs(DEFAULT_DOGS);
       setActiveDogId(DEFAULT_DOGS[0].id);
+      setPetState(createPetState());
+      say('Profiles reset to the factory defaults.');
+    }
+  };
+
+  /**
+   * THE REGIONS.
+   *
+   * On a wide screen every region is on screen, because that is what a
+   * dashboard is. On a narrow screen the animal is on top and one region sits
+   * below it — chosen from the strip, not by scrolling to it.
+   */
+  const renderRegion = (key: RegionKey) => {
+    switch (key) {
+      case 'care':
+        return <CarePanel dog={currentDog} petState={petState} />;
+      case 'coach':
+        return (
+          <Suspense fallback={<RegionLoading label="Coach" />}>
+            <CoachPanel
+              dog={currentDog}
+              petState={petState}
+              onPetStateChange={setPetState}
+            />
+          </Suspense>
+        );
+      case 'record':
+        return (
+          <Suspense fallback={<RegionLoading label="Record" />}>
+            <RecordPanel
+              dog={currentDog}
+              onUpdateDog={handleUpdateCurrentDog}
+              onAddPhoto={handleAddPhotoToDog}
+            />
+          </Suspense>
+        );
+      case 'commons':
+        return (
+          <Suspense fallback={<RegionLoading label="Commons" />}>
+            <CommonsPanel myDog={currentDog} />
+          </Suspense>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-ground text-zinc-100 flex flex-col font-body">
+    <div className="cockpit" data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
-      <header className="border-hairline-b bg-surface sticky top-0 z-40 no-print">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 flex items-center gap-2 sm:gap-3">
+      <header className="border-hairline-b bg-surface shrink-0 no-print">
+        <div className="h-13 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
           <span className="hidden sm:inline font-display text-[15px] text-white shrink-0">
             Canine OS
           </span>
 
           {/* Which dog. The dog is the subject of the app, so the switcher sits
-              in the middle of the band, where the eye lands first.
+              near the front of the band, where the eye lands first.
 
               It is a DISCLOSURE, not a row of buttons: a row grows with the
               number of dogs, and the header is a fixed band. A row of chips
@@ -291,7 +420,7 @@ export const App: React.FC = () => {
               aria-haspopup="listbox"
               aria-expanded={isDogMenuOpen}
               aria-controls="dog-switcher"
-              className="btn-quiet min-h-11 px-2 text-[13px] whitespace-nowrap"
+              className="btn-quiet min-h-10 px-2 text-[13px] whitespace-nowrap"
             >
               <Dog size={13} aria-hidden="true" />
               {currentDog.name}
@@ -309,7 +438,7 @@ export const App: React.FC = () => {
                   id="dog-switcher"
                   role="listbox"
                   aria-label="Dogs"
-                  className="absolute left-0 top-full mt-1 z-20 min-w-[200px] border-hairline bg-elevated shadow-none"
+                  className="absolute left-0 top-full mt-1 z-20 min-w-[200px] border-hairline bg-elevated"
                 >
                   {dogs.map((dog) => (
                     <li key={dog.id} role="none">
@@ -320,7 +449,7 @@ export const App: React.FC = () => {
                           setActiveDogId(dog.id);
                           setIsDogMenuOpen(false);
                         }}
-                        className={`w-full min-h-11 px-3 text-left text-[13px] ${
+                        className={`w-full min-h-10 px-3 text-left text-[13px] ${
                           dog.id === activeDogId ? 'text-accent' : 'text-zinc-300 hover:text-white'
                         }`}
                       >
@@ -337,7 +466,7 @@ export const App: React.FC = () => {
                         setIsDogMenuOpen(false);
                         setIsAddDogOpen(true);
                       }}
-                      className="w-full min-h-11 px-3 text-left text-[13px] text-zinc-300 hover:text-white"
+                      className="w-full min-h-10 px-3 text-left text-[13px] text-zinc-300 hover:text-white"
                     >
                       <Plus size={13} className="inline mr-1 -mt-0.5" aria-hidden="true" />
                       Enroll another dog
@@ -348,239 +477,206 @@ export const App: React.FC = () => {
             )}
           </div>
 
-          {/* Which view. The ONE loud control in the header. */}
-          <nav aria-label="Views" className="ml-auto shrink-0">
-            <ul className="flex items-center">
-              {MODES.map((mode) => {
-                const isActive = mode.id === activeMode;
-                return (
-                  <li key={mode.id}>
-                    <button
-                      onClick={() => {
-                        setActiveMode(mode.id);
-                        setIsDogMenuOpen(false);
-                      }}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`min-h-11 px-2.5 text-[12px] ${
-                        isActive ? 'btn-accent' : 'btn-quiet'
-                      }`}
-                    >
-                      <span className="hidden sm:inline">{mode.icon}</span>
-                      {mode.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+          {/* The facts about the dog you are with. */}
+          <p className="min-w-0 flex-1 truncate text-[12px] text-zinc-400">
+            <span className="text-zinc-300">{currentDog.breed}</span>
+            <span className="text-zinc-600"> / </span>
+            <span className="data">{age.formattedCalendarAge}</span>
+            <span className="text-zinc-600"> / </span>
+            <span className="data">{age.dogYears} dog years</span>
+          </p>
+
+          <span className="hidden lg:inline text-[11px] text-faint shrink-0">
+            Local-first. Nothing leaves this device.
+          </span>
+
+          <button
+            onClick={resetToFactoryDefaults}
+            className="btn-quiet min-h-10 px-2 shrink-0"
+            aria-label="Reset all dog profiles to the factory defaults"
+            title="Reset profiles to defaults"
+          >
+            <RotateCcw size={13} aria-hidden="true" />
+          </button>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-4 py-4">
-        {/* ---- the subject ------------------------------------------------- */}
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
-          <h1 className="font-display text-3xl text-white">{currentDog.name}</h1>
-          <p className="text-[13px] text-zinc-400">
-            {currentDog.breed}
-            <span className="text-zinc-600"> / </span>
-            <span className="data text-zinc-300">{age.formattedCalendarAge}</span>
-          </p>
-        </div>
-
-        {activeMode === 'command' && (
-          <div className="space-y-4">
-            {/* The deck. The stage and the care panel sit side by side; the
-                stage's height comes from its own aspect ratio, and the care
-                panel's from its content, so neither column is padded out to
-                meet the other. */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-              {/* The stage. Its height comes from its own aspect ratio, because
-                  the camera's field of view is vertical: a wider stage at the
-                  same height would frame the dog smaller, and a narrower one
-                  would crop it. The box is therefore the same shape the scene
-                  is composed for, and it does not move when the scene
-                  arrives. */}
-              <div className="lg:col-span-7 aspect-[4/3] lg:aspect-[16/10] bg-black border-hairline overflow-hidden">
-                <Suspense fallback={null}>
+      {/* ---- the regions ----------------------------------------------------- */}
+      <main
+        className={`cockpit-workspace ${
+          isWide ? 'cockpit-workspace--wide' : 'cockpit-workspace--tall'
+        }`}
+      >
+        {/* The animal. The biggest region on the screen, and the one the
+            reader came for. */}
+        <section className="panel region-stage" aria-label={`${currentDog.name}, live avatar`}>
+          {/* The page's heading. The dog's name is VISIBLE in the header band —
+              but there it is a control, a disclosure you open to change dogs.
+              A control is not a heading, so the document still needs one: this
+              is the same name, said once, as the subject of the page. It is
+              hidden because it is already on the screen; it is not hidden
+              because it is unimportant. */}
+          <h1 className="sr-only">
+            {currentDog.name}, {currentDog.breed}
+          </h1>
+          <div className="panel-body">
+            <div className="stage-frame">
+              <Suspense fallback={<StageLoading name={currentDog.name} />}>
+                {currentDog.avatarConfig.customModelUrl ? (
+                  <RiggedAvatar
+                    dog={currentDog}
+                    petState={petState}
+                    url={currentDog.avatarConfig.customModelUrl}
+                    interactionTrigger={interactionTrigger}
+                    onInteractionEnd={() => setInteractionTrigger(null)}
+                  />
+                ) : (
                   <DogAvatar3D
                     dog={currentDog}
                     petState={petState}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />
-                </Suspense>
-              </div>
-
-              <div className="lg:col-span-5 flex flex-col gap-4">
-                <TamagotchiControls
-                  dog={currentDog}
-                  petState={petState}
-                  onInteract={handleInteract}
-                  onCommunicate={handleCommunicate}
-                  communicationNote={communicationNote}
-                  isInteracting={isInteracting}
-                />
-
-                {/* The photogrammetry callout is a caption on the pipeline, not
-                    a card of its own. */}
-                <div className="border-hairline bg-surface p-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="font-display text-[13px] text-white">Photo to 3D avatar</h2>
-                    <p className="text-[12px] text-zinc-400">
-                      Stitch {currentDog.photos.length}{' '}
-                      {currentDog.photos.length === 1 ? 'photo' : 'photos'} into a mesh via TripoSR or
-                      InstantMesh.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setIsReconstructionOpen(true)}
-                    className="btn btn-accent shrink-0"
-                  >
-                    Pipeline
-                  </button>
-                </div>
-              </div>
+                )}
+              </Suspense>
             </div>
 
-            <DogPassportView
-              dog={currentDog}
-              onUpdateDog={handleUpdateCurrentDog}
-              onOpenReconstruction={() => setIsReconstructionOpen(true)}
-            />
+            {/* The note. It belongs to the animal, so it sits under the animal,
+                and it is a bar rather than a panel: it arrives, it is read,
+                and it goes. */}
+            {note && (
+              <div className="bar bar--note" role="status" key={note.id}>
+                <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate">
+                  {note.text}
+                </p>
+                <button
+                  onClick={() => setNote(null)}
+                  className="btn-quiet px-1.5 shrink-0"
+                  aria-label="Dismiss"
+                >
+                  <X size={13} aria-hidden="true" />
+                </button>
+              </div>
+            )}
           </div>
+        </section>
+
+        {isWide ? (
+          <>
+            {renderRegion('care')}
+            {renderRegion('coach')}
+            {renderRegion('commons')}
+            {renderRegion('record')}
+          </>
+        ) : (
+          <>
+            {/* Which region, on a screen that can only show one. */}
+            <div role="tablist" aria-label="Regions" className="flex border-hairline bg-surface">
+              {REGIONS.map((r) => {
+                const active = r.key === activeRegion;
+                return (
+                  <button
+                    key={r.key}
+                    role="tab"
+                    type="button"
+                    aria-selected={active}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setActiveRegion(r.key)}
+                    className={`flex-1 min-h-9 px-1 text-[11px] border-hairline-r last:border-hairline-r-0 ${
+                      active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="region-frame">{renderRegion(activeRegion)}</div>
+          </>
         )}
 
-        {activeMode === 'metaverse' && (
-          <Suspense fallback={null}>
-            <MetaversePark3D myDog={currentDog} />
-          </Suspense>
-        )}
-
-        {activeMode === 'clinical' && (
-          <ClinicalArchiveView
-            dog={currentDog}
-            onOpenReconstruction={() => setIsReconstructionOpen(true)}
-          />
-        )}
-
-        {activeMode === 'training' && (
-          <TrainingView
-            dog={currentDog}
-            petState={petState}
-            onPetStateChange={setPetState}
-            onInteract={handleInteract}
-          />
+        {/* ---- enroll a dog, as a bar ---------------------------------------
+            It lives INSIDE the workspace, so it sits on top of the content
+            and directly above the command bar — never over the controls, and
+            never over the whole screen. */}
+        {isAddDogOpen && (
+          <form
+            onSubmit={handleCreateNewDog}
+            className="bar bar--stack max-w-2xl"
+            role="dialog"
+            aria-label="Enroll a new dog"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="label shrink-0">Enroll a dog</span>
+              <input
+                type="text"
+                value={newDogName}
+                onChange={(e) => setNewDogName(e.target.value)}
+                placeholder="Name"
+                aria-label="Dog name"
+                className="flex-1 min-w-0 px-2 py-1 text-xs"
+                required
+                autoFocus
+              />
+              <input
+                type="text"
+                value={newDogBreed}
+                onChange={(e) => setNewDogBreed(e.target.value)}
+                placeholder="Breed"
+                aria-label="Breed"
+                className="flex-1 min-w-0 px-2 py-1 text-xs"
+                required
+              />
+              <input
+                type="date"
+                value={newDogBirth}
+                onChange={(e) => setNewDogBirth(e.target.value)}
+                aria-label="Birth date"
+                className="px-2 py-1 text-xs shrink-0"
+                required
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddDogOpen(false)}
+                className="btn btn-quiet text-[11px]"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-accent text-[11px]">
+                Create profile
+              </button>
+            </div>
+          </form>
         )}
       </main>
 
-      <footer className="border-hairline-t bg-surface px-3 sm:px-4 py-3 mt-8 no-print">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <p className="text-[12px] text-faint">
-            Canine OS is local-first. Every profile, note and measurement stays on this device.
-          </p>
-          <button onClick={resetToFactoryDefaults} className="btn-quiet text-[12px]">
-            Reset profiles to defaults
-          </button>
-        </div>
-      </footer>
-
-      <ReconstructionPipelineModal
+      {/* ---- the controls ---------------------------------------------------- */}
+      <CommandBar
         dog={currentDog}
-        isOpen={isReconstructionOpen}
-        onClose={() => setIsReconstructionOpen(false)}
-        onAddPhoto={handleAddPhotoToDog}
-        onLoadCustomModel={(url) => {
-          handleUpdateCurrentDog({
-            ...currentDog,
-            avatarConfig: {
-              ...currentDog.avatarConfig,
-              customModelUrl: url,
-            },
-          });
-        }}
+        petState={petState}
+        isInteracting={isInteracting}
+        pendingAction={pendingAction}
+        onInteract={handleInteract}
+        onCommunicate={handleCommunicate}
+        onBed={handleBed}
       />
-
-      {/* ---- enroll a dog --------------------------------------------------- */}
-      {isAddDogOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 no-print">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="enroll-title"
-            className="bg-surface border-hairline w-full max-w-md p-4 text-zinc-100"
-          >
-            <div className="flex justify-between items-center border-hairline-b pb-2 mb-3">
-              <h2 id="enroll-title" className="font-display text-base text-white">
-                Enroll a new dog
-              </h2>
-              <button
-                onClick={() => setIsAddDogOpen(false)}
-                className="btn-quiet w-9 h-9 min-h-0"
-                aria-label="Close"
-              >
-                <X size={15} aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateNewDog} className="space-y-3">
-              <div>
-                <label className="label block mb-1" htmlFor="new-dog-name">
-                  Dog name
-                </label>
-                <input
-                  id="new-dog-name"
-                  type="text"
-                  value={newDogName}
-                  onChange={(e) => setNewDogName(e.target.value)}
-                  placeholder="Luna"
-                  className="w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label block mb-1" htmlFor="new-dog-breed">
-                  Breed
-                </label>
-                <input
-                  id="new-dog-breed"
-                  type="text"
-                  value={newDogBreed}
-                  onChange={(e) => setNewDogBreed(e.target.value)}
-                  placeholder="Thai Ridgeback"
-                  className="w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label block mb-1" htmlFor="new-dog-birth">
-                  Birth date
-                </label>
-                <input
-                  id="new-dog-birth"
-                  type="date"
-                  value={newDogBirth}
-                  onChange={(e) => setNewDogBirth(e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-hairline-t">
-                <button
-                  type="button"
-                  onClick={() => setIsAddDogOpen(false)}
-                  className="btn"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-accent">
-                  Create profile
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+/** A region that has not arrived yet. A quiet plate, not a hole. */
+const RegionLoading: React.FC<{ label: string }> = ({ label }) => (
+  <div className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
+    <span className="label">{label} — loading</span>
+  </div>
+);
+
+/** The scene has not arrived yet. */
+const StageLoading: React.FC<{ name: string }> = ({ name }) => (
+  <div className="absolute inset-0 flex items-center justify-center bg-black">
+    <span className="label">{name} — loading</span>
+  </div>
+);

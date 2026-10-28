@@ -381,6 +381,79 @@ function measureDoc(d, route, w, cb) {
 // done: exactly one result per navigation. Two loops racing on the same
 // iframe would report the same page twice, and the gate would then claim
 // to have measured more than it promised.
+// Two paths are the same page when they differ only by a trailing slash.
+// A site that rewrites "/memory/" to "/memory" is still the same page, and
+// the harness must not decide otherwise.
+function samePath(a, b) {
+  if (!a || !b) return false;
+  var norm = function (p) {
+    return p.length > 1 && p.charAt(p.length - 1) === '/' ? p.slice(0, -1) : p;
+  };
+  return norm(a) === norm(b);
+}
+
+// A document is FRESH when it was created at or after the moment the
+// navigation was asked for. performance.timeOrigin is that moment, and it
+// is the document's own clock, so it does not depend on the page keeping a
+// query string.
+//
+// Where there is no clock to read, the token is all there is — the old
+// test, kept as the fallback rather than as the rule.
+function isFresh(d, navStart, token) {
+  try {
+    var t = d.performance && d.performance.timeOrigin;
+    if (typeof t === 'number' && isFinite(t)) return t >= navStart - 100;
+  } catch (e) { /* no clock in this document */ }
+  try {
+    return String(d.location.search).indexOf('__spatial=' + token) >= 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+// The page must be RENDERED before it is measured.
+//
+// A page that has parsed but has not rendered has no title box, no first
+// action and no chrome — and a receipt cell that records none of those is
+// not a measurement of the page, it is a measurement of a moment before the
+// page existed. The gate cannot see that failure: it compares holes and
+// drift, and a cell with nothing in it has neither. So the one cell that
+// proves nothing is the one the gate is blind to.
+//
+// The hierarchy gate already waits for exactly this, in
+// scripts/hierarchy-ready.mjs: a title with a real box, inside a main
+// that is not standing at data-study-ready="false", with the fonts
+// loaded. The rule belongs to both gates, so it is written once and used
+// here.
+//
+// A page with no title at all is not a failure — some pages have no h1 —
+// so for those the main element's own box is the readiness signal.
+function rendered(d, cb) {
+  var start = Date.now();
+  (function step() {
+    var main = d.querySelector('main#content') || d.querySelector('main');
+    var title = main && main.querySelector('h1');
+    var ready = !main || main.getAttribute('data-study-ready') !== 'false';
+    var fonts = true;
+    try { fonts = !d.fonts || d.fonts.status === 'loaded'; } catch (e) { fonts = true; }
+    var shown = false;
+    try {
+      if (title) {
+        var r = title.getBoundingClientRect();
+        shown = r.width > 0 && r.height > 0;
+      } else if (main) {
+        var m = main.getBoundingClientRect();
+        shown = m.height > 0;
+      } else {
+        shown = false;
+      }
+    } catch (e) { shown = false; }
+    if (ready && fonts && shown) return cb(true);
+    if (Date.now() - start > 12000) return cb(false);
+    setTimeout(step, 25);
+  })();
+}
+
 function loadPage(route, w, h, cb) {
   var token = ++TOKEN;
   var done = false;
@@ -394,6 +467,12 @@ function loadPage(route, w, h, cb) {
   // The query string stops the browser from answering with a page it has
   // already laid out at another width.
   f.src = route + (route.indexOf('?') >= 0 ? '&' : '?') + '__spatial=' + token;
+  // The moment this navigation was asked for. A document born before it is
+  // the PREVIOUS one, and measuring that is measuring the wrong page.
+  var navStart = Date.now();
+  // The path this navigation is for. The path survives a rewrite of the
+  // query string; the token does not.
+  var routePath = route.split('?')[0].split('#')[0];
   // The page is WAITED FOR BY POLLING, not by listening for the load event.
   //
   // The load event fires when every subresource of the page has arrived, so
@@ -432,7 +511,25 @@ function loadPage(route, w, h, cb) {
       return finish({ route: route, w: w, error: 'timed out waiting for the page' });
     var here = false;
     try {
-      here = !!(d.location && String(d.location.search).indexOf('__spatial=' + token) >= 0);
+      // The frame is identified by its PATH, and by being FRESH.
+      //
+      // It used to be identified by the query token alone. An app that
+      // rewrites its own URL when it hydrates — dropping the query string —
+      // takes that token with it, and the harness then cannot tell which
+      // document it is looking at. The measurement becomes a race with the
+      // hydration, and winning that race early is how a cell comes to
+      // measure a page that has not rendered yet. A receipt cell with
+      // nothing in it is not evidence, and the gate cannot see it: the gate
+      // compares holes and drift, and a cell with nothing in it has
+      // neither.
+      //
+      // The path survives the rewrite. Freshness is proved by the document's
+      // own clock — performance.timeOrigin is the moment this document
+      // was created, so a document born before the navigation was asked for
+      // is the PREVIOUS one and is refused. That is the token's old job,
+      // done without depending on the page to keep a query string it never
+      // agreed to keep.
+      here = !!(d.location && samePath(d.location.pathname, routePath) && isFresh(d, navStart, token));
     } catch (e) {
       here = false;
     }
@@ -441,7 +538,20 @@ function loadPage(route, w, h, cb) {
       if (!d.__spatialInstalled) { d.__spatialInstalled = true; installProbe(d); }
       var wv = d.defaultView;
       if (wv && typeof wv.__SPATIAL_MEASURE__ === 'function') {
-        return settle(d, function () {
+        // Wait for the page to RENDER before it is measured. A parsed page
+        // that has not painted has no title box and no first action, and a
+        // cell that records neither is a cell that proves nothing while
+        // looking exactly like a cell that measured a hole.
+        return rendered(d, function (isRendered) {
+          if (token !== TOKEN) return;
+          if (!isRendered) {
+            return finish({
+              route: route,
+              w: w,
+              error: 'the page never rendered a title',
+            });
+          }
+          return settle(d, function () {
           if (token !== TOKEN) return;
           // The page may have navigated while we settled. If it did, the
           // window we captured now belongs to a different document, and the
@@ -452,6 +562,7 @@ function loadPage(route, w, h, cb) {
           // the probe's presence is the only honest test.
           if (typeof wv.__SPATIAL_MEASURE__ !== 'function') return wait();
           measureDoc(d, route, w, finish);
+          });
         });
       }
     }
@@ -909,10 +1020,7 @@ function scanStylesheets(text, into) {
 
 function cssBreakpoints(root) {
   const into = { viewport: new Set(), container: new Set(), cliffs: new Set(), namedCliffs: new Map() };
-  let dir = path.join(root, "assets");
-  if (!existsSync(dir)) {
-    dir = path.join(root, "_next", "static", "css");
-  }
+  const dir = path.join(root, "_next", "static", "css");
   let files = [];
   try {
     files = readdirSync(dir).filter((f) => f.endsWith(".css"));
@@ -1039,11 +1147,24 @@ for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { cleanup(); proc
 const RUN_TIMEOUT_MS = 45 * 60 * 1000;
 let payload = null;
 let chromeError = null;
-// Five attempts, not three. Another agent on the same machine can take this
+// Twelve attempts, not five. Another agent on the same machine can take this
 // gate's browser out from under it with a `pkill -f "Google Chrome"`, and a
 // sweep that is killed at the twentieth minute should try again rather than
 // report a failure that is really a collision.
-for (let attempt = 1; attempt <= 5; attempt++) {
+//
+// Five was not enough. A confirmation sweep on a busy machine lost its
+// browser four times to the same neighbour and finished on the fifth
+// attempt — the budget was enough, barely, and the recording needed more.
+// A budget that is barely enough is a budget that produces a false failure
+// on the next busy afternoon, and a false failure is worse than no failure:
+// it teaches the reader that the gate is flaky, which is exactly the
+// conclusion that makes people stop running it.
+//
+// The attempts are not free, so the budget stays finite: twelve is four
+// more than the worst recorded run, and each attempt is bounded by the
+// watchdog above.
+const MAX_ATTEMPTS = 12;
+for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
   // Pick up where the last attempt stopped.
   if (attempt > 1) console.error(`  · resuming after ${completedRoutes} route(s)`);
   // A FRESH profile per attempt: a browser that was killed leaves a dirty
@@ -1119,7 +1240,7 @@ for (let attempt = 1; attempt <= 5; attempt++) {
     got === died
       ? new Error("the browser exited before it reported its measurements")
       : new Error(`the browser did not finish within ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes`);
-  console.error(`  · Chrome attempt ${attempt}/5 ${got === died ? "exited early" : "did not finish"} — retrying`);
+  console.error(`  · Chrome attempt ${attempt}/${MAX_ATTEMPTS} ${got === died ? "exited early" : "did not finish"} — retrying`);
   try {
     rmSync(attemptProf, { recursive: true, force: true });
   } catch {

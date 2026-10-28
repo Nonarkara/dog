@@ -1,0 +1,184 @@
+import React from 'react';
+import type { DogProfile } from '../types/dog';
+import type { PetState } from '../domain/types';
+import { happiness, readiness, temperament } from '../domain/pet';
+
+interface CarePanelProps {
+  dog: DogProfile;
+  petState: PetState;
+}
+
+type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
+
+interface Meter {
+  key: MeterKey;
+  label: string;
+  value: number;
+  /** What a LOW value means for this meter — some run out, some run high. */
+  lowMeans: string;
+  /** True when the number is the wrong way round (arousal is a band, not a tank). */
+  inverted?: boolean;
+}
+
+const LOW_THRESHOLD = 30;
+
+/**
+ * THE CARE READOUT.
+ *
+ * Six numbers, all of them derived from one state: what the body needs, what
+ * the relationship is worth, and how the animal is doing right now.
+ *
+ * "Happiness" is not stored anywhere — it is computed from the other five,
+ * because a number kept in two places drifts and the reader ends up looking
+ * at two truths.
+ */
+/**
+ * "HOW LONG AGO", IN THE WORDS A PERSON WOULD USE.
+ *
+ * "3h ago" and "2d ago" are honest about what the record knows. A precise
+ * clock time would be a lie: the timestamp is when the button was pressed,
+ * which is not the same thing as when the thing happened.
+ */
+function since(at: number | undefined): string {
+  if (!at) return 'never';
+  const minutes = Math.max(0, Math.round((Date.now() - at) / 60_000));
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.round(days / 30)}mo ago`;
+}
+
+/** A clock time, for the hour a thing happened. */
+function clockTime(at: number | null | undefined): string {
+  if (!at) return '—';
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
+  const meters: Meter[] = [
+    { key: 'fullness', label: 'Fullness', value: petState.needs.hunger, lowMeans: 'hungry' },
+    { key: 'energy', label: 'Energy', value: petState.needs.energy, lowMeans: 'tired' },
+    { key: 'hygiene', label: 'Hygiene', value: petState.needs.hygiene, lowMeans: 'dirty' },
+    { key: 'happiness', label: 'Happiness', value: happiness(petState), lowMeans: 'low' },
+    { key: 'trust', label: 'Trust', value: petState.trust, lowMeans: 'distrustful' },
+    { key: 'arousal', label: 'Arousal', value: petState.arousal, lowMeans: 'flat', inverted: true },
+  ];
+
+  const ready = readiness(petState);
+  const asleep = petState.sleep?.asleep ?? false;
+
+  const CARE_LOG = [
+    { key: 'fed', label: 'Fed', at: dog.tamagotchi?.lastFed },
+    { key: 'played', label: 'Played', at: dog.tamagotchi?.lastPlayed },
+    { key: 'walked', label: 'Walked', at: dog.tamagotchi?.lastWalked },
+    { key: 'groomed', label: 'Groomed', at: dog.tamagotchi?.lastGroomed },
+  ];
+
+  /**
+   * THE ONE THING TO DO NEXT.
+   *
+   * Six numbers are data. A sentence is advice. The app owes the reader the
+   * sentence — otherwise the panel is a dashboard nobody can act on.
+   */
+  const nextAction = (): string => {
+    const p = petState.needs;
+    if (p.energy < 25) return `${dog.name} is out of energy. Rest before training.`;
+    if (p.hunger < 30) return `${dog.name} is hungry. Food first — it is worth more when it is asked for.`;
+    if (p.hygiene < 30) return `${dog.name} needs a groom.`;
+    if (petState.trust < 35) return `${dog.name} does not trust you yet. Petting without a request is the only thing that moves it.`;
+    if (petState.arousal > 80) return `${dog.name} is wound up. A walk brings the arousal down.`;
+    if (petState.arousal < 20) return `${dog.name} is flat. Play wakes him up.`;
+    if (ready > 0.7) return `${dog.name} is ready to work. The coach will tell you what to mark.`;
+    return `${dog.name} is comfortable. Nothing is urgent.`;
+  };
+
+  return (
+    <section className="panel region-care h-full" aria-label="Care">
+      <header className="panel-head">
+        <h2 className="label text-zinc-300">Care</h2>
+        <span className="truncate text-[11px] text-zinc-500">
+          {dog.name} / {dog.breed}
+        </span>
+      </header>
+
+      <div className="panel-body p-2.5 gap-2">
+        <div className="grid flex-1 min-h-0 grid-cols-2 content-between gap-x-4 gap-y-2.5">
+          {meters.map((m) => {
+            const isLow = m.inverted
+              ? m.value > 75 || m.value < 20
+              : m.value < LOW_THRESHOLD;
+            const value = Math.round(m.value);
+            return (
+              <div key={m.key} className="min-w-0">
+                <div className="flex items-baseline justify-between gap-1">
+                  <span className="label">{m.label}</span>
+                  {isLow && (
+                    <span className="label text-rose-400 truncate">{m.lowMeans}</span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span
+                    className={`data text-[17px] leading-none ${isLow ? 'text-rose-400' : 'text-zinc-100'}`}
+                  >
+                    {value}
+                  </span>
+                  <span className="data text-[10px] leading-none text-faint">%</span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-valuenow={value}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${m.label}, ${value} percent${isLow ? `, ${m.lowMeans}` : ''}`}
+                  className="h-1 w-full overflow-hidden bg-zinc-900"
+                >
+                  <div
+                    className={`h-full ${isLow ? 'bg-rose-500' : 'bg-accent'}`}
+                    style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* The sentence. One of them, said once, in the reading voice. */}
+        <div className="border-hairline-t pt-2">
+          <p className="label">Now</p>
+          <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
+          <p className="data text-[10px] text-faint mt-1">
+            Ready to work {Math.round(ready * 100)}% · {temperament(petState)}
+          </p>
+        </div>
+
+        {/* THE CARE LOG.
+            The record has carried four timestamps — when he was last fed,
+            played, walked and groomed — since before the app had a place to
+            show them, so they were written and never read. They are here now,
+            because a Tamagotchi's whole pleasure is the question "when did I
+            last do that?", and because a panel with a hole in it is a hole. */}
+        <div className="border-hairline-t pt-2">
+          <p className="label">Last</p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
+            {CARE_LOG.map((row) => (
+              <div key={row.key} className="flex items-baseline justify-between gap-1 min-w-0">
+                <dt className="label truncate">{row.label}</dt>
+                <dd className="data text-[10px] text-zinc-300 shrink-0">{since(row.at)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="data text-[10px] text-faint mt-1.5">
+            {asleep
+              ? `Asleep since ${clockTime(petState.sleep?.fellAsleepAt)}`
+              : petState.sleep?.wakeCount
+                ? `Awake · woken ${petState.sleep.wakeCount}× tonight`
+                : 'Awake'}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};

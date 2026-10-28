@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 
 label = sys.argv[1] if len(sys.argv) > 1 else "current"
 url = sys.argv[2] if len(sys.argv) > 2 else "http://127.0.0.1:4173/"
+EXPECTED_TITLE = sys.argv[3] if len(sys.argv) > 3 else "Canine OS"
 out = os.path.join(".audit", label)
 os.makedirs(out, exist_ok=True)
 
@@ -69,8 +70,22 @@ with sync_playwright() as p:
         page.wait_for_timeout(1500)
         page.wait_for_timeout(2500)
 
+        # WHICH PAGE IS THIS?
+        #
+        # A capture of the wrong site is worse than no capture: it looks like
+        # evidence. The port can already be serving something else — another
+        # project's preview, a stale server — so the title is checked BEFORE
+        # anything is written to disk, and the run fails loudly rather than
+        # quietly producing photographs of somebody else's screen.
+        title = page.title()
+        if EXPECTED_TITLE and EXPECTED_TITLE not in title:
+            raise SystemExit(
+                f"WRONG PAGE at {url}: the title is {title!r}, expected to contain "
+                f"{EXPECTED_TITLE!r}. Refusing to write evidence for another site."
+            )
+
         facts = page.evaluate(PROBE)
-        print(f"\n=== {w}x{h} ===")
+        print(f"\n=== {w}x{h} === ({title})")
         print(json.dumps(facts, indent=2))
 
         cdp_shot(page, os.path.join(out, f"{w}.png"), full_page=True)

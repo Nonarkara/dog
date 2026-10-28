@@ -13,12 +13,12 @@ export const DEFAULT_DOGS: DogProfile[] = [
     isNeutered: true,
     microchipId: 'TH-985141002849102',
     weightKg: 24.8,
-    coatColor: 'Sable Agouti & Pure White (ดำ-น้ำตาล-ขาว)',
+    coatColor: 'Wolf-grey Agouti & Cream White (ดำ-เทา-ขาว)',
     distinctiveMarks: [
-      'Striking dark wolf-sable mask around eyes and ears',
-      'Crisp white vertical blaze down muzzle',
-      'Dense lion-like white mane / chest ruff (แผงคอสิงโต)',
-      'Plumed feathered tail carried proudly',
+      'Soft charcoal wolf-sable mask across the muzzle and around the eyes',
+      'Crisp white vertical blaze running up the muzzle to the forehead',
+      'Enormous cream-white lion mane / chest ruff (แผงคอสิงโต)',
+      'Great cream plumed tail carried curled up over the back',
       'Warm amber-brown watchful eyes',
     ],
     personalityTraits: [
@@ -157,9 +157,12 @@ export const DEFAULT_DOGS: DogProfile[] = [
     metaverseTribe: 'Phitsanulok Bangkaew Order',
     metaverseBio: 'Sovereign Bangkaew guardian. Calm, watchful, proud bearer of the white mane and sable mask.',
     avatarConfig: {
-      baseColor: '#2b2623',      // dark sable saddle
-      secondaryColor: '#f4ede6', // pure white chest/ruff/legs
-      maskColor: '#1c1815',      // dark mask around eyes
+      // Taken from Expo's own photographs, not from a breed book: a coarse
+      // wolf-grey agouti coat with black-tipped guard hairs, a soft charcoal
+      // mask, and a great cream-white ruff, chest and legs.
+      baseColor: '#6b665c',      // wolf-grey agouti coat
+      secondaryColor: '#e8dfcd', // cream ruff, chest, legs, blaze
+      maskColor: '#38352f',      // charcoal mask, muzzle, saddle
       furFluff: 0.9,
       earShape: 'pricked',
       tailShape: 'plume',

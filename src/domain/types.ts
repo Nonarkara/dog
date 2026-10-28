@@ -8,6 +8,20 @@
 export type NeedKey = 'hunger' | 'energy' | 'hygiene';
 
 /**
+ * THE SUBJECT OF A SENTENCE.
+ *
+ * The notes this app writes are about a particular animal, so they use that
+ * animal's name. A note that says "Expo" while the reader is holding Mali is a
+ * lie about who is being cared for; a note that says "he" for a dog the reader
+ * just enrolled as female is a lie about the dog. The subject carries the
+ * name and the sex so that neither has to be guessed at the point of use.
+ */
+export interface Subject {
+  name: string;
+  sex: 'male' | 'female';
+}
+
+/**
  * THE BEHAVIOURS THE SYSTEM TEACHES.
  *
  * A short list, chosen because each one is a different lesson in mechanics:
@@ -93,8 +107,25 @@ export interface Behaviour {
   strength: number;
   /** Reinforced reps with the real animal. */
   reps: number;
+  /**
+   * Reps that HAPPENED with the real animal, whether they were paid for or
+   * not. The coach talks about reps ("do a dozen"), and a dozen is a dozen
+   * whether or not the schedule paid for every third one.
+   */
+  performedReps: number;
   /** Rehearsed reps in the app. These do not raise `strength`. */
   rehearsals: number;
+  /**
+   * How many reps have happened since the last reward.
+   *
+   * It is stored rather than counted out of the history, because the history
+   * is a window of forty: counting from it froze the schedule once the window
+   * filled, and a fixed ratio that never pays again is worse than no schedule
+   * at all.
+   */
+  repsSinceReinforcement: number;
+  /** When the strength was last decayed, so the decay can be applied once. */
+  decayedAt?: number;
   lastReinforcedAt?: string;
   /** Your average marker delay, over recent rehearsals. */
   markerDelayMs: number;
@@ -117,6 +148,77 @@ export interface Personality {
   sensitivity: number;
 }
 
+/**
+ * WHAT THE OWNER SAW.
+ *
+ * The observation log is the channel from the real animal into the model. It
+ * is kept because it is the evidence: a personality number that cannot be
+ * traced back to something that happened is a number nobody should trust.
+ */
+export type ObservationTag =
+  | 'ateNewFoodEagerly'
+  | 'refusedFood'
+  | 'nervousWithStrangers'
+  | 'relaxedWithStrangers'
+  | 'pulledHardOnLeash'
+  | 'pulledCalmOnLeash'
+  | 'soughtOutCompany'
+  | 'hidUnderTheBed'
+  | 'succeededAtCue'
+  | 'ignoredCue';
+
+export interface Observation {
+  tag: ObservationTag;
+  at: string;
+  note?: string;
+}
+
+export const OBSERVATION_LABELS: Record<ObservationTag, string> = {
+  ateNewFoodEagerly: 'Ate a new food eagerly',
+  refusedFood: 'Refused food',
+  nervousWithStrangers: 'Nervous with strangers',
+  relaxedWithStrangers: 'Relaxed with strangers',
+  pulledHardOnLeash: 'Pulled hard on the leash',
+  pulledCalmOnLeash: 'Walked calmly on the leash',
+  soughtOutCompany: 'Sought out company',
+  hidUnderTheBed: 'Hid under the bed',
+  succeededAtCue: 'Succeeded at a cue',
+  ignoredCue: 'Ignored a cue',
+};
+
+export const OBSERVATION_TAGS = Object.keys(OBSERVATION_LABELS) as ObservationTag[];
+
+/**
+ * SLEEP.
+ *
+ * A dog sleeps like we do: at night, and when he is spent. He is harder to
+ * wake than a human is, and — this is the part that matters — if you keep
+ * him up past his bedtime, he does not go straight back down. He takes it
+ * personally, and he sulks.
+ *
+ * That is the whole point of a Tamagotchi: it is fun AND it is a burden,
+ * because you cannot look away for long without something needing you, and
+ * you cannot simply decide the animal is finished for the night.
+ */
+export interface SleepState {
+  /** TRUE when he is asleep, curled up, breathing slowly. */
+  asleep: boolean;
+  /** When he fell asleep. */
+  fellAsleepAt: number | null;
+  /** When he was last woken. */
+  wokenAt: number | null;
+  /** How many times he has been woken since he last settled. */
+  wakeCount: number;
+  /**
+   * How hard it is to settle again, 0..1.
+   *
+   * Waking him raises it. Time asleep lowers it. A dog woken twice in one
+   * night is twice as reluctant to go back down, so the bar for settling
+   * rises with every interruption.
+   */
+  restlessness: number;
+}
+
 export interface PetState {
   updatedAt: number;
   needs: Record<NeedKey, number>;
@@ -128,6 +230,10 @@ export interface PetState {
   behaviours: Record<string, Behaviour>;
   /** Cue name -> conditioned strength, 0..1. */
   associations: Record<string, number>;
+  /** What the owner actually saw, newest last. */
+  observations: Observation[];
+  /** Whether he is asleep, and how hard he is to settle. */
+  sleep: SleepState;
   lastCareAt: number;
   lastRealSessionAt?: number;
   /** The last cue word the owner said, for classical-conditioning pairing. */

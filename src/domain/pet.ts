@@ -32,7 +32,18 @@
  *    produced it.
  */
 
-import type { Behaviour, BehaviourName, PetState, Schedule } from './types';
+import type {
+  Behaviour,
+  BehaviourName,
+  Observation,
+  ObservationTag,
+  PetState,
+  Schedule,
+  SleepState,
+  Subject,
+} from './types';
+
+export type { Observation, ObservationTag };
 
 /** How long after a behaviour a marker still predicts it. */
 export const MARKER_WINDOW_MS = 500;
@@ -58,6 +69,8 @@ export function createPetState(now: number = Date.now()): PetState {
     },
     behaviours: {},
     associations: {},
+    observations: [],
+    sleep: createSleepState(),
     lastCareAt: now,
     lastRealSessionAt: undefined,
     lastCue: undefined,
@@ -65,19 +78,223 @@ export function createPetState(now: number = Date.now()): PetState {
   };
 }
 
+/**
+ * A FRESH NIGHT.
+ *
+ * He is awake, he has not been woken tonight, and nothing is pending.
+ */
+export function createSleepState(): SleepState {
+  return {
+    asleep: false,
+    fellAsleepAt: null,
+    wokenAt: null,
+    wakeCount: 0,
+    restlessness: 0,
+  };
+}
+
+/**
+ * WHEN A DOG SLEEPS.
+ *
+ * He sleeps at night, like we do — from late evening to small hours — and
+ * whenever he is spent. The hours are the house's hours, not the dog's
+ * biology: this is a pet that lives with a person, so the bed belongs to the
+ * person too.
+ */
+export const NIGHT_START_HOUR = 22;
+export const NIGHT_END_HOUR = 6;
+
+/** TRUE when the clock says it is the small hours. */
+export function isNightHour(now: number): boolean {
+  const hour = new Date(now).getHours();
+  return hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR;
+}
+
+/**
+ * HOW STRONGLY HE WANTS TO SLEEP, 0..1.
+ *
+ * Night is most of it; tiredness is the rest. This is the number the app
+ * uses to decide whether he settles on his own, and it is also the number
+ * that makes the small hours feel different from the afternoon.
+ */
+export function sleepPressure(state: PetState, now: number = Date.now()): number {
+  const tired = 1 - state.needs.energy / 100;
+  const night = isNightHour(now) ? 0.65 : 0;
+  // The deepest pressure is in the small hours, not at bedtime.
+  const hour = new Date(now).getHours();
+  const deepNight = hour >= 1 && hour < 4 ? 0.15 : 0;
+  return clamp(night + deepNight + tired * 0.55, 0, 1);
+}
+
+/**
+ * CAN HE SETTLE ON HIS OWN RIGHT NOW?
+ *
+ * Not if he is wound up, and not if he has been woken too many times tonight.
+ * The second one is the rule that makes this a Tamagotchi and not a
+ * checklist: every interruption raises the bar, so keeping him up has a
+ * compounding cost.
+ */
+export function willSettle(state: PetState, now: number = Date.now()): boolean {
+  const sleep = state.sleep ?? createSleepState();
+  if (sleep.asleep) return false;
+  if (sleep.restlessness > 0.55) return false;
+  if (state.arousal > 55) return false;
+  return sleepPressure(state, now) > 0.45;
+}
+
+/**
+ * PUT HIM TO BED.
+ *
+ * If he will not settle, this says so — and says why. "He is too wound up to
+ * settle" is an answer; a silent failure is not.
+ */
+export function settleSleep(
+  state: PetState,
+  now: number = Date.now(),
+  subject?: Subject
+): { state: PetState; note: string } {
+  const p = pronouns(subject);
+  const name = subject?.name?.trim() || 'The dog';
+  const sleep = state.sleep ?? createSleepState();
+
+  if (sleep.asleep) {
+    return { state, note: `${name} is already asleep.` };
+  }
+  if (sleep.restlessness > 0.55) {
+    return {
+      state,
+      note: `${name} will not settle. ${p.subj} has been woken ${sleep.wakeCount} ${
+        sleep.wakeCount === 1 ? 'time' : 'times'
+      } tonight, and ${p.subj} cannot get back down.`,
+    };
+  }
+  if (state.arousal > 55) {
+    return {
+      state,
+      note: `${name} is too wound up to settle. A walk would bring ${p.poss} arousal down.`,
+    };
+  }
+
+  const next: PetState = {
+    ...state,
+    sleep: {
+      asleep: true,
+      fellAsleepAt: now,
+      wokenAt: sleep.wokenAt,
+      wakeCount: 0,
+      restlessness: 0,
+    },
+    arousal: clamp(state.arousal - 18),
+    updatedAt: now,
+  };
+  return {
+    state: next,
+    note: `${name} circles twice and lies down, nose on his paws. Out like a light.`,
+  };
+}
+
+/**
+ * WAKE HIM.
+ *
+ * He does not want to. Waking him costs him energy and raises his
+ * restlessness, so the second and third wake-up of a night are met with less
+ * patience than the first — and he is measurably harder to settle afterwards.
+ */
+export function wake(
+  state: PetState,
+  now: number = Date.now(),
+  subject?: Subject
+): { state: PetState; note: string } {
+  const sleep = state.sleep ?? createSleepState();
+  const p = pronouns(subject);
+  const name = subject?.name?.trim() || 'The dog';
+
+  if (!sleep.asleep) {
+    return { state, note: '' };
+  }
+
+  const wakeCount = sleep.wakeCount + 1;
+  const restlessness = clamp(sleep.restlessness + 0.24);
+  const next: PetState = {
+    ...state,
+    sleep: { ...sleep, asleep: false, wokenAt: now, wakeCount, restlessness },
+    needs: { ...state.needs, energy: clamp(state.needs.energy - 6) },
+    arousal: clamp(state.arousal + 16),
+    updatedAt: now,
+  };
+
+  const note =
+    wakeCount === 1
+      ? `${name} was asleep. ${p.subj} opens one eye, puts ${p.poss} head back down, and does not get up.`
+      : `${name} was asleep — and ${p.subj} has been woken ${wakeCount} times now. ${p.subj} will not settle easily again tonight.`;
+
+  return { state: next, note };
+}
+
+/**
+ * HOW THIS DOG IS, RIGHT NOW.
+ *
+ * A phrase, not a number, because the point of the model is that the
+ * behaviour follows the animal: a food-driven dog works for food, a bold dog
+ * works for the challenge, a sensitive dog needs a quieter criterion. The
+ * temperament is the sentence that names which dog this is.
+ */
+export function temperament(state: PetState): string {
+  const p = state.personality;
+  if (p.sensitivity > 0.35) return 'a dog who notices everything';
+  if (p.foodDrive > 0.5) return 'a dog who works for food';
+  if (p.playDrive > 0.5) return 'a dog who works for the ball';
+  if (p.sociability > 0.4) return 'a dog who wants company';
+  if (p.boldness > 0.4) return 'a dog who is not afraid of anything';
+  if (p.sociability < -0.3) return 'a dog who keeps his own distance';
+  if (p.boldness < -0.3) return 'a careful dog';
+  return 'a steady dog';
+}
+
+/**
+ * HAPPINESS IS NOT A FOURTH BAR.
+ *
+ * It is what the other numbers add up to, so it is computed and never stored.
+ * A number kept in two places drifts, and the reader ends up looking at two
+ * truths. A dog that is fed, rested, clean, and trusts you is happy; a dog
+ * with full bars and a broken bond is not, and this is the number that says
+ * so.
+ */
+export function happiness(state: PetState): number {
+  const body = (state.needs.hunger + state.needs.energy + state.needs.hygiene) / 300;
+  const bond = state.trust / 100;
+  const calm = clamp(1 - Math.abs(state.arousal - 55) / 100);
+  return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100);
+}
+
 /** The pet drifts whether anyone is watching. */
 export function decay(state: PetState, now: number = Date.now()): PetState {
   const hours = Math.max(0, (now - state.updatedAt) / 3_600_000);
   const factor = Math.min(hours, 72); // nobody is away for a month
+  const sleep = state.sleep ?? createSleepState();
+
+  // A dog asleep recovers faster than a dog awake, and settles more deeply.
+  const asleep = sleep.asleep;
+  const energyRate = asleep ? 4.5 : DECAY_PER_HOUR.energy;
+
   const next: PetState = {
     ...state,
     updatedAt: now,
     needs: {
       hunger: clamp(state.needs.hunger - DECAY_PER_HOUR.hunger * factor),
-      energy: clamp(state.needs.energy - DECAY_PER_HOUR.energy * factor),
+      energy: clamp(
+        state.needs.energy + (asleep ? energyRate : -energyRate) * factor
+      ),
       hygiene: clamp(state.needs.hygiene - DECAY_PER_HOUR.hygiene * factor),
     },
     trust: clamp(state.trust - (TRUST_DECAY_PER_DAY * factor) / 24),
+    sleep: {
+      ...sleep,
+      // Time asleep calms him; time awake through the night does not.
+      restlessness: clamp(
+        sleep.restlessness + factor * (asleep ? -0.22 : isNightHour(now) ? 0.06 : 0)
+      ),
+    },
   };
   // A spoken cue expires if nothing follows it — classical conditioning
   // needs the cue and the outcome close together in time.
@@ -100,7 +317,9 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
  * animal — and this is the number the coach shows before a session.
  */
 export function readiness(state: PetState): number {
-  const body = (state.needs.energy / 100) * 0.6 + ((100 - state.needs.hunger) / 100) * 0.4;
+  // `hunger` is FULLNESS: 100 is a full belly. A hungry dog is a dog that will
+  // not work, so a full belly adds to readiness and an empty one subtracts.
+  const body = (state.needs.energy / 100) * 0.6 + (state.needs.hunger / 100) * 0.4;
   const bond = 0.7 + 0.3 * (state.trust / 100);
   const arousalBand = 1 - Math.abs(state.arousal - 55) / 100; // too flat or too wired
   return clamp(body * bond * clamp(arousalBand) * 1.25);
@@ -120,6 +339,24 @@ export interface InteractionResult {
 }
 
 /**
+ * PRONOUNS THAT MATCH THE DOG.
+ *
+ * The household is not all one animal. A note that says "he" about a dog the
+ * reader enrolled as female is a small lie that makes the whole record feel
+ * written about somebody else's dog. So the pronoun comes from the record.
+ */
+export interface Pronouns {
+  subj: string;
+  obj: string;
+  poss: string;
+}
+
+export function pronouns(subject: Subject | undefined): Pronouns {
+  if (subject?.sex === 'female') return { subj: 'she', obj: 'her', poss: 'her' };
+  return { subj: 'he', obj: 'him', poss: 'his' };
+}
+
+/**
  * THE FOUR THINGS YOU CAN DO, AND WHAT THEY COST.
  *
  * Every interaction moves the state, and every one of them can be mistimed.
@@ -130,12 +367,32 @@ export interface InteractionResult {
 export function interact(
   state: PetState,
   action: Interaction,
-  now: number = Date.now()
+  now: number = Date.now(),
+  subject?: Subject
 ): InteractionResult {
+  const p = pronouns(subject);
+  const name = subject?.name?.trim() || 'The dog';
+
+  // ASLEEP FIRST.
+  //
+  // You cannot play with a sleeping dog without waking him, and waking him
+  // costs him. So the interaction goes THROUGH the waking, and the note says
+  // so — the reader is told they interrupted something, rather than being
+  // served a cheerful response from an animal that was not there.
+  let base = state;
+  let wakeNote = '';
+  if ((state.sleep ?? createSleepState()).asleep) {
+    const woken = wake(state, now, subject);
+    base = woken.state;
+    wakeNote = woken.note;
+  }
+
+  const t = temperament(base);
+
   let next: PetState = {
-    ...state,
-    needs: { ...state.needs },
-    personality: { ...state.personality },
+    ...base,
+    needs: { ...base.needs },
+    personality: { ...base.personality },
     updatedAt: now,
     lastCareAt: now,
   };
@@ -143,62 +400,76 @@ export function interact(
   let note = '';
   switch (action) {
     case 'pet': {
-      next.trust = clamp(state.trust + 4);
-      next.arousal = clamp(state.arousal - 6);
-      note = 'Contact without a request. Trust is the only thing it moves.';
+      next.trust = clamp(base.trust + 4);
+      next.arousal = clamp(base.arousal - 6);
+      note =
+        base.trust > 70
+          ? `${name} leans into the hand without being asked. Contact without a request — trust is the only thing it moves.`
+          : 'Contact without a request. Trust is the only thing it moves.';
       break;
     }
     case 'feed': {
-      // `hunger` here is FULLNESS: 100 is a full belly, 30 is an empty one.
-      if (state.needs.hunger < 62) {
+      // `hunger` here is FULLNESS: 100 is a full belly, 30 an empty one.
+      if (base.needs.hunger < 62) {
         // Fed when he asked. The food is worth something, and worth more.
-        next.needs.hunger = clamp(state.needs.hunger + 26);
-        next.personality.foodDrive = clampTrait(state.personality.foodDrive + 0.04);
-        next.arousal = clamp(state.arousal + 10);
-        note = 'Fed while hungry. Good. Food is worth something, and it is worth more now.';
+        next.needs.hunger = clamp(base.needs.hunger + 26);
+        next.personality.foodDrive = clampTrait(base.personality.foodDrive + 0.04);
+        next.arousal = clamp(base.arousal + 10);
+        note =
+          base.personality.foodDrive > 0.45
+            ? 'Fed while hungry, and gone at once. Food is worth something, and it is worth more now.'
+            : 'Fed while hungry. Good. Food is worth something, and it is worth more now.';
       } else {
         // Fed when he did not ask. The food loses its value as a reward.
-        next.personality.foodDrive = clampTrait(state.personality.foodDrive - 0.08);
-        next.arousal = clamp(state.arousal + 8);
+        next.personality.foodDrive = clampTrait(base.personality.foodDrive - 0.08);
+        next.arousal = clamp(base.arousal + 8);
         note = 'Fed while full. The value of food as a reward drops, and asking starts.';
       }
       break;
     }
     case 'play': {
-      const capacity = state.needs.energy / 100;
-      next.needs.energy = clamp(state.needs.energy - 16);
-      next.arousal = clamp(state.arousal + 22 * capacity + (1 - capacity) * 4);
-      next.trust = clamp(state.trust + 2);
-      next.personality.playDrive = clampTrait(state.personality.playDrive + 0.05);
+      const capacity = base.needs.energy / 100;
+      next.needs.energy = clamp(base.needs.energy - 16);
+      next.arousal = clamp(base.arousal + 22 * capacity + (1 - capacity) * 4);
+      next.trust = clamp(base.trust + 2);
+      next.personality.playDrive = clampTrait(base.personality.playDrive + 0.05);
       note =
-        state.needs.energy < 35
-          ? 'Played on an empty tank. He was excited, and then he was done.'
-          : 'Played while he had it in him.';
+        base.needs.energy < 35
+          ? `Played on an empty tank. ${p.subj} was excited, and then ${p.subj} was done.`
+          : base.personality.playDrive > 0.45
+            ? 'Played, and it is the best part of the day. The ball comes back every time.'
+            : 'Played with energy in hand.';
       break;
     }
     case 'groom': {
-      next.needs.hygiene = clamp(state.needs.hygiene + 30);
-      next.trust = clamp(state.trust + 3);
-      next.arousal = clamp(state.arousal - 4);
-      note = 'Groomed. Slow, and worth doing while he is still learning to trust the hand.';
+      next.needs.hygiene = clamp(base.needs.hygiene + 30);
+      next.trust = clamp(base.trust + 3);
+      next.arousal = clamp(base.arousal - 4);
+      note =
+        base.personality.sensitivity > 0.35
+          ? `Groomed. Slow, and worth doing while ${p.subj} is still learning to trust the hand — today ${p.subj} was not sure about it.`
+          : `Groomed. Slow, and worth doing while ${p.subj} is still learning to trust the hand.`;
       break;
     }
     case 'walk': {
-      next.needs.energy = clamp(state.needs.energy - 12);
-      next.arousal = clamp(state.arousal - 18);
-      next.needs.hygiene = clamp(state.needs.hygiene - 4);
-      next.trust = clamp(state.trust + 2);
-      next.personality.boldness = clampTrait(state.personality.boldness + 0.03);
-      note = 'Walked. Arousal down, legs exercised.';
+      next.needs.energy = clamp(base.needs.energy - 12);
+      next.arousal = clamp(base.arousal - 18);
+      next.needs.hygiene = clamp(base.needs.hygiene - 4);
+      next.trust = clamp(base.trust + 2);
+      next.personality.boldness = clampTrait(base.personality.boldness + 0.03);
+      note = `Walked. Arousal down, legs exercised — and ${t} on a walk is a different animal.`;
       break;
     }
   }
 
   // Pair the last spoken cue with this outcome (classical conditioning):
-  // say "dinner", then feed, and Expo learns "dinner" means food is coming.
-  if (state.lastCue && state.lastCueAt && now - state.lastCueAt <= 30_000) {
-    next = strengthenAssociation(next, state.lastCue, 0.06);
+  // say "dinner", then feed, and the dog learns "dinner" means food is coming.
+  if (base.lastCue && base.lastCueAt && now - base.lastCueAt <= 30_000) {
+    next = strengthenAssociation(next, base.lastCue, 0.06);
   }
+
+  // The waking, if there was one, comes first: it is what actually happened.
+  if (wakeNote) note = `${wakeNote} ${note}`;
 
   return { state: next, note };
 }
@@ -215,10 +486,12 @@ export function interact(
 export function communicate(
   state: PetState,
   cue: string,
-  now: number = Date.now()
+  now: number = Date.now(),
+  subject?: Subject
 ): InteractionResult {
   const clean = cue.trim().toLowerCase();
   const strength = associationStrength(state, clean);
+  const name = subject?.name?.trim() || 'The dog';
 
   const next: PetState = {
     ...state,
@@ -230,14 +503,14 @@ export function communicate(
 
   let note = '';
   if (clean === '') {
-    note = "You said nothing. Expo blinked at you.";
+    note = `You said nothing. ${name} blinked at you.`;
   } else if (strength >= 0.5) {
     next.trust = clamp(state.trust + 1);
-    note = `Expo knows "${clean}". His ears prick and he looks at you, waiting.`;
+    note = `${name} knows "${clean}". Ears prick, and ${name} looks at you, waiting.`;
   } else if (strength > 0) {
-    note = `Expo recognizes "${clean}" a little. He tilts his head, not quite sure what it means yet.`;
+    note = `${name} recognizes "${clean}" a little. A head tilt — not quite sure what it means yet.`;
   } else {
-    note = `Expo doesn't know "${clean}" yet. He looks at you, waiting for you to show him.`;
+    note = `${name} doesn't know "${clean}" yet. ${name} looks at you, waiting to be shown.`;
   }
 
   return { state: next, note };
@@ -251,25 +524,11 @@ export function communicate(
  * that the model becomes a description of THIS dog, and the training
  * protocol can be chosen to suit him (a sensitive dog needs a quieter
  * criterion; a food-driven dog can carry a variable schedule).
+ *
+ * The log is KEPT, not just applied. A trait with no record behind it is a
+ * number the reader cannot check, and an owner who cannot check a number
+ * stops believing the rest of them.
  */
-export type ObservationTag =
-  | 'ateNewFoodEagerly'
-  | 'refusedFood'
-  | 'nervousWithStrangers'
-  | 'relaxedWithStrangers'
-  | 'pulledHardOnLeash'
-  | 'pulledCalmOnLeash'
-  | 'soughtOutCompany'
-  | 'hidUnderTheBed'
-  | 'succeededAtCue'
-  | 'ignoredCue';
-
-export interface Observation {
-  tag: ObservationTag;
-  at: string;
-  note?: string;
-}
-
 const OBSERVATION_EFFECTS: Record<ObservationTag, Partial<PetState['personality']>> = {
   ateNewFoodEagerly: { foodDrive: 0.12 },
   refusedFood: { foodDrive: -0.1 },
@@ -283,6 +542,10 @@ const OBSERVATION_EFFECTS: Record<ObservationTag, Partial<PetState['personality'
   ignoredCue: { sensitivity: 0.05, boldness: -0.04 },
 };
 
+/** How many observations are kept. The newest are the ones that describe the
+ *  dog as it is now. */
+const OBSERVATION_LOG_LIMIT = 60;
+
 export function observe(state: PetState, observation: Observation): PetState {
   const effect = OBSERVATION_EFFECTS[observation.tag] ?? {};
   const personality = { ...state.personality };
@@ -290,7 +553,8 @@ export function observe(state: PetState, observation: Observation): PetState {
     const k = key as keyof typeof personality;
     personality[k] = clampTrait(personality[k] + (delta ?? 0));
   }
-  return { ...state, personality, updatedAt: Date.now() };
+  const observations = [...(state.observations ?? []), observation].slice(-OBSERVATION_LOG_LIMIT);
+  return { ...state, personality, observations, updatedAt: Date.now() };
 }
 
 /** A cue the pet has learned to associate with something. */
@@ -317,16 +581,38 @@ export function associationStrength(state: PetState, cue: string): number {
   return state.associations[key] ?? 0;
 }
 
-/** Extinction: a behaviour nobody rewards stops, and spikes first. */
+/**
+ * EXTINCTION: a behaviour nobody rewards stops.
+ *
+ * The strength is a probability, so it lives between 0 and 1 — and it was
+ * being clamped to 100, which let it read "10000%" in the coach after an
+ * afternoon. It is also applied against the time since the last call, so the
+ * decay is now anchored to `decayedAt`: the same behaviour, decayed to the
+ * same moment, always gives the same number. A model that changes when you
+ * look at it is not a model.
+ *
+ * The BURST is not baked into the number. The extinction burst is a rise in
+ * the RATE of responding for a few days after the reward stops, and owners
+ * read it as stubbornness. A probability cannot show a rate, so the app says
+ * it in words instead (see the coach's advice) rather than pretending the
+ * number spiked.
+ */
 export function decayBehaviour(behaviour: Behaviour, now: number = Date.now()): Behaviour {
-  if (!behaviour.lastReinforcedAt) return behaviour;
-  const days = (now - new Date(behaviour.lastReinforcedAt).getTime()) / 86_400_000;
-  if (days <= 0) return behaviour;
-  // The extinction burst: a few days after the last reward, the behaviour
-  // gets MORE likely before it collapses. Owners read this as stubbornness.
-  const burst = days < 3 ? 1 + 0.25 * Math.sin((days / 3) * Math.PI) : 1;
+  const anchor = behaviour.decayedAt ?? behaviour.lastReinforcedAt;
+  if (!anchor) return behaviour;
+  const elapsed = now - new Date(anchor).getTime();
+  // The app decays once a minute. A second call a moment later must not move
+  // the number: a model that changes when you look at it is not a model.
+  if (elapsed < 60_000) return { ...behaviour, decayedAt: behaviour.decayedAt ?? now };
+  const days = elapsed / 86_400_000;
+  if (days <= 0) return { ...behaviour, decayedAt: now };
   const decayRate = 0.06 * (behaviour.schedule === 'continuous' ? 1.6 : 1);
-  return { ...behaviour, strength: clamp(behaviour.strength * (1 - decayRate * days) * burst) };
+  const factor = Math.max(0, 1 - decayRate * days);
+  return {
+    ...behaviour,
+    strength: Math.min(1, Math.max(0, behaviour.strength * factor)),
+    decayedAt: now,
+  };
 }
 
 export function getBehaviour(state: PetState, name: BehaviourName): Behaviour {
@@ -335,7 +621,9 @@ export function getBehaviour(state: PetState, name: BehaviourName): Behaviour {
       name,
       strength: 0,
       reps: 0,
+      performedReps: 0,
       rehearsals: 0,
+      repsSinceReinforcement: 0,
       markerDelayMs: 0,
       schedule: 'continuous' as Schedule,
       cues: [],
