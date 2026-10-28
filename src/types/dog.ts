@@ -80,6 +80,8 @@ export interface DogProfile {
     baseColor: string;
     secondaryColor: string;
     maskColor: string;
+    pointColor?: string; // tan points; defaults to baseColor
+    pattern?: import('../domain/coat').CoatPattern; // defaults to 'solid'
     furFluff: number; // 0 - 1
     earShape: 'pricked' | 'floppy' | 'semi-pricked';
     tailShape: 'curl' | 'plume' | 'straight' | 'bob';

@@ -13,7 +13,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     isNeutered: true,
     microchipId: 'TH-985141002849102',
     weightKg: 24.8,
-    coatColor: 'Wolf-grey Agouti & Cream White (ดำ-เทา-ขาว)',
+    coatColor: 'White with black-tan saddle and mask (ขาว-ดำ)',
     distinctiveMarks: [
       'Soft charcoal wolf-sable mask across the muzzle and around the eyes',
       'Crisp white vertical blaze running up the muzzle to the forehead',
@@ -157,12 +157,14 @@ export const DEFAULT_DOGS: DogProfile[] = [
     metaverseTribe: 'Phitsanulok Bangkaew Order',
     metaverseBio: 'Sovereign Bangkaew guardian. Calm, watchful, proud bearer of the white mane and sable mask.',
     avatarConfig: {
-      // Taken from Expo's own photographs, not from a breed book: a coarse
-      // wolf-grey agouti coat with black-tipped guard hairs, a soft charcoal
-      // mask, and a great cream-white ruff, chest and legs.
-      baseColor: '#6b665c',      // wolf-grey agouti coat
-      secondaryColor: '#e8dfcd', // cream ruff, chest, legs, blaze
-      maskColor: '#38352f',      // charcoal mask, muzzle, saddle
+      // From Expo's photographs (design/reference/expo): a mostly WHITE
+      // Bangkaew with a black, brown-tipped saddle, a dark mask with a white
+      // blaze and muzzle, tan cheeks and brows, and a white plume tail.
+      pattern: 'bangkaew',
+      baseColor: '#ece7de',      // white coat
+      secondaryColor: '#f8f6f1', // brighter white: mane, muzzle, paws
+      maskColor: '#211c18',      // black saddle, mask, ears
+      pointColor: '#9a6c43',     // tan tipping, cheeks, brows
       furFluff: 0.9,
       earShape: 'pricked',
       tailShape: 'plume',
@@ -219,6 +221,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     metaverseTribe: 'Bangkok Street Pack',
     metaverseBio: 'Golden-hearted street dog turned sofa guardian. Food is her language.',
     avatarConfig: {
+      pattern: 'solid',
       baseColor: '#c98a2e',
       secondaryColor: '#f7f5f0',
       maskColor: '#451a03',
@@ -278,6 +281,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     metaverseTribe: 'Phitsanulok Ridge Line',
     metaverseBio: 'Athletic guardian with an independent streak. Runs first, asks later.',
     avatarConfig: {
+      pattern: 'saddle',
       baseColor: '#6b3a1a',
       secondaryColor: '#f4ede6',
       maskColor: '#2b1a0e',
@@ -384,6 +388,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     metaverseTribe: 'Golden Valley Pack',
     metaverseBio: 'Unstoppable tail-wagger. Always searching for the next tennis ball.',
     avatarConfig: {
+      pattern: 'solid',
       baseColor: '#e09838',      // warm golden
       secondaryColor: '#f7d399', // lighter golden ruff
       maskColor: '#c47d20',

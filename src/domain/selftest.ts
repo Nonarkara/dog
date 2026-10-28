@@ -11,6 +11,7 @@
 import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate } from './pet';
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
+import { coatColorAt } from './coat';
 
 let failures = 0;
 let checks = 0;
@@ -290,6 +291,14 @@ const later = decay(before, Date.now() + 3_600_000);
 ok('an hour of drift makes a dog hungrier', later.needs.hunger < before.needs.hunger, `${later.needs.hunger} vs ${before.needs.hunger}`);
 ok('drift does not touch the body it did not drift', later.needs.energy <= before.needs.energy);
 ok('drift keeps the observation log', later.observations.length === before.observations.length);
+
+console.log('\nTHE COAT');
+const expoCoat = { base: '#ece7de', light: '#f8f6f1', dark: '#211c18', point: '#9a6c43' };
+const lum = ([r, g, b]: [number, number, number]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+ok('Expo is white at the chest', lum(coatColorAt('mane', 0, 0, 0.3, 'bangkaew', expoCoat)) > 0.85);
+ok('Expo is dark on the saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'bangkaew', expoCoat)) < 0.35);
+ok('the blaze is white between the eyes', lum(coatColorAt('head', 0, 0.15, 0.25, 'bangkaew', expoCoat)) > 0.7);
+ok('a solid dog has no saddle', lum(coatColorAt('torso', 0, 0.3, -0.1, 'solid', expoCoat)) > 0.8);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

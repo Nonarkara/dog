@@ -270,7 +270,17 @@ export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return fallback;
 
-    const migrated = parsed.map(migrateDog).filter((d): d is DogProfile => d !== null);
+    const migrated = parsed
+      .map(migrateDog)
+      .filter((d): d is DogProfile => d !== null)
+      // A starter dog saved before coats had patterns carries the old, wrong
+      // colours (Expo was stored as wolf-grey). Take the corrected coat from
+      // the defaults, keeping any model the owner imported.
+      .map((d) => {
+        const def = fallback.find((f) => f.id === d.id);
+        if (!def || d.avatarConfig?.pattern) return d;
+        return { ...d, coatColor: def.coatColor, avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig?.customModelUrl } };
+      });
     if (migrated.length === 0) return fallback;
     if (readSchemaVersion() !== SCHEMA_VERSION) writeSchemaVersion();
     return migrated;

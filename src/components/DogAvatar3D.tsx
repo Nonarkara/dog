@@ -1,21 +1,47 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
+import { coatColorAt, coatOf, type CoatPart } from '../domain/coat';
 import { sound } from '../utils/proceduralAudio';
+
+/** What the body is doing. Training (and sleep) set it; the avatar eases into it. */
+export type AvatarPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep';
 
 interface DogAvatar3DProps {
   dog: DogProfile;
   petState: PetState;
   interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null;
   onInteractionEnd?: () => void;
+  pose?: AvatarPose;
 }
+
+/**
+ * THE POSES, AS NUMBERS.
+ *
+ * The body hangs off a "chassis" that pivots at the hips, so a sit is one
+ * tilt of the chassis plus the legs folding — not a second model.
+ *   rootY      how far the whole dog sinks
+ *   pitch      chassis tilt at the hips (negative = nose up)
+ *   front/back leg swing at the shoulder / hip (negative = forward)
+ *   frontR     the right foreleg on its own (the paw lift)
+ *   headY/headPitch  the head dropping toward the paws
+ */
+const POSES: Record<AvatarPose, { rootY: number; pitch: number; front: number; frontR: number; back: number; headY: number; headPitch: number }> = {
+  stand: { rootY: 0, pitch: 0, front: 0, frontR: 0, back: 0, headY: 0, headPitch: 0 },
+  sit: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: 0.45, back: -1.45, headY: 0.02, headPitch: 0.3 },
+  paw: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: -0.75, back: -1.45, headY: 0.02, headPitch: 0.3 },
+  down: { rootY: -0.27, pitch: 0, front: -1.5, frontR: -1.5, back: -1.45, headY: -0.04, headPitch: 0 },
+  sleep: { rootY: -0.27, pitch: 0, front: -1.5, frontR: -1.5, back: -1.45, headY: -0.3, headPitch: 0.42 },
+};
 
 export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   dog,
   petState,
   interactionTrigger,
   onInteractionEnd,
+  pose = 'stand',
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
@@ -30,18 +56,17 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
    */
   const [webglError, setWebglError] = useState<string | null>(null);
 
-  // References to animated dog parts
+  // The scene is built once per dog, but the dog's mood changes every
+  // minute. The render loop reads mood through refs, never through the
+  // closure it was born in — the old build froze Expo's mood at mount.
+  const petStateRef = useRef(petState);
+  petStateRef.current = petState;
+  const poseRef = useRef(pose);
+  poseRef.current = pose;
+
   const dogParts = useRef<{
     root: THREE.Group;
     head: THREE.Group;
-    tail: THREE.Group;
-    leftEar: THREE.Group;
-    rightEar: THREE.Group;
-    tongue: THREE.Mesh;
-    frontLeftLeg: THREE.Group;
-    frontRightLeg: THREE.Group;
-    backLeftLeg: THREE.Group;
-    backRightLeg: THREE.Group;
     heartsGroup: THREE.Group;
     foodItem: THREE.Group | null;
     ballItem: THREE.Mesh | null;
@@ -50,20 +75,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   const interactionState = useRef<{
     type: 'idle' | 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate';
     timer: number;
-    intensity: number;
-  }>({
-    type: 'idle',
-    timer: 0,
-    intensity: 1,
-  });
+  }>({ type: 'idle', timer: 0 });
 
   useEffect(() => {
     if (!interactionTrigger) return;
-    interactionState.current = {
-      type: interactionTrigger,
-      timer: 120, // ~2 seconds at 60fps
-      intensity: 1,
-    };
+    interactionState.current = { type: interactionTrigger, timer: 2 };
 
     if (interactionTrigger === 'pet') {
       sound.happyYip();
@@ -92,57 +108,41 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   const spawnHeart = () => {
     if (!dogParts.current) return;
     const { heartsGroup } = dogParts.current;
-    const heartGeo = new THREE.SphereGeometry(0.12, 6, 6);
-    const heartMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-    const heart = new THREE.Mesh(heartGeo, heartMat);
-    heart.position.set(
-      (Math.random() - 0.5) * 0.6,
-      1.2,
-      (Math.random() - 0.5) * 0.6
+    const heart = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
     );
-    (heart as any).vy = 0.02 + Math.random() * 0.02;
-    (heart as any).life = 1.0;
+    heart.position.set((Math.random() - 0.5) * 0.6, 1.55, 0.3 + (Math.random() - 0.5) * 0.4);
+    heart.userData = { vy: 0.5 + Math.random() * 0.4, life: 1 };
     heartsGroup.add(heart);
   };
 
   const spawnFood = () => {
     if (!dogParts.current) return;
-    // Create cute bone geometry
     const group = new THREE.Group();
-    const shaftGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 8);
-    const shaftMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xf3eee4, roughness: 0.5 });
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 10), mat);
     shaft.rotation.z = Math.PI / 2;
     group.add(shaft);
-
-    const tipGeo = new THREE.SphereGeometry(0.06, 8, 8);
-    const t1 = new THREE.Mesh(tipGeo, shaftMat);
-    t1.position.set(-0.16, 0.05, 0);
-    const t2 = new THREE.Mesh(tipGeo, shaftMat);
-    t2.position.set(-0.16, -0.05, 0);
-    const t3 = new THREE.Mesh(tipGeo, shaftMat);
-    t3.position.set(0.16, 0.05, 0);
-    const t4 = new THREE.Mesh(tipGeo, shaftMat);
-    t4.position.set(0.16, -0.05, 0);
-    group.add(t1, t2, t3, t4);
-
-    group.position.set(0, 1.8, 1.0);
-    group.scale.set(1.2, 1.2, 1.2);
+    const tipGeo = new THREE.SphereGeometry(0.05, 10, 8);
+    for (const [x, y] of [[-0.15, 0.04], [-0.15, -0.04], [0.15, 0.04], [0.15, -0.04]]) {
+      const tip = new THREE.Mesh(tipGeo, mat);
+      tip.position.set(x, y, 0);
+      group.add(tip);
+    }
+    group.position.set(0, 1.7, 0.95);
     dogParts.current.root.add(group);
     dogParts.current.foodItem = group;
   };
 
   const spawnBall = () => {
     if (!dogParts.current) return;
-    const ballGeo = new THREE.SphereGeometry(0.16, 16, 16);
-    const ballMat = new THREE.MeshStandardMaterial({
-      color: 0xccff00, // vibrant tennis yellow
-      roughness: 0.8,
-    });
-    const ball = new THREE.Mesh(ballGeo, ballMat);
-    ball.position.set(1.2, 1.5, 1.2);
-    (ball as any).vy = -0.04;
-    (ball as any).vx = -0.02;
+    const ball = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.8 })
+    );
+    ball.position.set(1.0, 1.4, 1.0);
+    ball.userData = { vx: -0.9, vy: 0 };
     dogParts.current.root.add(ball);
     dogParts.current.ballItem = ball;
   };
@@ -151,42 +151,31 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const container = mountRef.current;
     if (!container) return;
 
-    // Dimensions
     const width = container.clientWidth || 390;
     const height = container.clientHeight || 320;
 
-    // Scene & Camera
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0c0c0e); // Sleek dark console tone
+    scene.background = new THREE.Color(0x0c0c0e);
 
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    // THE FRAMING IS A FUNCTION OF THE BOX, NOT A CONSTANT.
-    //
-    // The stage is a tall column on a wide screen and a wide rectangle on a
-    // phone, and a fixed camera distance crops the dog in one and strands it
-    // in the other. So the distance is solved from the container's aspect:
-    // far enough back that the whole animal — nose to tail, paw to ear tip —
-    // fits in BOTH axes, with a little air around it.
-    const DOG_HEIGHT = 1.85; // ground to ear tip
-    const DOG_WIDTH = 2.15; // nose to the tip of the tail
+    const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
+    // THE FRAMING IS A FUNCTION OF THE BOX, NOT A CONSTANT: the distance is
+    // solved so the whole dog — paw to ear tip, nose to plume — fits in both
+    // axes of whatever region the cockpit gives the stage.
+    const DOG_HEIGHT = 1.85;
+    const DOG_WIDTH = 1.95;
     const fitCamera = (w: number, h: number) => {
       const vFov = (camera.fov * Math.PI) / 180;
       const hFov = 2 * Math.atan(Math.tan(vFov / 2) * (w / h));
       const distV = DOG_HEIGHT / 2 / Math.tan(vFov / 2);
       const distH = DOG_WIDTH / 2 / Math.tan(hFov / 2);
       const dist = Math.max(distV, distH) * 1.08;
-      camera.position.set(0, 0.72 + dist * 0.16, dist);
-      camera.lookAt(0, 0.78, 0);
+      camera.position.set(0, 0.85 + dist * 0.14, dist);
+      camera.lookAt(0, 0.8, 0);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     };
     fitCamera(width, height);
 
-    // Renderer
-    //
-    // A browser with no WebGL — a blocklisted GPU, a hardened profile, a
-    // machine with no graphics driver — used to throw here, and the stage
-    // stayed black. The failure is caught and stated instead.
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -199,833 +188,483 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     }
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
+    renderer.domElement.style.touchAction = 'none';
 
-    // Lights.
-    //
-    // The first cut used a hot ambient (1.1) plus a hot key (2.0) plus an
-    // amber rim (1.8). The result was a bleached white creature on a brown
-    // disc: the ambient washed out the sable, and the amber rim — which is
-    // the UI's accent — lit the whole podium toffee.
-    //
-    // The accent belongs to the interface, not to the fur. The rim is now a
-    // dim neutral, and the key does the modelling.
-    const ambientLight = new THREE.AmbientLight(0xd8dbe4, 0.42);
-    scene.add(ambientLight);
+    // Light. A white dog under a hot key light is a white blob, so the key
+    // is moderate and a sky/ground hemisphere does the soft plush modelling.
+    // The amber accent belongs to the interface, never to the fur.
+    scene.add(new THREE.HemisphereLight(0xf2f4fa, 0x2a2622, 1.25));
+    const key = new THREE.DirectionalLight(0xfff3e4, 1.7);
+    key.position.set(3, 6, 5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.radius = 4;
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xa9bbd8, 0.9);
+    rim.position.set(-4, 3, -4);
+    scene.add(rim);
 
-    const dirLight = new THREE.DirectionalLight(0xfff4e6, 2.4);
-    dirLight.position.set(4, 6, 5);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    scene.add(dirLight);
-
-    // A cool fill from behind separates the sable saddle from the ground.
-    const rimLight = new THREE.DirectionalLight(0x9fb4d6, 1.1);
-    rimLight.position.set(-4, 3, -4);
-    scene.add(rimLight);
-
-    // Floor Platform (Minimalist studio podium with hairlines)
-    const podiumGeo = new THREE.CylinderGeometry(1.9, 2.0, 0.1, 32);
-    const podiumMat = new THREE.MeshStandardMaterial({
-      color: 0x18181b,
-      roughness: 0.7,
-      metalness: 0.1,
-    });
-    const podium = new THREE.Mesh(podiumGeo, podiumMat);
+    const podium = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.9, 2.0, 0.1, 48),
+      new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.75, metalness: 0.1 })
+    );
     podium.position.y = -0.05;
     podium.receiveShadow = true;
     scene.add(podium);
-
-    const ringGeo = new THREE.RingGeometry(1.88, 1.9, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
-      side: THREE.DoubleSide,
-      opacity: 0.4,
-      transparent: true,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(1.88, 1.9, 64),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, opacity: 0.4, transparent: true })
+    );
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.005;
     scene.add(ring);
 
     // ==========================================
-    // BUILD BANGKAEW / EXPO PROCEDURAL 3D AVATAR
+    // THE PLUSH BANGKAEW
     // ==========================================
+    //
+    // Three earlier builds placed dozens of primitives side by side, and the
+    // eye read every primitive: the ruff became a stack of cone cups. This
+    // one is a handful of big, overlapping, soft volumes — skull, cheeks,
+    // muzzle, a lion's mane, a bean of a body, stubby legs, a curled plume —
+    // painted by one coat rule and covered in shell fur, so the seams vanish
+    // under the fluff the way they do on a plush toy.
+    //
+    // Bangkaew signatures carried on purpose: a broad wedge head with cheek
+    // ruff, small thick prick ears set high, a mane round neck and chest,
+    // feathered "pants", and a plume carried over the back.
+    const { pattern, colors } = coatOf(dog.avatarConfig);
+    const fluff = 0.45 + 0.75 * (dog.avatarConfig.furFluff ?? 0.6);
+
+    // Shell fur: the same surface drawn again, pushed out along its normals,
+    // each layer keeping fewer strands. Fewer layers on phones.
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const SHELLS = coarse ? 7 : 11;
+
+    const strandTex = (() => {
+      // Random per texel, but sampled smoothly: soft clumps of fur, not the
+      // single-pixel static a nearest-filtered noise gives.
+      const size = 128;
+      const data = new Uint8Array(size * size * 4);
+      for (let i = 0; i < size * size; i++) {
+        const v = Math.floor(Math.random() * 255);
+        data[i * 4] = v;
+        data[i * 4 + 1] = v;
+        data[i * 4 + 2] = v;
+        data[i * 4 + 3] = 255;
+      }
+      const tex = new THREE.DataTexture(data, size, size);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(9, 5);
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.needsUpdate = true;
+      return tex;
+    })();
+
+    const skinMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    const shellMats = Array.from({ length: SHELLS }, (_, i) => {
+      const k = (i + 1) / SHELLS;
+      const m = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 1,
+        alphaMap: strandTex,
+        alphaTest: 0.08 + 0.86 * k,
+      });
+      // Inner layers sit in the shade of the outer ones.
+      m.color.setScalar(0.7 + 0.3 * k);
+      m.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nattribute float furLen;')
+          .replace(
+            '#include <begin_vertex>',
+            `#include <begin_vertex>
+             transformed += normal * furLen * ${k.toFixed(3)};
+             transformed.y -= furLen * ${(k * k * 0.35).toFixed(3)};`
+          );
+      };
+      m.customProgramCacheKey = () => `shell-${i}`;
+      return m;
+    });
+
+    /**
+     * A soft volume: a sphere-like geometry scaled (the scale is baked into
+     * the vertices, so normals and fur length stay true), painted by the
+     * coat rule in its own coordinates, then moved into place.
+     */
+    const paint = (
+      geo: THREE.BufferGeometry,
+      part: CoatPart,
+      fur: number | ((x: number, y: number, z: number) => number),
+      coords: (x: number, y: number, z: number) => [number, number, number] = (x, y, z) => [x, y, z]
+    ) => {
+      const pos = geo.getAttribute('position');
+      const col = new Float32Array(pos.count * 3);
+      const len = new Float32Array(pos.count);
+      const tmp = new THREE.Color();
+      for (let i = 0; i < pos.count; i++) {
+        const [cx, cy, cz] = coords(pos.getX(i), pos.getY(i), pos.getZ(i));
+        const [r, g, b] = coatColorAt(part, cx, cy, cz, pattern, colors);
+        // The coat rule speaks sRGB; the renderer works in linear light.
+        tmp.setRGB(r, g, b, THREE.SRGBColorSpace);
+        col[i * 3] = tmp.r;
+        col[i * 3 + 1] = tmp.g;
+        col[i * 3 + 2] = tmp.b;
+        len[i] = (typeof fur === 'number' ? fur : fur(pos.getX(i), pos.getY(i), pos.getZ(i))) * fluff;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geo.setAttribute('furLen', new THREE.BufferAttribute(len, 1));
+      return geo;
+    };
+
+    const blob = (sx: number, sy: number, sz: number, w = 40, h = 28) =>
+      new THREE.SphereGeometry(1, w, h).scale(sx, sy, sz);
+
+    /** One furry mesh: a skin plus its shells, all sharing one geometry. */
+    const furry = (geo: THREE.BufferGeometry, shells = true) => {
+      const group = new THREE.Group();
+      const skin = new THREE.Mesh(geo, skinMat);
+      skin.castShadow = true;
+      skin.userData.skin = true;
+      group.add(skin);
+      if (shells) {
+        for (const m of shellMats) group.add(new THREE.Mesh(geo, m));
+      }
+      return group;
+    };
+
     const dogRoot = new THREE.Group();
     scene.add(dogRoot);
 
-    // THE COAT.
-    //
-    // Taken from Expo's own photographs, not from a breed book: a coarse
-    // WOLF-GREY AGOUTI coat with black-tipped guard hairs (salt-and-pepper),
-    // a soft CHARCOAL mask across the muzzle and around both eyes, and a huge
-    // CREAM-WHITE ruff, chest, belly and legs.
-    //
-    // The previous build had this exactly wrong — a chocolate-brown body
-    // with a white head — and the record's own colour fields were wrong too,
-    // which is why the dog read as a paper craft rather than as this animal.
-    const overlay = new THREE.Color(dog.avatarConfig.maskColor || '#3a3630');
-    const cream = new THREE.Color(dog.avatarConfig.secondaryColor || '#e6ddcc');
-    const coatBase = new THREE.Color(dog.avatarConfig.baseColor || '#6f6a5f');
-
-    // The agouti body: the recorded base, pulled slightly toward the cream
-    // so it reads as a soft winter coat rather than a flat grey.
-    const agouti = coatBase.clone().lerp(cream, 0.18);
-    // The lighter grey on the flanks and the upper legs.
-    const agoutiLight = coatBase.clone().lerp(cream, 0.42);
-    // The shadow inside the charcoal overlay, so the mask is not a flat hole.
-    const overlayDeep = overlay.clone().multiplyScalar(0.72);
-
-    // Materials
-    const agoutiMat = new THREE.MeshStandardMaterial({
-      color: agouti,
-      roughness: 0.9,
-      metalness: 0.02,
-    });
-    const whiteFurMat = new THREE.MeshStandardMaterial({
-      color: agoutiLight,
-      roughness: 0.88,
-      metalness: 0.02,
-    });
-    const creamFurMat = new THREE.MeshStandardMaterial({
-      color: cream,
-      roughness: 0.86,
-      metalness: 0.02,
-    });
-    // The charcoal overlay: mask, muzzle, saddle, ear tips.
-    const maskMat = new THREE.MeshStandardMaterial({
-      color: overlay,
-      roughness: 0.92,
-      metalness: 0.02,
-    });
-    const maskDeepMat = new THREE.MeshStandardMaterial({
-      color: overlayDeep,
-      roughness: 0.94,
-      metalness: 0.02,
-    });
-    const noseMat = new THREE.MeshStandardMaterial({
-      color: 0x0d0c0b,
-      roughness: 0.28,
-    });
-    // Expo's eyes are amber-brown.
-    const eyeMat = new THREE.MeshStandardMaterial({
-      color: 0x8a5a1c,
-      roughness: 0.16,
-      metalness: 0.1,
-    });
-    const pupilMat = new THREE.MeshStandardMaterial({
-      color: 0x0b0908,
-      roughness: 0.1,
-    });
-    const tongueMat = new THREE.MeshStandardMaterial({
-      color: 0xe4636f,
-      roughness: 0.4,
-    });
-
-    // 1. THE BODY.
-    //
-    // A dog's torso is HORIZONTAL and tapers: deep chest in front, a tucked
-    // waist, and a croup that rises to the tail. The previous build was a
-    // vertical cylinder with a box on top, which is why it read as a barrel
-    // with a brick strapped to it.
-    //
-    // Then the second build stacked four ellipsoids on top of each other,
-    // which read as a snowman. The body is a SURFACE OF REVOLUTION now — one
-    // lathe, turned along the spine, with a profile that carries the whole
-    // silhouette: the depth of the chest, the tuck of the waist, the rise of
-    // the croup. One continuous skin, no seams to read as lumps.
-    const torso = new THREE.Group();
-    torso.position.y = 0.66;
-
-    // The profile, in radius-and-along-the-spine. Revolved, this IS the dog.
-    const BODY_PROFILE: [number, number][] = [
-      [0.03, -0.64],
-      [0.17, -0.60],
-      [0.29, -0.50],
-      [0.32, -0.32],
-      [0.29, -0.14],
-      [0.31, 0.02],
-      [0.37, 0.18],
-      [0.35, 0.30],
-      [0.23, 0.41],
-      [0.14, 0.50],
-    ];
-    const bodyGeo = new THREE.LatheGeometry(
-      BODY_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)),
-      28
-    );
-    const bodyMesh = new THREE.Mesh(bodyGeo, agoutiMat);
-    // The lathe's axis is Y; the spine is Z.
-    bodyMesh.rotation.x = Math.PI / 2;
-    bodyMesh.castShadow = true;
-    bodyMesh.receiveShadow = true;
-    torso.add(bodyMesh);
-
-    // THE SADDLE — the charcoal overlay over the back and shoulders.
-    //
-    // A second, smaller lathe laid over the first, so it breaks the surface
-    // only along the top: a dark band down the spine, with the agouti
-    // showing at the flanks and the chest.
-    const SADDLE_PROFILE: [number, number][] = [
-      [0.03, -0.58],
-      [0.16, -0.54],
-      [0.25, -0.44],
-      [0.27, -0.26],
-      [0.245, -0.10],
-      [0.255, 0.02],
-      [0.29, 0.14],
-      [0.26, 0.24],
-      [0.16, 0.32],
-    ];
-    const saddleGeo = new THREE.LatheGeometry(
-      SADDLE_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)),
-      24
-    );
-    const saddle = new THREE.Mesh(saddleGeo, maskMat);
-    saddle.rotation.x = Math.PI / 2;
-    // Lifted so the dark band sits ON the back rather than inside the body.
-    saddle.position.y = 0.10;
-    saddle.castShadow = true;
-    torso.add(saddle);
-
-    // THE WHITE CHEST — the underside and the front of the chest, which on a
-    // Bang Kaew carries the white that runs up into the throat.
-    const chestWhite = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), creamFurMat);
-    chestWhite.scale.set(0.32, 0.30, 0.28);
-    chestWhite.position.set(0, -0.20, 0.30);
-    torso.add(chestWhite);
-
-    // BANGKAEW SIGNATURE: THE LION MANE (แผงคอสิงโต).
-    //
-    // The breed is named for it, and on Expo it is enormous: a cream-white
-    // mane standing out around the neck, framing the dark face and falling
-    // over the chest.
-    //
-    // Three attempts failed before this one. A cylinder collar with two cones
-    // read as FINS. A ring of sharp downward cones read as a PICKET FENCE. A
-    // ring of round tufts read as a NECKLACE OF PEARLS. What a mane is, is a
-    // continuous MASS with a ragged edge — so it is a flared shell (which
-    // gives the unbroken volume) with tufts breaking its lower rim (which
-    // gives the ragged edge). Volume first, detail second.
-    const ruffGroup = new THREE.Group();
-    ruffGroup.position.set(0, 0.30, 0.40);
-
-    // The shell: an open cone, wide at the bottom, narrow at the throat.
-    const ruffShell = new THREE.Mesh(
-      new THREE.ConeGeometry(0.255, 0.62, 20, 1, true),
-      creamFurMat
-    );
-    ruffShell.material.side = THREE.DoubleSide;
-    ruffShell.position.y = -0.22;
-    ruffShell.castShadow = true;
-    ruffGroup.add(ruffShell);
-
-    // The ragged edge: tufts around the lower rim, each leaning out and down.
-    const TUFT_COUNT = 11;
-    for (let i = 0; i < TUFT_COUNT; i += 1) {
-      const angle = (i / TUFT_COUNT) * Math.PI * 2 + (i % 2) * 0.14;
-      // Irregular on purpose: an even ring of identical spikes is a
-      // picket fence, and a mane is never even.
-      const len = 0.26 + ((i * 7) % 5) * 0.036;
-      const tuft = new THREE.Mesh(
-        new THREE.ConeGeometry(0.085, len, 5),
-        creamFurMat
-      );
-      tuft.position.set(
-        Math.sin(angle) * 0.215,
-        -0.46 - len * 0.2,
-        Math.cos(angle) * 0.215
-      );
-      tuft.rotation.x = Math.PI;
-      // Leaning only a little out, so the mane falls DOWN the chest rather
-      // than spreading sideways like wings.
-      tuft.rotation.z = -Math.sin(angle) * 0.26;
-      tuft.rotation.y = Math.cos(angle) * 0.22;
-      ruffGroup.add(tuft);
-
-      // The charcoal guard hairs at the very edge of the mane.
-      if (i % 3 === 1) {
-        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.10, 5), maskMat);
-        tip.position.set(
-          Math.sin(angle) * 0.245,
-          -0.54 - len * 0.2,
-          Math.cos(angle) * 0.245
-        );
-        tip.rotation.x = Math.PI;
-        tip.rotation.z = -Math.sin(angle) * 0.26;
-        tip.rotation.y = Math.cos(angle) * 0.22;
-        ruffGroup.add(tip);
-      }
-    }
-
-    torso.add(ruffGroup);
-
-    // THE NECK — thick, carried forward, running from the shoulders to the
-    // skull. A Bang Kaew holds its head high.
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.21, 0.34, 16), agoutiMat);
-    neck.position.set(0, 0.30, 0.46);
-    neck.rotation.x = -0.40;
-    neck.castShadow = true;
-    torso.add(neck);
-
-    dogRoot.add(torso);
-
-    // 2. THE HEAD.
-    //
-    // Expo's actual head, from the photographs: a broad, slightly domed
-    // skull; a soft CHARCOAL mask across the muzzle and around both eyes;
-    // a WHITE blaze running up the muzzle to the forehead; white cheeks; big
-    // erect triangular ears with a pale pink inside; and amber-brown eyes.
-    //
-    // The mask is the muzzle itself plus a brow patch, not a second sphere
-    // laid over the skull — that is what turned the head into a potato.
-    const head = new THREE.Group();
-    head.position.set(0, 0.46, 0.52);
-
-    // The cranium: one broad, slightly flattened dome.
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 16), agoutiMat);
-    skull.scale.set(0.122, 0.108, 0.130);
-    skull.position.set(0, 0.028, -0.012);
-    skull.castShadow = true;
-    head.add(skull);
-
-    // THE MUZZLE — a lathe along the face, tapering from the stop to the nose.
-    // A Bang Kaew has a blunt, strong muzzle, not a fox's snout.
-    const MUZZLE_PROFILE: [number, number][] = [
-      [0.085, 0.00],
-      [0.080, 0.05],
-      [0.072, 0.10],
-      [0.062, 0.15],
-      [0.050, 0.19],
-      [0.034, 0.21],
-    ];
-    const snoutGeo = new THREE.LatheGeometry(
-      MUZZLE_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)),
-      16
-    );
-    const snout = new THREE.Mesh(snoutGeo, maskMat);
-    snout.rotation.x = Math.PI / 2;
-    snout.position.set(0, -0.058, 0.075);
-    snout.castShadow = true;
-    head.add(snout);
-
-    // The charcoal mask over the eyes: a flattened patch across the brow,
-    // which is where the wolf-sable sits on this breed.
-    const maskPatch = new THREE.Mesh(new THREE.SphereGeometry(0.5, 18, 14), maskMat);
-    maskPatch.scale.set(0.112, 0.072, 0.098);
-    maskPatch.position.set(0, 0.012, 0.048);
-    head.add(maskPatch);
-
-    // The cheeks: white, and small.
-    const cheekGeo = new THREE.SphereGeometry(0.5, 14, 10);
-    const cheekL = new THREE.Mesh(cheekGeo, creamFurMat);
-    cheekL.scale.set(0.078, 0.066, 0.072);
-    cheekL.position.set(-0.082, -0.072, 0.010);
-    const cheekR = new THREE.Mesh(cheekGeo, creamFurMat);
-    cheekR.scale.set(0.078, 0.066, 0.072);
-    cheekR.position.set(0.082, -0.072, 0.010);
-    head.add(cheekL, cheekR);
-
-    // The WHITE BLAZE — running from the stop to the nose, and the single
-    // mark that most says "this is my dog".
-    const blazeGeo = new THREE.BoxGeometry(0.040, 0.032, 0.205);
-    const blaze = new THREE.Mesh(blazeGeo, creamFurMat);
-    blaze.position.set(0, -0.012, 0.175);
-    head.add(blaze);
-
-    // The black nose, on the blunt end of the muzzle.
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), noseMat);
-    nose.scale.set(0.042, 0.034, 0.032);
-    nose.position.set(0, -0.050, 0.288);
-    head.add(nose);
-
-    // THE EYES.
-    //
-    // Amber-brown iris, black pupil, a dark lid ring around each. A dog that
-    // has only a dark sphere for an eye reads as a toy; an iris is what makes
-    // it read as an animal looking at you. They sit ON the skull, not in
-    // front of it — the earlier build had them bulging out like headlights.
-    const eyeGeo = new THREE.SphereGeometry(0.030, 16, 14);
-    const pupilGeo = new THREE.SphereGeometry(0.015, 12, 10);
-    const eyelidGeo = new THREE.RingGeometry(0.034, 0.046, 18);
-    const eyelidMat = new THREE.MeshBasicMaterial({ color: 0x2a2724 });
-
-    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeL.position.set(-0.076, 0.032, 0.086);
-    eyeL.scale.set(1, 0.92, 0.75);
-    const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-    pupilL.position.set(-0.088, 0.031, 0.103);
-    const lidL = new THREE.Mesh(eyelidGeo, eyelidMat);
-    lidL.position.set(-0.076, 0.032, 0.088);
-    lidL.rotation.x = Math.PI / 2;
-    lidL.rotation.z = -0.25;
-    head.add(lidL, pupilL, eyeL);
-
-    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeR.position.set(0.076, 0.032, 0.086);
-    eyeR.scale.set(1, 0.92, 0.75);
-    const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-    pupilR.position.set(0.088, 0.031, 0.103);
-    const lidR = new THREE.Mesh(eyelidGeo, eyelidMat);
-    lidR.position.set(0.076, 0.032, 0.088);
-    lidR.rotation.x = Math.PI / 2;
-    lidR.rotation.z = 0.25;
-    head.add(lidR, pupilR, eyeR);
-
-    // The tongue — Expo's relaxed tongue peek.
-    const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.050, 0.022, 0.085), tongueMat);
-    tongue.position.set(0, -0.128, 0.262);
-    tongue.rotation.x = 0.3;
-    head.add(tongue);
-
-    // THE EARS.
-    //
-    // Erect triangles with a pale pink inside — large on this dog, and the
-    // clearest single signal that this is not a floppy-eared dog.
-    const earGeo = new THREE.ConeGeometry(0.072, 0.20, 4);
-    const earTipGeo = new THREE.ConeGeometry(0.034, 0.08, 4);
-    const earInnerGeo = new THREE.ConeGeometry(0.042, 0.135, 4);
-    const earInnerMat = new THREE.MeshStandardMaterial({
-      color: 0xc98d86,
-      roughness: 0.7,
-    });
-
-    const leftEar = new THREE.Group();
-    leftEar.position.set(-0.112, 0.118, -0.022);
-    const earLMesh = new THREE.Mesh(earGeo, maskMat);
-    earLMesh.rotation.z = -0.09;
-    earLMesh.rotation.x = 0.12;
-    leftEar.add(earLMesh);
-    const earLTip = new THREE.Mesh(earTipGeo, maskDeepMat);
-    earLTip.position.y = 0.12;
-    earLTip.rotation.z = -0.09;
-    earLTip.rotation.x = 0.12;
-    leftEar.add(earLTip);
-    const earLInner = new THREE.Mesh(earInnerGeo, earInnerMat);
-    earLInner.position.set(0.026, -0.012, 0.038);
-    earLInner.rotation.z = -0.09;
-    earLInner.rotation.x = 0.12;
-    leftEar.add(earLInner);
-
-    const rightEar = new THREE.Group();
-    rightEar.position.set(0.112, 0.118, -0.022);
-    const earRMesh = new THREE.Mesh(earGeo, maskMat);
-    earRMesh.rotation.z = 0.09;
-    earRMesh.rotation.x = 0.12;
-    rightEar.add(earRMesh);
-    const earRTip = new THREE.Mesh(earTipGeo, maskDeepMat);
-    earRTip.position.y = 0.12;
-    earRTip.rotation.z = 0.09;
-    earRTip.rotation.x = 0.12;
-    rightEar.add(earRTip);
-    const earRInner = new THREE.Mesh(earInnerGeo, earInnerMat);
-    earRInner.position.set(-0.026, -0.012, 0.038);
-    earRInner.rotation.z = 0.09;
-    earRInner.rotation.x = 0.12;
-    rightEar.add(earRInner);
-
-    head.add(leftEar, rightEar);
-    dogRoot.add(head);
-
-    // 3. THE PLUMED TAIL.
-    //
-    // On Expo the tail is a great cream plume, carried UP and OVER the back
-    // and curling forward — the spitz silhouette, not a hanging tail. The
-    // previous build made it three stiff cylinders that ended in a cone,
-    // which read as a bent pipe.
-    //
-    // So the tail is a curve now: a smooth tube along a spline that rises
-    // from the croup and folds forward over the spine, with the cream plume
-    // hanging from the end of it.
-    const tail = new THREE.Group();
-    tail.position.set(0, 0.76, -0.54);
-
-    const tailCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0.20, -0.10),
-      new THREE.Vector3(0, 0.33, -0.04),
-      new THREE.Vector3(0, 0.34, 0.08),
-      new THREE.Vector3(0, 0.24, 0.14),
-    ]);
-    const tailTube = new THREE.Mesh(
-      new THREE.TubeGeometry(tailCurve, 28, 0.072, 10, false),
-      agoutiMat
-    );
-    tailTube.castShadow = true;
-    tail.add(tailTube);
-
-    // THE PLUME — the great cream brush at the end of the tail.
-    const plume = new THREE.Group();
-    plume.position.set(0, 0.24, 0.14);
-    plume.rotation.x = 0.45;
-
-    const plumeCore = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), creamFurMat);
-    plumeCore.scale.set(0.115, 0.105, 0.24);
-    plume.add(plumeCore);
-
-    // The brush itself: it HANGS, from the end of the curl, down over the
-    // rump. A plume that sticks out sideways is a broom.
-    const plumeFall = new THREE.Mesh(new THREE.ConeGeometry(0.135, 0.44, 10), creamFurMat);
-    plumeFall.position.set(0, -0.22, -0.06);
-    plumeFall.rotation.x = Math.PI;
-    plume.add(plumeFall);
-
-    // A second, shorter fall on the other side of the curve, so the plume has
-    // depth instead of being a flat paddle.
-    const plumeFall2 = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.28, 8), creamFurMat);
-    plumeFall2.position.set(0.02, -0.15, 0.10);
-    plumeFall2.rotation.x = Math.PI * 0.85;
-    plume.add(plumeFall2);
-
-    tail.add(plume);
-    dogRoot.add(tail);
-
-    // 4. LEGS & PAWS.
-    //
-    // The front legs are cream from the elbow down, with dark TICKING on the
-    // upper foreleg — the freckled speckling you can see on the photographs.
-    // The rear legs carry more of the agouti.
-    const createLeg = (x: number, z: number, isFront: boolean) => {
-      const legGroup = new THREE.Group();
-      legGroup.position.set(x, 0.50, z);
-
-      // The mass of the shoulder or the thigh, so the leg grows out of the
-      // body instead of being stuck onto it.
-      const mass = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), agoutiMat);
-      mass.scale.set(0.145, isFront ? 0.27 : 0.31, 0.16);
-      mass.position.set(0, 0.02, isFront ? 0 : -0.02);
-      mass.castShadow = true;
-      legGroup.add(mass);
-
-      // The ticking: dark speckling up the foreleg.
-      if (isFront) {
-        const tickGeo = new THREE.SphereGeometry(0.010, 5, 4);
-        for (let i = 0; i < 4; i += 1) {
-          const tick = new THREE.Mesh(tickGeo, maskMat);
-          const side = i % 2 === 0 ? 1 : -1;
-          tick.position.set(
-            side * (0.068 + (i % 3) * 0.010),
-            -0.01 - i * 0.058,
-            0.045 + (i % 4) * 0.018
-          );
-          legGroup.add(tick);
-        }
-      }
-
-      // The leg itself: cream, tapering to the pastern.
-      const legGeo = new THREE.CylinderGeometry(0.095, 0.068, 0.52, 10);
-      const legMesh = new THREE.Mesh(legGeo, creamFurMat);
-      legMesh.position.set(0, -0.25, 0);
-      legMesh.castShadow = true;
-      legGroup.add(legMesh);
-
-      // The paw.
-      const pawGeo = new THREE.SphereGeometry(0.5, 12, 8);
-      const pawMesh = new THREE.Mesh(pawGeo, creamFurMat);
-      pawMesh.scale.set(0.092, 0.060, 0.12);
-      pawMesh.position.set(0, -0.50, 0.02);
-      pawMesh.castShadow = true;
-      legGroup.add(pawMesh);
-
-      // Four little toes.
-      const toeGeo = new THREE.SphereGeometry(0.04, 6, 4);
-      const toePositions = [
-        [-0.055, 0, 0.06],
-        [-0.02, 0, 0.075],
-        [0.02, 0, 0.075],
-        [0.055, 0, 0.06],
-      ];
-      toePositions.forEach(([tx, ty, tz]) => {
-        const toe = new THREE.Mesh(toeGeo, creamFurMat);
-        toe.position.set(tx, -0.52, tz + 0.02);
-        legGroup.add(toe);
-      });
-
-      dogRoot.add(legGroup);
-      return legGroup;
+    // The chassis pivots at the hips; everything but the hind legs rides on it.
+    const HIP = new THREE.Vector3(0, 0.45, -0.38);
+    const chassis = new THREE.Group();
+    chassis.position.copy(HIP);
+    dogRoot.add(chassis);
+    const onChassis = (obj: THREE.Object3D, x: number, y: number, z: number) => {
+      obj.position.set(x - HIP.x, y - HIP.y, z - HIP.z);
+      chassis.add(obj);
+      return obj;
     };
 
-    const frontLeftLeg = createLeg(-0.25, 0.30, true);
-    const frontRightLeg = createLeg(0.25, 0.30, true);
-    const backLeftLeg = createLeg(-0.25, -0.40, false);
-    const backRightLeg = createLeg(0.25, -0.40, false);
+    // 1. Body and mane, one mesh. The mane is longer fur, longest low in front.
+    const torsoGeo = paint(blob(0.4, 0.36, 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
+    const maneGeo = paint(blob(0.4, 0.4, 0.34), 'mane', (_x, y, z) => 0.085 + Math.max(0, z) * 0.08 - Math.min(0, y) * 0.07)
+      .translate(0, 0.86, 0.32);
+    const body = furry(mergeGeometries([torsoGeo, maneGeo])!);
+    const breathing = new THREE.Group();
+    breathing.add(body);
+    onChassis(breathing, 0, 0, 0);
 
-    // Hearts group for petting feedback
+    // 2. The head: skull, cheek ruff and muzzle as one furry mesh, eyes,
+    // nose and mouth as smooth pieces on top.
+    const head = new THREE.Group();
+    onChassis(head, 0, 1.24, 0.58);
+    const HEAD_REST = head.position.clone();
+    const skullGeo = paint(blob(0.32, 0.29, 0.28), 'head', 0.026);
+    const cheekL = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(0.17, -0.09, 0.05);
+    const cheekR = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(-0.17, -0.09, 0.05);
+    const muzzleGeo = paint(blob(0.13, 0.1, 0.15, 28, 20), 'muzzle', 0.012).translate(0, -0.09, 0.24);
+    head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo])!));
+
+    const glossy = (color: number, roughness = 0.2) => new THREE.MeshStandardMaterial({ color, roughness });
+    const nose = new THREE.Mesh(blob(0.058, 0.042, 0.042, 20, 14), glossy(0x121010, 0.25));
+    nose.position.set(0, -0.045, 0.385);
+    head.add(nose);
+    const mouth = new THREE.Mesh(blob(0.075, 0.03, 0.05, 16, 10), glossy(0x3a1616, 0.6));
+    mouth.position.set(0, -0.165, 0.27);
+    head.add(mouth);
+    const tongue = new THREE.Mesh(blob(0.045, 0.014, 0.075, 16, 10), glossy(0xe0707c, 0.45));
+    tongue.position.set(0, -0.19, 0.31);
+    tongue.rotation.x = 0.55;
+    head.add(tongue);
+
+    // The eyes are where the cute lives: big, dark, wet, with a catch-light.
+    const eyes: THREE.Group[] = [];
+    for (const side of [1, -1]) {
+      const eye = new THREE.Group();
+      eye.position.set(0.11 * side, 0.035, 0.235);
+      // Expo's eyes are amber-brown: an iris with a dark pupil in front,
+      // so they read inside the dark mask instead of vanishing into it.
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.062, 24, 16), glossy(0x7a4a1c, 0.12));
+      eye.add(ball);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 20, 14), glossy(0x0c0806, 0.08));
+      pupil.position.set(0, 0, 0.03);
+      eye.add(pupil);
+      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      glint.position.set(0.018 * side, 0.024, 0.058);
+      glint.userData.glint = true;
+      eye.add(glint);
+      head.add(eye);
+      eyes.push(eye);
+    }
+
+    // Ears: small, thick, set high, pricked. Pivot at the base so they can
+    // turn and flatten.
+    const ears: THREE.Group[] = [];
+    for (const side of [1, -1]) {
+      const ear = new THREE.Group();
+      ear.position.set(0.16 * side, 0.2, -0.03);
+      const outer = paint(new THREE.ConeGeometry(0.12, 0.24, 24, 6).scale(1, 1, 0.55), 'ear', 0.018).translate(0, 0.12, 0);
+      ear.add(furry(outer));
+      const inner = new THREE.Mesh(
+        new THREE.ConeGeometry(0.07, 0.15, 16).scale(1, 1, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x9c7468, roughness: 0.95 })
+      );
+      inner.position.set(0, 0.095, 0.045);
+      ear.add(inner);
+      head.add(ear);
+      ears.push(ear);
+    }
+
+    // 3. Legs: stubby capsules with round paws; the hind legs carry the
+    // feathered thighs. Pivot at the shoulder / hip.
+    const LEG_TOP = 0.45;
+    const makeLeg = (x: number, z: number, hind: boolean) => {
+      const side = Math.sign(x);
+      const parts = [
+        paint(new THREE.CapsuleGeometry(0.085, 0.3, 8, 20), 'leg', 0.035, (lx, ly, lz) => [lx, ly - 0.2, lz]).translate(0, -0.2, 0),
+        paint(blob(0.1, 0.065, 0.13, 24, 14), 'leg', 0.014, (lx, ly, lz) => [lx, ly - 0.4, lz]).translate(0, -0.385, 0.035),
+      ];
+      if (hind) {
+        parts.push(
+          paint(blob(0.17, 0.22, 0.22, 28, 20), 'thigh', (_lx, ly, lz) => 0.05 + Math.max(0, -lz) * 0.25 + Math.max(0, -ly) * 0.1, (lx, ly, lz) => [lx * side, ly, lz])
+            .translate(0.03 * side, 0.03, 0)
+        );
+      }
+      const leg = furry(mergeGeometries(parts)!);
+      const pivot = new THREE.Group();
+      pivot.add(leg);
+      if (hind) {
+        pivot.position.set(x, LEG_TOP, z);
+        dogRoot.add(pivot);
+      } else {
+        onChassis(pivot, x, LEG_TOP, z);
+      }
+      return pivot;
+    };
+    const frontL = makeLeg(0.17, 0.3, false);
+    const frontR = makeLeg(-0.17, 0.3, false);
+    const backL = makeLeg(0.19, -0.4, true);
+    const backR = makeLeg(-0.19, -0.4, true);
+
+    // 4. The plume: overlapping balls along a curl over the back, merged and
+    // furred so it reads as one feathered tail.
+    const tail = new THREE.Group();
+    onChassis(tail, 0, 0.8, -0.6);
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0.22, -0.12),
+      new THREE.Vector3(0, 0.42, -0.04),
+      new THREE.Vector3(0, 0.5, 0.15),
+      new THREE.Vector3(0, 0.44, 0.32),
+    ]);
+    const TAIL_BALLS = 14;
+    const tailParts: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < TAIL_BALLS; i++) {
+      const t = i / (TAIL_BALLS - 1);
+      const p = curve.getPoint(t);
+      const r = 0.06 + 0.08 * Math.sin(Math.PI * Math.min(1, t * 1.15));
+      tailParts.push(
+        paint(blob(r, r, r, 22, 16), 'tail', 0.13 + t * 0.05, (lx, ly) => [lx, ly, t]).translate(p.x, p.y, p.z)
+      );
+    }
+    tail.add(furry(mergeGeometries(tailParts)!));
+
     const heartsGroup = new THREE.Group();
     scene.add(heartsGroup);
 
-    dogParts.current = {
-      root: dogRoot,
-      head,
-      tail,
-      leftEar,
-      rightEar,
-      tongue,
-      frontLeftLeg,
-      frontRightLeg,
-      backLeftLeg,
-      backRightLeg,
-      heartsGroup,
-      foodItem: null,
-      ballItem: null,
-    };
+    dogParts.current = { root: dogRoot, head, heartsGroup, foodItem: null, ballItem: null };
 
-    // Mouse / Touch Interaction for orbit & head tracking
-    let isDragging = false;
-    let prevMouseX = 0;
-    let prevMouseY = 0;
-    let targetRotationY = 0.35;
-    let targetRotationX = 0;
-
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
-      isDragging = true;
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      prevMouseX = clientX;
-      prevMouseY = clientY;
-    };
-
-    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-      if (isDragging) {
-        const deltaX = clientX - prevMouseX;
-        const deltaY = clientY - prevMouseY;
-        targetRotationY += deltaX * 0.008;
-        targetRotationX += deltaY * 0.004;
-        targetRotationX = Math.max(-0.2, Math.min(0.4, targetRotationX));
-        prevMouseX = clientX;
-        prevMouseY = clientY;
-      }
-    };
-
-    const handlePointerUp = () => {
-      isDragging = false;
-    };
-
+    // ==========================================
+    // ORBIT, AND PETTING BY CLICK (A CLICK IS A PRESS THAT DID NOT DRAG)
+    // ==========================================
+    let dragging = false;
+    let downX = 0;
+    let downY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let targetYaw = 0.45;
+    let targetTilt = 0;
     const domElem = renderer.domElement;
-    domElem.addEventListener('mousedown', handlePointerDown);
-    window.addEventListener('mousemove', handlePointerMove);
-    window.addEventListener('mouseup', handlePointerUp);
-    domElem.addEventListener('touchstart', handlePointerDown);
-    window.addEventListener('touchmove', handlePointerMove);
-    window.addEventListener('touchend', handlePointerUp);
 
-    // Click on canvas to pet directly
-    const handleClick = () => {
-      interactionState.current = {
-        type: 'pet',
-        timer: 60,
-        intensity: 1,
-      };
-      sound.happyYip();
-      spawnHeart();
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      downX = lastX = e.clientX;
+      downY = lastY = e.clientY;
     };
-    domElem.addEventListener('click', handleClick);
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      targetYaw += (e.clientX - lastX) * 0.008;
+      targetTilt = Math.max(-0.15, Math.min(0.3, targetTilt + (e.clientY - lastY) * 0.004));
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (dragging && Math.hypot(e.clientX - downX, e.clientY - downY) < 6) {
+        interactionState.current = { type: 'pet', timer: 1 };
+        sound.happyYip();
+        spawnHeart();
+      }
+      dragging = false;
+    };
+    domElem.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
 
     // ==========================================
-    // RENDER LOOP & REAL-TIME ANIMATIONS
+    // THE LIVING LOOP
     // ==========================================
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
+    const cur = { ...POSES.stand };
+    let nextBlink = 2 + Math.random() * 3;
+    let blink = 0;
+    const camLocal = new THREE.Vector3();
 
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.getElapsedTime();
+      const ps = petStateRef.current;
 
-      // ---- Mood from the dog's inner state ---------------------------------
-      const trust = petState.trust / 100;        // 0..1 — how much Expo trusts you
-      const arousal = petState.arousal / 100;    // 0..1 — how excited he is
-      const hunger = 1 - petState.needs.hunger / 100; // 0..1, 1 = very hungry
-      const energy = petState.needs.energy / 100; // 0..1
-
-      // Friendly = trusts you and isn't starving. Alert = aroused + trusting.
+      const trust = ps.trust / 100;
+      const arousal = ps.arousal / 100;
+      const hunger = 1 - ps.needs.hunger / 100;
+      const energy = ps.needs.energy / 100;
       const friendly = Math.max(0, trust * 0.7 + (1 - hunger * 0.5) * 0.3);
       const alert = Math.min(1, arousal * 0.6 + trust * 0.4);
       const tired = 1 - energy;
+      const asleep = ps.sleep?.asleep ?? false;
+      const act = interactionState.current;
+      if (act.timer > 0) act.timer -= dt;
+      const acting = act.timer > 0 ? act.type : 'idle';
 
-      // ASLEEP.
-      //
-      // A sleeping dog is not a standing dog with its eyes shut: he is DOWN.
-      // The body sinks and folds, the head comes to rest on the paws, the
-      // ears go back, the tail wraps round, and the breathing goes slow and
-      // deep. This is the state the whole app exists to make you reluctant
-      // to interrupt.
-      const asleep = petState.sleep?.asleep ?? false;
-      const asleepBlend = asleep ? 1 : 0;
+      // Ease toward the pose. Sleep wins over anything training asked for.
+      const target = POSES[asleep ? 'sleep' : poseRef.current];
+      const ease = 1 - Math.exp(-dt * 6);
+      for (const k of Object.keys(cur) as (keyof typeof cur)[]) cur[k] += (target[k] - cur[k]) * ease;
 
-      // Smooth camera / podium orbit interpolation
-      dogRoot.rotation.y += (targetRotationY - dogRoot.rotation.y) * 0.1;
-      dogRoot.rotation.x += (targetRotationX - dogRoot.rotation.x) * 0.1;
+      dogRoot.rotation.y += (targetYaw - dogRoot.rotation.y) * 0.1;
+      dogRoot.rotation.x += (targetTilt - dogRoot.rotation.x) * 0.1;
 
-      // 1. Idle breathing — faster when excited, slower when tired, and slow
-      // and DEEP when asleep.
-      const breathRate = asleep ? 0.9 : 2.8 + arousal * 2.0;
-      const breathAmp = asleep ? 0.045 : 0.02 + energy * 0.02;
-      const breath = Math.sin(elapsed * breathRate) * breathAmp;
-      torso.scale.set(1 + breath, 1 + breath * 0.8, 1);
+      // Breathing: quick when excited, slow and deep asleep.
+      const breath = Math.sin(t * (asleep ? 1.0 : 2.6 + arousal * 2)) * (asleep ? 0.035 : 0.014 + energy * 0.012);
+      breathing.scale.set(1 + breath, 1 + breath * 0.8, 1);
 
-      // 1b. THE CURL. Sinking, folding down, head to the paws, ears back.
+      let bounce = 0;
+      let walkX = 0;
+      let stride = 0;
+      if (acting === 'pet' || acting === 'groom') bounce = Math.abs(Math.sin(t * 9)) * 0.05;
+      if (acting === 'play') bounce = Math.abs(Math.sin(t * 12)) * 0.1;
+      if (acting === 'walk' && !asleep) {
+        stride = Math.sin(t * 8);
+        bounce = Math.abs(stride) * 0.04;
+        walkX = Math.sin(t * 1.8) * 0.35;
+      }
+      dogRoot.position.set(walkX, cur.rootY + bounce, 0);
+      chassis.rotation.x = cur.pitch;
+      frontL.rotation.x = cur.front + stride * 0.5;
+      frontR.rotation.x = cur.frontR - stride * 0.5;
+      backL.rotation.x = cur.back - stride * 0.4;
+      backR.rotation.x = cur.back + stride * 0.4;
+      if (poseRef.current === 'paw' && !asleep) frontR.rotation.x += Math.sin(t * 6) * 0.12;
+
+      // The head: follows you with its eyes and nose, rests on the paws asleep.
+      camLocal.copy(camera.position);
+      dogRoot.worldToLocal(camLocal);
+      const gaze = asleep ? 0 : Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
+      head.position.set(HEAD_REST.x, HEAD_REST.y + cur.headY + (friendly * 0.03 - tired * 0.03), HEAD_REST.z);
+      head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 - head.rotation.y) * 0.08;
+      head.rotation.x = cur.headPitch - cur.pitch * 0.9 + (acting === 'feed' ? Math.max(0, Math.sin(t * 12)) * 0.15 : 0);
+      head.rotation.z = acting === 'communicate' && trust < 0.6 ? 0.2 : Math.sin(t * 1.3) * 0.04;
+
+      // Ears flatten when unsure or sleepy; they flick when alert.
+      const flat = asleep ? 0.7 : (1 - trust) * 0.45 + tired * 0.2;
+      ears.forEach((ear, i) => {
+        const s = i === 0 ? 1 : -1;
+        ear.rotation.x = -flat * 0.8;
+        ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert;
+      });
+
+      // Blinks, and shut eyes asleep.
+      nextBlink -= dt;
+      if (nextBlink <= 0) {
+        blink = 0.14;
+        nextBlink = 2.5 + Math.random() * 4;
+      }
+      blink = Math.max(0, blink - dt);
+      const lid = asleep ? 0.08 : blink > 0 ? 0.12 : acting === 'pet' ? 0.45 : 1;
+      eyes.forEach((e) => {
+        e.scale.y += (lid - e.scale.y) * 0.4;
+        e.children.forEach((c) => c.userData.glint && (c.visible = e.scale.y > 0.3));
+      });
+
+      tongue.visible = !asleep;
+      mouth.visible = !asleep;
+      tongue.position.y = -0.19 + Math.sin(t * 2.8) * 0.006 * (1 + arousal);
+
+      // Tail: the plume wags from its root; asleep it lies wrapped.
+      let wagF = Math.max(1, 3 + friendly * 7 + alert * 3 - tired * 3);
+      let wagA = Math.max(0.05, 0.18 + friendly * 0.28 + alert * 0.1 - tired * 0.15);
+      if (acting === 'pet' || acting === 'feed') {
+        wagF = 13;
+        wagA = 0.5;
+      } else if (acting === 'play') {
+        wagF = 16;
+        wagA = 0.6;
+      }
       if (asleep) {
-        dogRoot.position.y = -0.06;
-        dogRoot.rotation.x = -0.10;
-        torso.rotation.z = 0.06;
-        head.position.y = 0.30;
-        head.position.z = 0.30;
-        head.rotation.x = 0.72; // nose down, on the paws
-        head.rotation.z = 0.10;
-        leftEar.rotation.x = 0.62;
-        rightEar.rotation.x = 0.62;
-        tail.rotation.x = 0.85; // wrapped round the body
-        // The eyes are shut.
-        eyeL.scale.setScalar(0.12);
-        eyeR.scale.setScalar(0.12);
-        pupilL.visible = false;
-        pupilR.visible = false;
-      } else {
-        dogRoot.position.y = 0;
-        dogRoot.rotation.x = 0;
-        torso.rotation.z = 0;
-        head.position.y = 0.46;
-        head.position.z = 0.52;
-        head.rotation.x = 0;
-        head.rotation.z = 0;
-        leftEar.rotation.x = 0.12;
-        rightEar.rotation.x = 0.12;
-        tail.rotation.x = 0;
-        eyeL.scale.set(1, 0.92, 0.75);
-        eyeR.scale.set(1, 0.92, 0.75);
-        pupilL.visible = true;
-        pupilR.visible = true;
+        wagA = 0.02;
+        wagF = 1;
       }
-      void asleepBlend;
+      tail.rotation.y = Math.sin(t * wagF) * wagA;
+      tail.rotation.x = asleep ? 0.9 : 0;
 
-      // 2. Tail Wagging dynamics — mood-driven when idle, interaction-driven
-      // when you're engaging with him.
-      let wagFreq = 4.0 + friendly * 8.0 + alert * 4.0 - tired * 3.0;
-      let wagAmp = 0.25 + friendly * 0.35 + alert * 0.15 - tired * 0.2;
-      wagFreq = Math.max(1.0, wagFreq);
-      wagAmp = Math.max(0.05, wagAmp);
-
-      if (interactionState.current.type === 'pet' || interactionState.current.type === 'feed') {
-        wagFreq = 14.0;
-        wagAmp = 0.55;
-      } else if (interactionState.current.type === 'play') {
-        wagFreq = 18.0;
-        wagAmp = 0.7;
-      } else if (interactionState.current.type === 'communicate') {
-        wagFreq = trust > 0.6 ? 12.0 : 2.0;
-        wagAmp = trust > 0.6 ? 0.5 : 0.1;
-      }
-      tail.rotation.y = Math.sin(elapsed * wagFreq) * wagAmp;
-      tail.rotation.z = Math.cos(elapsed * wagFreq * 0.5) * 0.1;
-
-      // 3. Head & ear listening twitches — ears flatten when nervous or tired.
-      const earFlatten = (1 - trust) * 0.35 + tired * 0.15;
-      const headLift = friendly * 0.04 - tired * 0.04;
-      head.position.y = 1.05 + headLift;
-      head.rotation.y = Math.sin(elapsed * 0.8) * 0.08 * (1 - alert * 0.5);
-      head.rotation.z = Math.sin(elapsed * 1.4) * 0.04;
-      if (interactionState.current.type === 'communicate' && trust < 0.6) {
-        head.rotation.z = 0.18; // head tilt: "I don't know that word"
-      }
-      leftEar.rotation.z = Math.sin(elapsed * 3.5) * 0.06 - earFlatten;
-      rightEar.rotation.z = -Math.cos(elapsed * 3.2) * 0.06 + earFlatten;
-
-      // 4. Tongue peek bob — more tongue when relaxed and friendly.
-      const tongueOut = friendly * 0.02;
-      tongue.position.y = -0.19 + tongueOut + Math.sin(elapsed * 2.8) * 0.01;
-
-      // 5. Interaction actions
-      if (interactionState.current.timer > 0) {
-        interactionState.current.timer -= 1;
-        const phase = interactionState.current.timer / 120;
-
-        if (interactionState.current.type === 'pet') {
-          // Playful body bounce
-          dogRoot.position.y = Math.abs(Math.sin(elapsed * 10)) * 0.08;
-        } else if (interactionState.current.type === 'feed' && dogParts.current?.foodItem) {
-          const item = dogParts.current.foodItem;
-          if (item.position.y > 0.8) {
-            item.position.y -= 0.025;
-            item.rotation.y += 0.05;
-          } else {
-            // Dog eats the bone
-            item.scale.multiplyScalar(0.92);
-            head.rotation.x = Math.sin(elapsed * 12) * 0.15; // chewing
-            if (item.scale.x < 0.1) {
-              dogRoot.remove(item);
-              dogParts.current.foodItem = null;
-            }
-          }
-        } else if (interactionState.current.type === 'play' && dogParts.current?.ballItem) {
-          const ball = dogParts.current.ballItem;
-          ball.position.x += (ball as any).vx;
-          ball.position.y += (ball as any).vy;
-          (ball as any).vy -= 0.002; // gravity
-
-          if (ball.position.y <= 0.16) {
-            ball.position.y = 0.16;
-            (ball as any).vy = -(ball as any).vy * 0.7; // bounce
-            sound.ballBounce();
-          }
-
-          // Dog tracks ball with head
-          head.lookAt(ball.position.x, ball.position.y + 0.5, ball.position.z);
-          dogRoot.position.y = Math.abs(Math.sin(elapsed * 14)) * 0.12;
-
-          if (interactionState.current.timer <= 1) {
-            dogRoot.remove(ball);
-            dogParts.current.ballItem = null;
-          }
-        } else if (interactionState.current.type === 'walk') {
-          // A walk is a trott: the body rolls, the legs swing, and the dog
-          // moves through the frame rather than standing in it. It used to be
-          // the one interaction with no animation at all — a sound and
-          // nothing else, so the reader was told about a walk they could not
-          // see.
-          const stride = Math.sin(elapsed * 7);
-          dogRoot.position.y = Math.abs(Math.sin(elapsed * 7)) * 0.05;
-          dogRoot.rotation.z = stride * 0.045;
-          dogRoot.rotation.x = -0.06;
-          dogRoot.position.x = Math.sin(elapsed * 1.75) * 0.42;
-          frontLeftLeg.rotation.x = stride * 0.55;
-          frontRightLeg.rotation.x = -stride * 0.55;
-          backLeftLeg.rotation.x = -stride * 0.42;
-          backRightLeg.rotation.x = stride * 0.42;
-          tail.rotation.x = -0.18;
-          if (interactionState.current.timer <= 1) {
-            dogRoot.position.x = 0;
-            dogRoot.rotation.x = 0;
-            dogRoot.rotation.z = 0;
-          }
+      // Food falls and is eaten; the ball bounces past.
+      const parts = dogParts.current;
+      if (parts?.foodItem) {
+        const item = parts.foodItem;
+        if (item.position.y > 1.0) item.position.y -= dt * 1.4;
+        else item.scale.multiplyScalar(0.93);
+        item.rotation.y += dt * 3;
+        if (item.scale.x < 0.08 || acting !== 'feed') {
+          dogRoot.remove(item);
+          parts.foodItem = null;
         }
-      } else {
-        dogRoot.position.y = 0;
+      }
+      if (parts?.ballItem) {
+        const ball = parts.ballItem;
+        ball.userData.vy -= dt * 6;
+        ball.position.x += ball.userData.vx * dt;
+        ball.position.y += ball.userData.vy * dt;
+        if (ball.position.y < 0.12) {
+          ball.position.y = 0.12;
+          ball.userData.vy = Math.abs(ball.userData.vy) * 0.7;
+        }
+        if (acting !== 'play') {
+          dogRoot.remove(ball);
+          parts.ballItem = null;
+        }
       }
 
-      // 6. Update hearts
-      heartsGroup.children.forEach((child) => {
-        const heart = child as any;
-        heart.position.y += heart.vy;
-        heart.life -= 0.015;
-        heart.scale.setScalar(heart.life);
-        if (heart.life <= 0) {
-          heartsGroup.remove(heart);
-        }
+      heartsGroup.children.slice().forEach((h) => {
+        h.position.y += h.userData.vy * dt;
+        h.userData.life -= dt * 0.9;
+        h.scale.setScalar(Math.max(0.01, h.userData.life));
+        if (h.userData.life <= 0) heartsGroup.remove(h);
       });
 
       renderer.render(scene, camera);
     };
-
     animate();
 
-    // Resize handler
     const handleResize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
@@ -1034,9 +673,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
-    // The window is not the only thing that resizes this scene: the cockpit
-    // gives it a region, and the region's size changes when the layout
-    // changes. A ResizeObserver watches the box the scene is actually in.
+    // The cockpit resizes the stage's region, not just the window.
     const observer = new ResizeObserver(handleResize);
     observer.observe(container);
 
@@ -1044,13 +681,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
       window.removeEventListener('resize', handleResize);
       observer.disconnect();
-      domElem.removeEventListener('mousedown', handlePointerDown);
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('mouseup', handlePointerUp);
-      domElem.removeEventListener('touchstart', handlePointerDown);
-      window.removeEventListener('touchmove', handlePointerMove);
-      window.removeEventListener('touchend', handlePointerUp);
-      domElem.removeEventListener('click', handleClick);
+      domElem.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.geometry.dispose();
+      });
+      shellMats.forEach((m) => m.dispose());
+      skinMat.dispose();
+      strandTex.dispose();
       renderer.dispose();
     };
   }, [dog]);
@@ -1059,8 +698,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     <div className="relative w-full h-full bg-black overflow-hidden select-none">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* When the browser cannot draw, the space the scene would have
-          occupied says so. A black rectangle tells the reader nothing. */}
       {webglError && (
         <div className="absolute inset-0 flex items-center justify-center p-4 bg-zinc-950">
           <div className="max-w-sm border-hairline p-3">
@@ -1073,12 +710,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         </div>
       )}
 
-      {/* Two captions, and only two. The scene is the content; a "LIVE" badge
-          on a scene that is obviously live is noise, and a dot that pulses to
-          prove it is decoration pretending to be a signal. What the reader
-          actually needs is what they are looking at, and what they can do to
-          it. Both are said once, in the reading voice, where the scene does
-          not cover them. */}
+      {/* What the reader is looking at, and what they can do to it. Said
+          once, where the scene does not cover it. */}
       {!webglError && (
         <>
           <p className="absolute bottom-2 left-2 max-w-[70%] text-[11px] leading-tight text-zinc-300 pointer-events-none">
@@ -1087,7 +720,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
             {dog.breed}
           </p>
           <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
-            Drag to orbit, click to pet
+            Drag to orbit, tap to pet
           </p>
         </>
       )}
