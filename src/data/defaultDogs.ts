@@ -430,9 +430,9 @@ export const DEFAULT_DOGS: DogProfile[] = [
     furFluff: 0, earShape: 'pricked', tailShape: 'bob',
   }, ['Tall bat ears', 'Short, broad muzzle', 'Pied black and white coat']),
   companion('paolo-pug', 'Paolo', 'Pug', {
-    pattern: 'mask', baseColor: '#c29b68', secondaryColor: '#e7d4ad', maskColor: '#302823',
+    pattern: 'mask', baseColor: '#d8c5a3', secondaryColor: '#e9dfc9', maskColor: '#302c29',
     furFluff: 0, earShape: 'floppy', tailShape: 'curl',
-  }, ['Folded button ears', 'Dark muzzle and brow wrinkles', 'Round body and tightly curled tail']),
+  }, ['Cream coat and broad, low body', 'Folded black ears and heavy forehead wrinkles', 'Flat dark jowls and a little tongue peeking out']),
   companion('shiba-chai', 'Chai', 'Shiba Inu', {
     pattern: 'solid', baseColor: '#bb713d', secondaryColor: '#fff1d9', maskColor: '#493023',
     furFluff: 0.4, earShape: 'pricked', tailShape: 'curl',

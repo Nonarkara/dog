@@ -95,6 +95,22 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(dogs.find(d=>d.id==='mali-2022').breed,'Thai Bangkaew Dog');
   assert.equal(dogs.find(d=>d.id==='expo-2021').avatarConfig.pattern,'bangkaew');
   assert.equal(dogs.find(d=>d.id==='oreo-frenchie').avatarConfig.pattern,'spotted');
+  assert.equal(dogs.find(d=>d.id==='paolo-pug').avatarConfig.baseColor,'#d8c5a3');
+  // An older starter Paolo gains his photo-matched palette without losing his history.
+  await page.evaluate(() => {
+    const dogs=JSON.parse(localStorage.getItem('canine_os_dogs_v1'));
+    const p=dogs.find(d=>d.id==='paolo-pug');
+    Object.assign(p.avatarConfig,{baseColor:'#c29b68',secondaryColor:'#e7d4ad',maskColor:'#302823'});
+    p.metaverseBio='Preserved owner note';
+    p.distinctiveMarks=['Owner recorded Paolo’s markings'];
+    localStorage.setItem('canine_os_dogs_v1',JSON.stringify(dogs));
+  });
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
+  const paolo = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_dogs_v1')).find(d=>d.id==='paolo-pug'));
+  assert.equal(paolo.avatarConfig.baseColor,'#d8c5a3');
+  assert.equal(paolo.metaverseBio,'Preserved owner note');
+  assert.deepEqual(paolo.distinctiveMarks,['Owner recorded Paolo’s markings']);
   assert.equal(dogs.length,7); // Five requested dogs plus two preserved companions.
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/measurements.json`,JSON.stringify(metrics,null,2));

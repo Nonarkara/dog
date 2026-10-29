@@ -295,6 +295,11 @@ export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
             distinctiveMarks: def.distinctiveMarks, metaverseBio: def.metaverseBio, coatColor: def.coatColor,
             avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig.customModelUrl } };
         }
+        if (d.id === 'paolo-pug' && d.avatarConfig.baseColor === '#c29b68' && d.avatarConfig.secondaryColor === '#e7d4ad' && d.avatarConfig.maskColor === '#302823') {
+          return { ...d,
+            avatarConfig: { ...d.avatarConfig, baseColor: def.avatarConfig.baseColor,
+              secondaryColor: def.avatarConfig.secondaryColor, maskColor: def.avatarConfig.maskColor } };
+        }
         if (d.avatarConfig?.pattern) return d;
         return { ...d, coatColor: def.coatColor, avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig?.customModelUrl } };
       });
