@@ -16,6 +16,17 @@ class SoundFX {
   }
 
   // Playful happy bark / "woof!"
+  markerClick() {
+    try{
+      this.init();if(!this.ctx)return;
+      const oscillator=this.ctx.createOscillator(),gain=this.ctx.createGain(),now=this.ctx.currentTime;
+      oscillator.type='square';oscillator.frequency.setValueAtTime(1600,now);
+      gain.gain.setValueAtTime(.035,now);gain.gain.exponentialRampToValueAtTime(.001,now+.035);
+      oscillator.connect(gain);gain.connect(this.ctx.destination);oscillator.start(now);oscillator.stop(now+.04);
+      oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+    }catch{/* Audio may be unavailable; visual marker feedback still works. */}
+  }
+
   bark() {
     try {
       this.init();

@@ -1,0 +1,41 @@
+[
+  {
+    "mode": "pet",
+    "phase": "ready",
+    "lessons": {
+      "expo-2021": null
+    }
+  },
+  {
+    "mode": "hidden",
+    "phase": "ready",
+    "lessons": {
+      "expo-2021": null
+    }
+  },
+  {
+    "mode": "fallback",
+    "phase": "result",
+    "lessons": {
+      "expo-2021": null,
+      "bangal-2023": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 1,
+          "misses": 0,
+          "sessionTrials": 1,
+          "sessionStartedAt": 1793336400000
+        }
+      }
+    }
+  },
+  {
+    "mode": "dogchange",
+    "phase": "ready",
+    "lessons": {
+      "expo-2021": null,
+      "mali-2022": null
+    }
+  }
+]

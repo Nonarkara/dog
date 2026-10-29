@@ -30,7 +30,8 @@ import {
   type Lesson,
   type TrialInput,
 } from '../domain/lesson';
-import type { AvatarPose } from './DogAvatar3D';
+import type {PerformPose} from './trainingMotion';
+import {calmNeed} from '../domain/calm';
 import { sound } from '../utils/proceduralAudio';
 
 type Phase = 'ready' | 'waiting' | 'marked' | 'result' | 'saving';
@@ -39,12 +40,13 @@ interface Props {
   dog: DogProfile;
   petState: PetState;
   onPetStateChange: CommitPet;
-  onPose: (pose: AvatarPose) => void;
+  onPose: PerformPose;
+  busy?:boolean;
 }
 
 const CHIP = 'min-h-0 h-[22px] px-1.5 py-0 text-[10px] leading-none';
 
-export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose }) => {
+export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy }) => {
   const [name, setName] = useState<BehaviourName>('sit');
   const [phase, setPhase] = useState<Phase>('ready');
   const [status, setStatus] = useState('');
@@ -56,7 +58,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const [isSaving,setIsSaving]=useState(false);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   stateRef.current = petState;
-  const trial = useRef<{ cueAt: number; responds: boolean; doneAt: number; markAt?: number; count: number }>({
+  const trial = useRef<{ cueAt: number; responds: boolean; doneAt: number; markAt?: number; count: number; finished?:boolean; early?:boolean }>({
     cueAt: 0,
     responds: false,
     doneAt: Infinity,
@@ -75,6 +77,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const label = BEHAVIOURS.find((b) => b.name === name)?.label ?? name;
   const p = pronouns({ name: dog.name, sex: dog.sex });
   const asleep = petState.sleep?.asleep ?? false;
+  const unavailable=calmNeed(petState,'training')||(busy?'Finish caring first.':null);
   const cueLabel = lesson.stage === 0 ? 'Lure' : lesson.stage === 1 ? 'Signal' : `“${word}”`;
 
   const reset = () => {
@@ -100,28 +103,31 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     []
   );
 
-  const finish = async (input: Omit<TrialInput, 'cueCount'>, prefix = '') => {
+  const finish = async (input: Omit<TrialInput, 'cueCount'>, prefix = '',offered=false) => {
     if(saving.current)return;
-    saving.current=true;setIsSaving(true);setPhase('saving');
+    saving.current=true;trial.current.finished=true;setIsSaving(true);setPhase('saving');
     const count=trial.current.count,submittedEpoch=epoch.current;
     clearTimers();
-    let r!:ReturnType<typeof scoreTrial>;
+    let r:ReturnType<typeof scoreTrial>|null=null;
     const next=await onPetStateChange(latest=>{
+      if(calmNeed(latest,'training'))return latest;
       r=scoreTrial(latest.lessons?.[name]??newLesson(),{...input,cueCount:count});
       return {...latest,trust:clamp(latest.trust+r.trustDelta),lessons:{...latest.lessons,[name]:r.lesson}};
     });
     saving.current=false;setIsSaving(false);
     if(!mounted.current||epoch.current!==submittedEpoch)return;
-    if(!next){setPhase('ready');setStatus('Practice was not saved. Please try again.');onPose('stand');return;}
+    if(!next||!r){setPhase('ready');setStatus(!next?'Practice was not saved. Please try again.':'Care first; this trial was paused.');void onPose('stand');return;}
+    const scored=r as ReturnType<typeof scoreTrial>;
     stateRef.current=next;
-    setResult({ verdict: prefix + r.verdict, tip: r.tip, score: r.score, advice: sessionAdvice(r.lesson, r.score) });
+    setResult({ verdict: prefix + scored.verdict, tip: scored.tip, score: scored.score, advice: sessionAdvice(scored.lesson, scored.score) });
     setPhase('result');
-    if (!input.responded) onPose('stand');
+    // Deliver stay/wait rewards in position, as the real-dog instructions teach.
+    if(offered&&!['sit','stay','wait'].includes(name))void onPose('reward');else if(!input.responded)void onPose('stand');
   };
 
   const cue = () => {
     if(saving.current)return;
-    if (asleep) return;
+    if (unavailable) return;
     if (phase === 'waiting') {
       trial.current.count += 1;
       setCueCount(trial.current.count);
@@ -130,18 +136,21 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     if (phase !== 'ready') return;
     const now = performance.now();
     const roll = dogResponds(lesson, readiness(stateRef.current));
-    trial.current = { cueAt: now, responds: roll.responds, doneAt: roll.responds ? now + roll.latencyMs + 500 : Infinity, count: 1 };
+    trial.current = { cueAt: now, responds: roll.responds, doneAt: Infinity, count: 1 };
     setCueCount(1);
     setPhase('waiting');
     setStatus(`${dog.name} is thinking…`);
     if (roll.responds) {
-      later(() => {
-        onPose(POSE_FOR[name]);
+      const currentTrial=trial.current,currentEpoch=epoch.current;
+      later(async () => {
         setStatus(`${dog.name} is moving into it…`);
-      }, roll.latencyMs);
-      later(() => setStatus(`Done — mark it now!`), roll.latencyMs + 500);
-      // Never marked: he did it and nothing told him so.
-      later(() => finish({ responded: true }), roll.latencyMs + 500 + 1500);
+        const at=await onPose(POSE_FOR[name]);
+        if(!mounted.current||currentEpoch!==epoch.current||trial.current!==currentTrial||currentTrial.finished||currentTrial.markAt!==undefined)return;
+        if(at===null){clearTimers();setPhase('ready');setStatus('No completed stage action. Try again with an animated companion.');return;}
+        currentTrial.doneAt=at;
+        setStatus('Done — mark it now!');
+        later(()=>finish({responded:true}),1500);
+      },roll.latencyMs);
     } else {
       later(() => setStatus(`${dog.name} sniffs the floor. Wait — don't repeat it.`), 1200);
       later(() => finish({ responded: false }), WAIT_MS);
@@ -149,37 +158,36 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   };
 
   const mark = () => {
-    if(saving.current)return;
-    if (phase !== 'waiting') return;
-    const now = performance.now();
-    if (!trial.current.responds) {
-      finish({ responded: false }, 'You marked, but he had not done anything. ');
-      return;
-    }
-    trial.current.markAt = now;
-    if (now < trial.current.doneAt) {
-      finish({ responded: true, markDelayMs: now - trial.current.doneAt });
-      return;
-    }
-    clearTimers();
-    setPhase('marked');
-    setStatus('Marked. Now the treat.');
-    later(() => finish({ responded: true, markDelayMs: now - trial.current.doneAt }), TREAT_WINDOW_MS + 600);
+    if(saving.current||phase!=='waiting')return;
+    const now=performance.now();
+    trial.current.markAt=now;
+    trial.current.early=!Number.isFinite(trial.current.doneAt)||now<trial.current.doneAt;
+    clearTimers();sound.markerClick();setPhase('marked');
+    setStatus(trial.current.early?'Early marker — still follow it with a reward.':'Marked. Now the treat.');
+    later(()=>finish({responded:trial.current.responds,markedBeforeCompletion:trial.current.early,markDelayMs:trial.current.early?undefined:now-trial.current.doneAt}),TREAT_WINDOW_MS+600);
   };
 
   const treat = () => {
     if(saving.current)return;
-    sound.eatCrunch();
-    if (phase === 'marked' && trial.current.markAt !== undefined) {
-      finish({
-        responded: true,
-        markDelayMs: trial.current.markAt - trial.current.doneAt,
-        treatDelayMs: performance.now() - trial.current.markAt,
-      });
-    } else if (phase === 'waiting') {
-      finish({ responded: trial.current.responds && performance.now() >= trial.current.doneAt }, 'A treat with no marker first. ');
+    if(phase==='marked'&&trial.current.markAt!==undefined){
+      sound.eatCrunch();
+      void finish({responded:trial.current.responds,markedBeforeCompletion:trial.current.early,
+        markDelayMs:trial.current.early?undefined:trial.current.markAt-trial.current.doneAt,
+        treatDelayMs:performance.now()-trial.current.markAt},'',true);
+    }else if(phase==='waiting'){
+      sound.eatCrunch();
+      void finish({responded:Number.isFinite(trial.current.doneAt),prematureReward:!Number.isFinite(trial.current.doneAt)},'A treat with no marker first. ',true);
     }
   };
+
+  useEffect(()=>{
+    if(!unavailable||!['waiting','marked'].includes(phase))return;
+    epoch.current++;trial.current.finished=true;clearTimers();void onPose('stand');setPhase('ready');setStatus(`${unavailable} Practice paused.`);
+  },[unavailable,phase,onPose]);
+  useEffect(()=>{
+    const hidden=()=>{if(document.hidden&&!saving.current){epoch.current++;trial.current.finished=true;clearTimers();void onPose('stand');setPhase('ready');setStatus('Practice paused while the page was away.');}};
+    document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);
+  },[onPose]);
 
   // One key for the whole trial.
   useEffect(() => {
@@ -200,7 +208,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const real = REAL_DOG[name];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-practice-phase={phase} data-practice-behaviour={name}>
       <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
         {BEHAVIOURS.map((b) => (
           <button
@@ -220,7 +228,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           <span className="label">
             {label} · stage {lesson.stage + 1}/5 · {stage.label}
           </span>
-          <span className="data text-[11px] text-zinc-300" title="How solid this stage is; five clean reps in a row at 80% moves you on">
+          <span className="data text-[11px] text-zinc-300" title="Virtual practice skill; five clean reps at 80% unlock the next game stage">
             {Math.round(lesson.skill * 100)}% · {lesson.streak} in a row
           </span>
         </div>
@@ -229,8 +237,8 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
 
       <div className="shrink-0 border-hairline-t px-2 py-1.5">
         <p className="min-h-[16px] text-[12px] leading-snug text-zinc-100" aria-live="polite">
-          {asleep
-            ? `${dog.name} is asleep. Training waits until ${p.subj} wakes.`
+          {unavailable
+            ? unavailable
             : phase === 'result' && result
               ? result.verdict
               : status || 'Cue once, wait, mark the moment, treat. Space bar does all four.'}
@@ -245,7 +253,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={cue}
-                disabled={asleep || phase === 'marked'||isSaving}
+                disabled={!!unavailable || phase === 'marked'||isSaving}
                 className={`btn flex-1 text-[12px] ${phase === 'ready' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
                 title={phase === 'waiting' ? 'Giving the cue again costs you' : 'Give the cue once'}
               >
@@ -255,7 +263,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={mark}
-                disabled={phase !== 'waiting'||isSaving}
+                disabled={!!unavailable||phase !== 'waiting'||isSaving}
                 className={`btn flex-1 text-[12px] ${phase === 'waiting' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
               >
                 Yes! (mark)
@@ -263,7 +271,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={treat}
-                disabled={isSaving||(phase !== 'marked' && phase !== 'waiting')}
+                disabled={!!unavailable||isSaving||(phase !== 'marked' && phase !== 'waiting')}
                 className={`btn flex-1 text-[12px] ${phase === 'marked' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
               >
                 Treat

@@ -36,8 +36,8 @@ function near(a: number, b: number, tolerance = 1e-6): boolean {
 
 console.log('\nTHE TIMING OF THE MARKER');
 ok('a marker on time is worth the most', timingQuality(100) === 1);
-ok('a marker half a second late still teaches, weakly', timingQuality(500) > 0 && timingQuality(500) < 1);
-ok('a marker a second late teaches nothing', timingQuality(1000) === 0);
+ok('a marker at 500ms earns partial game timing credit', timingQuality(500) > 0 && timingQuality(500) < 1);
+ok('a marker at 1000ms earns no game timing credit', timingQuality(1000) === 0);
 ok('no marker at all teaches nothing', timingQuality(undefined) === 0);
 ok('the verdict names the problem', timingVerdict(800).includes('late'));
 /* The app tells the owner the window is 500ms. Past that window the marker
@@ -311,18 +311,28 @@ for (let i = 0; i < 400; i++) {
 }
 ok('a spotted coat has spots, and is mostly not spots', darkSpots > 20 && darkSpots < 250, `${darkSpots}/400 dark`);
 
+import {bodyPoseFor,trainingMotion} from '../components/trainingMotion';
 console.log('\nTHE PRACTICE FIELD');
 const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
 const clean = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100, treatDelayMs: 800 });
 ok('cue once, mark on time, treat on time: full marks', clean.score === 1 && clean.lesson.skill > L.skill);
 const early = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: -200, treatDelayMs: 800 });
 ok('a marker before he finishes pays for "almost"', early.score < 0.2 && early.lesson.skill < L.skill);
+const beforeDone=scoreTrial(L,{responded:false,cueCount:1,markedBeforeCompletion:true,treatDelayMs:100});
+ok('an early marker can still be rewarded without a false no-response success',beforeDone.score===.1&&beforeDone.lesson.misses===L.misses&&beforeDone.lesson.streak===0);
+const earlyTreat=scoreTrial(L,{responded:false,cueCount:1,prematureReward:true});
+ok('premature food never earns patient-waiting credit',earlyTreat.score===0&&earlyTreat.lesson.skill===L.skill);
+ok('down has its own pose and wait holds a sit',bodyPoseFor('down')==='down'&&bodyPoseFor('wait')==='sit');
+ok('fetch moves out, returns and carries the toy',trainingMotion('fetch',900).x>.6&&Math.abs(trainingMotion('fetch',1800).x)<.001&&trainingMotion('fetch',1800).carrying&&trainingMotion('fetch',1800).done);
+ok('come approaches before completion',trainingMotion('come',0).scale<trainingMotion('come',1000).scale&&!trainingMotion('come',500).done);
+ok('stay needs a completed hold even in reduced motion',!trainingMotion('stay',999,true).done&&trainingMotion('stay',1000,true).done);
+ok('reduced motion removes fetch travel but retains completion and toy',trainingMotion('fetch',0,true).x===0&&trainingMotion('fetch',0,true).done&&trainingMotion('fetch',0,true).toy);
 const twice = scoreTrial(L, { responded: true, cueCount: 2, markDelayMs: 100, treatDelayMs: 800 });
 ok('saying the cue twice costs you', twice.score < clean.score && twice.lesson.skill < clean.lesson.skill);
 const noTreat = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100 });
 ok('a marker with no treat breaks the promise', noTreat.score < 0.3 && noTreat.trustDelta < 0);
 const tooLate = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 900, treatDelayMs: 800 });
-ok("a marker far too late teaches nothing", tooLate.score === 0 && tooLate.lesson.skill === L.skill);
+ok("a late marker earns no game skill gain", tooLate.score === 0 && tooLate.lesson.skill === L.skill);
 const miss1 = scoreTrial(L, { responded: false, cueCount: 1 });
 const miss2 = scoreTrial(miss1.lesson, { responded: false, cueCount: 1 });
 ok('two misses in a row step back a stage', miss2.lesson.stage === 2 && miss2.stageChange === -1);

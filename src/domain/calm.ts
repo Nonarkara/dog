@@ -5,9 +5,9 @@ import {dailyLife} from './dailyLife';
 export const CALM_WAIT_MS=3000;
 export const CALM_REWARD_COOLDOWN_MS=60_000;
 
-export function calmNeed(state:PetState):string|null {
+export function calmNeed(state:PetState,activity='calm practice'):string|null {
   if(state.sleep.asleep)return 'Let the dog sleep.';
-  if(state.sick)return 'Care and rest first; calm practice can wait.';
+  if(state.sick)return `Care and rest first; ${activity} can wait.`;
   if(dailyLife(state).bladder>=70)return 'Toilet break first.';
   if(state.needs.hunger<35)return 'Food first.';
   if(state.needs.energy<25)return 'Rest first.';

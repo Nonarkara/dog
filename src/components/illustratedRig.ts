@@ -1,7 +1,8 @@
 import type { AvatarPose } from './DogAvatar3D';
+import {bodyPoseFor} from './trainingMotion';
 
 export type ArtPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep' | 'feed' | 'pet' | 'bow' | 'sick';
-export const artPoseFor = (pose: AvatarPose): ArtPose => pose;
+export const artPoseFor = (pose: AvatarPose): ArtPose => pose==='reward'?'feed':bodyPoseFor(pose);
 
 // Normalized, top-origin landmarks on the authored 768px canvases. These are
 // illustration-specific, not breed anatomy inferred from one shared image.

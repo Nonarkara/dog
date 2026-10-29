@@ -64,27 +64,27 @@ export const SCHEDULES: { id: Schedule; label: string; note: string }[] = [
   {
     id: 'continuous',
     label: 'Every rep',
-    note: 'Every correct response is rewarded. Best for learning a shape; fragile for life.',
+    note: 'Reward each successful response while teaching a new skill.',
   },
   {
     id: 'fixedRatio',
     label: 'Every 3rd',
-    note: 'Three responses per reward. Strong response rate; a pause after the reward.',
+    note: 'Game model: every third response earns a reward. Use every-rep rewards for new skills.',
   },
   {
     id: 'variableRatio',
     label: 'Unpredictable',
-    note: 'Sometimes three, sometimes twenty. The hardest schedule to stop, and the reason a habit holds.',
+    note: 'Game model: some responses earn a reward. Keep new skills on every-rep rewards.',
   },
   {
     id: 'fixedInterval',
     label: 'Every 30 seconds',
-    note: 'A reward is available after a pause. Produces steady, unhurried work.',
+    note: 'Game model: reward the first response after 30 seconds. Not a beginner training plan.',
   },
   {
     id: 'variableInterval',
     label: 'Unpredictable, over time',
-    note: 'A reward may come at any moment. Steady work, without a rhythm to lean on.',
+    note: 'Game model: reward availability varies with elapsed time.',
   },
 ];
 

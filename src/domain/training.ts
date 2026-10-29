@@ -4,18 +4,12 @@
  * A behaviour changes because of what happened AFTER it. That is the whole
  * model, and it is stricter than most people's intuitions:
  *
- *   - A marker (a click, a word) only teaches anything if it arrives within
- *     about half a second of the behaviour. Later than that and the dog
- *     cannot tell what the marker was for. This is the single most common
- *     mistake in real training, and the app can measure it, so it measures it.
- *   - The reward must follow the marker closely, or the marker predicts the
- *     clicker and not the behaviour.
- *   - A rehearsal in the app teaches YOU, not the dog. The timing statistics
- *     update; the behaviour's strength does not. Only a rep with the real
- *     animal raises it.
- *   - A behaviour nobody rewards stops, and gets MORE likely for a few days
- *     first. That spike is the extinction burst, and owners read it as
- *     stubbornness.
+ *   - Mark promptly, then deliver the promised reward. The 500ms cutoff
+ *     below is a practice-game target, not a biological learning deadline.
+ *   - Rehearsal updates practice statistics; real logs are self-reported.
+ *     Their strength estimate is a game model, not a verified assessment.
+ *   - Reward new skills consistently and make an exercise easier when the
+ *     dog struggles. Never treat non-response as defiance.
  *
  * The learning numbers here are a MODEL, not a claim about a real dog's
  * neurology. They are chosen to be monotone, bounded, and legible — so that
@@ -45,33 +39,19 @@ export interface RepInput {
   at?: string;
 }
 
-/**
- * TIMING QUALITY.
- *
- * 1.0 at or under 150ms, falling to 0 at 1000ms. The window between 150ms
- * and 500ms still works, but weakly — the marker is arriving late enough
- * that the dog is starting to look elsewhere.
- */
+/** Authored game score: full credit through 150ms, decreasing to the 500ms target. */
 export function timingQuality(delayMs: number | undefined): number {
   if (delayMs === undefined) return 0;
   if (delayMs <= 150) return 1;
-  // Past the window the marker predicts nothing: the dog has already moved
-  // its attention, and paying for the behaviour now teaches the marker to
-  // mean "nothing in particular". So it is worth NOTHING past the window —
-  // not a little. The app says the window is 500ms, and the engine has to
-  // mean it.
   if (delayMs > MARKER_WINDOW_MS) return 0;
-  // Inside the window it still teaches, but less and less: a mark 400ms
-  // late is late enough that the dog is starting to look elsewhere.
   return clamp(1 - ((delayMs - 150) / (MARKER_WINDOW_MS - 150)) * 0.75, 0, 1);
 }
 
-/** The same window, as a verdict the coach can say out loud. */
 export function timingVerdict(delayMs: number | undefined): string {
-  if (delayMs === undefined) return 'No marker was given.';
-  if (delayMs <= 150) return 'Marker on time.';
-  if (delayMs <= MARKER_WINDOW_MS) return 'Marker late. It still taught something, less than it should have.';
-  return 'Marker far too late. It taught nothing, and it taught the marker to mean nothing.';
+  if (delayMs === undefined) return 'No marker recorded.';
+  if (delayMs <= 150) return 'On the game timing target.';
+  if (delayMs <= MARKER_WINDOW_MS) return 'A little late for full game credit. Aim to mark the completed action promptly.';
+  return 'Marker late for the game timing target. Mark sooner next time; this score cannot measure real learning.';
 }
 
 /**
@@ -190,7 +170,7 @@ export function applyRep(
         explanation = `Reinforced, ${Math.round(quality * 100)}% on timing. ${note}`;
         if (readiness < 0.45) {
           explanation +=
-            ' He was too tired or hungry to take much of it in — feed him, walk him, and try again.';
+            ' The virtual dog needs care before more practice. Check the real dog’s comfort separately.';
         }
       } else {
         strength = behaviour.strength;
@@ -207,14 +187,14 @@ export function applyRep(
         strength = clamp(strength + delta, 0, 1);
         repsSinceReinforcement += 1;
       }
-      explanation = 'Performed, unmarked. No consequence, so nothing was learned.';
+      explanation = 'Performed without a recorded marker. Prompt rewards can still reinforce behavior; this timing drill needs a marker.';
     }
   } else {
     delta = -BASE_LOSS;
     if (input.real) {
       strength = clamp(strength + delta, 0, 1);
     }
-    explanation = 'Did not perform. The cue and the consequence are not connected yet.';
+    explanation = 'No response recorded. Check needs and distractions, and make the next step easier.';
   }
 
   // Trust: a cue that never pays costs a little. A cue that pays, on time,
@@ -294,11 +274,11 @@ export function nextApproximation(behaviour: BehaviourName, subject?: Subject): 
   const who = name ? `${name} ` : 'The dog ';
   switch (behaviour) {
     case 'sit':
-      return `${who}drops the back end. Mark that, not the sit.`;
+      return `${who}lowers the bottom toward the floor. Reward a useful small step.`;
     case 'down':
-      return `${who}lowers the back end. Mark that, not the down.`;
+      return `${who}lowers the elbows toward the floor. Reward a useful small step.`;
     case 'paw':
-      return `${who}lifts a paw. Mark that, not the paw.`;
+      return `${who}lifts a paw. Mark the offered paw movement.`;
     case 'stay':
       return `${who}stays for one second. Mark that, not the minute.`;
     case 'come':
@@ -356,17 +336,17 @@ export function readinessToAdvance(behaviour: Behaviour): {
     return { advance: false, reason: 'Not reliable yet. Keep the reward for every correct response.' };
   }
   if (behaviour.schedule === 'continuous') {
-    return { advance: true, reason: 'Reliable. Move to every third rep before the reward goes stale.' };
+    return { advance: true, reason: 'Game milestone reached. New skills still need every successful response rewarded; thin food rewards gradually only after reliability.' };
   }
   if (behaviour.schedule === 'fixedRatio' && (behaviour.performedReps ?? 0) < 36) {
     return {
       advance: false,
       reason:
-        'Doing every third. Do a dozen PAID reps — that is about thirty-six tries — before the schedule gets harder.',
+        'Game schedule: every third response. Keep real exercises easy and continue rewarding new skills every time.',
     };
   }
   if (behaviour.schedule === 'fixedRatio') {
-    return { advance: true, reason: 'Solid on every third. Make the reward unpredictable now.' };
+    return { advance: true, reason: 'Game milestone reached. Vary familiar rewards gradually; do not abruptly withhold rewards for a new skill.' };
   }
   if (behaviour.schedule === 'variableRatio' && (behaviour.performedReps ?? 0) < 30) {
     return { advance: false, reason: 'On an unpredictable schedule. Give it thirty reps before you add difficulty.' };

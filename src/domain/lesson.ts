@@ -10,8 +10,7 @@
  *   1. CUE ONCE. A repeated cue becomes the cue ("sit, sit, SIT").
  *   2. WAIT. Give him about three seconds to think.
  *   3. MARK the instant the behaviour is complete — "Yes!" or a click.
- *      Before it is complete, the marker means "almost". After half a
- *      second, it means nothing.
+ *      The scoring target is 500ms. This is game pacing, not a biological cutoff.
  *   4. TREAT within a couple of seconds of the marker.
  *
  * And a dog learns a behaviour in stages: first he follows a lure, then a
@@ -94,6 +93,9 @@ export interface TrialInput {
   cueCount: number;
   /** Marker time minus completion time, ms. Negative = marked too early. Undefined = never marked. */
   markDelayMs?: number;
+  /** The rendered action had not finished when the player marked. */
+  markedBeforeCompletion?:boolean;
+  prematureReward?:boolean;
   /** Treat time minus marker time, ms. Undefined = no treat. */
   treatDelayMs?: number;
 }
@@ -123,6 +125,15 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
   let stageChange: -1 | 0 | 1 = 0;
   const repeated = input.cueCount > 1;
 
+  if(input.prematureReward){
+    next.streak=0;
+    return {lesson:next,score:0,verdict:'Reward offered before the action finished.',tip:'Wait for the action, mark, then reward.',trustDelta,stageChange};
+  }
+  if(input.markedBeforeCompletion){
+    next.streak=0;next.skill=clamp01(lesson.skill-.03);
+    return {lesson:next,score:.1,verdict:'Marked before the dog finished moving.',tip:input.treatDelayMs===undefined?'Even an early marker still promises a reward.':'Watch the completed action, then mark and reward.',trustDelta,stageChange};
+  }
+
   if (!input.responded) {
     next.streak = 0;
     next.misses = lesson.misses + 1;
@@ -147,10 +158,11 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
 
   next.misses = 0;
 
+
   if (input.markDelayMs === undefined) {
     next.streak = 0;
-    verdict = 'He did it, and nothing told him that was right.';
-    tip = 'Mark the moment he finishes, then treat. Without the marker he cannot tell what earned it.';
+    verdict = 'Action completed; no marker recorded in this drill.';
+    tip = 'This drill practises a marker followed by a reward. In real training, prompt rewards can also work without a marker.';
     return { lesson: next, score: 0.1, verdict, tip, trustDelta, stageChange };
   }
 
@@ -179,8 +191,8 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
     timing === 1
       ? `Marked ${ms} ms after he finished: on time.`
       : timing > 0
-        ? `Marked ${ms} ms after he finished: late, it taught him less.`
-        : `Marked ${ms} ms after he finished: too late, he had already moved on.`;
+        ? `Marked ${ms} ms after he finished: reduced game timing credit.`
+        : `Marked ${ms} ms after he finished: outside the game timing target.`;
   tip = repeated
     ? 'He did it, but you said the cue more than once. Next time say it once and wait.'
     : !treated
@@ -208,7 +220,7 @@ export function sessionAdvice(lesson: Lesson, lastScore: number, now: number = D
     return 'That was a good one. End the session here — on a success — and give him a break.';
   }
   if (long || lesson.sessionTrials >= SESSION_TRIALS) {
-    return 'Session is long enough. Ask for one easy thing he knows, pay it, and stop.';
+    return 'Session is long enough. Take a break; there is no need to push for another response.';
   }
   return null;
 }
@@ -255,13 +267,13 @@ export const REAL_DOG: Record<BehaviourName, { lure: string; mistake: string }> 
 };
 
 /** What his body does when he performs the behaviour, for the avatar. */
-export const POSE_FOR: Record<BehaviourName, 'sit' | 'down' | 'paw' | 'stand'> = {
+export const POSE_FOR: Record<BehaviourName, import('../components/trainingMotion').AvatarPose> = {
   sit: 'sit',
   down: 'down',
-  stay: 'sit',
-  come: 'stand',
+  stay: 'stay',
+  come: 'come',
   paw: 'paw',
-  wait: 'sit',
-  leaveIt: 'stand',
-  fetch: 'stand',
+  wait: 'wait',
+  leaveIt: 'leaveIt',
+  fetch: 'fetch',
 };

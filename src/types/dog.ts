@@ -57,7 +57,7 @@ export interface DogProfile {
   thaiBreed?: string;
   birthDate: string; // YYYY-MM-DD
   sex: 'male' | 'female';
-  isNeutered: boolean;
+  isNeutered: boolean|null;
   microchipId: string;
   weightKg: number;
   coatColor: string;

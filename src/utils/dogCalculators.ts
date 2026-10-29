@@ -150,7 +150,7 @@ function migrateDog(raw: unknown): DogProfile | null {
     breed: dog.breed || 'Mixed Breed',
     birthDate: typeof dog.birthDate === 'string' ? dog.birthDate : '',
     sex: dog.sex === 'female' ? 'female' : 'male',
-    isNeutered: Boolean(dog.isNeutered),
+    isNeutered: typeof dog.isNeutered==='boolean'?dog.isNeutered:null,
     microchipId: dog.microchipId || 'Not recorded',
     weightKg: Number.isFinite(Number(dog.weightKg)) ? Number(dog.weightKg) : 0,
     coatColor: dog.coatColor || 'Not recorded',

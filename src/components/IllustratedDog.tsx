@@ -12,8 +12,9 @@ import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footp
 import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
+import {trainingMotion,type PerformanceProps} from './trainingMotion';
 
-interface Props {
+interface Props extends PerformanceProps {
   controlsHost?: HTMLElement|null;
   dog: DogProfile; petState: PetState; pose?: AvatarPose;
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
@@ -192,7 +193,7 @@ function IllustratedStage(props: Props & {url:string}) {
     gameRef.current=null;setGame(null);leap.current={direction:0,started:0};
   };
   useEffect(()=>{if(failed){closeGame();closeFinding();stopFun();}},[failed]);
-  useEffect(()=>{if(props.petState.sick||props.petState.sleep?.asleep){closeGame();closeFinding();stopFun();clearCheer();}else if(props.pose&&props.pose!=='stand'){closeFinding();stopFun();}},[props.petState.sick,props.petState.sleep?.asleep,props.pose]);
+  useEffect(()=>{if(props.petState.sick||props.petState.sleep?.asleep){closeGame();closeFinding();stopFun();clearCheer();}else if(props.pose&&props.pose!=='stand'){closeGame();closeFinding();stopFun();}},[props.petState.sick,props.petState.sleep?.asleep,props.pose]);
   const choose=(direction:'left'|'right')=>{
     const current=gameRef.current;if(!current||current.busy)return;
     const hit=current.target===direction,score=current.score+(hit?1:0);
@@ -212,6 +213,7 @@ function IllustratedStage(props: Props & {url:string}) {
     let disposed=false,frame=0;
     const textures=new Map<ArtPose,THREE.Texture>();
     let shownPose:ArtPose='stand',desiredPose:ArtPose='stand',poseChangedAt=-Infinity,transitionDuration=420;
+    let poseRun={id:0,settledAt:null as number|null,reported:false};
     let renderer:THREE.WebGLRenderer;
     try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});}catch{setFailed(true);return;}
     renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
@@ -233,6 +235,8 @@ function IllustratedStage(props: Props & {url:string}) {
     const outgoingMaterial=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,uniforms:outgoingUniforms,transparent:true,depthTest:false,depthWrite:false});
     const outgoing=new THREE.Mesh(geometry,outgoingMaterial);outgoing.visible=false;outgoing.renderOrder=1;scene.add(outgoing);
     const skin=new THREE.Mesh(geometry,material);skin.renderOrder=2;scene.add(skin);
+    const toyGeometry=new THREE.SphereGeometry(.055,10,8),toyMaterial=new THREE.MeshBasicMaterial({color:'#b37736',depthTest:false});
+    const trainingToy=new THREE.Mesh(toyGeometry,toyMaterial);trainingToy.renderOrder=3;trainingToy.visible=false;scene.add(trainingToy);
     const setRig=(u:typeof uniforms,pose:ArtPose)=>{
       const r=landmarksFor(dog.id,pose);u.feet.value.set(...r.feet);u.eyes.value.set(...r.eyes);u.headPivot.value.set(...r.head);u.tailPivot.value.set(...r.tail);u.legStart.value=r.legStart;
       u.resting.value=['stand','sit','paw','pet','bow'].includes(pose)?0:1;
@@ -327,6 +331,12 @@ function IllustratedStage(props: Props & {url:string}) {
         const m=masks.get(shownPose);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}
       }
       const transition=reduced.matches?1:Math.min(1,(now-poseChangedAt)/transitionDuration);
+      const request=p.poseRequest;
+      if((request?.id??0)!==poseRun.id)poseRun={id:request?.id??0,settledAt:null,reported:false};
+      const posed=!!request&&!asleep&&!p.petState.sick&&!action&&shownPose===artPoseFor(request.pose)&&transition===1;
+      if(posed&&poseRun.settledAt===null)poseRun.settledAt=now;
+      const lesson=request?trainingMotion(request.pose,poseRun.settledAt===null?0:now-poseRun.settledAt,reduced.matches):null;
+      if(lesson){uniforms.gaze.value.x=lesson.gaze;uniforms.motion.value.y=Math.max(uniforms.motion.value.y,lesson.run);}
       const eased=transition*transition*(3-2*transition);
       uniforms.morphAmount.value=1-eased;uniforms.opacity.value=1;
       outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1;
@@ -340,17 +350,26 @@ function IllustratedStage(props: Props & {url:string}) {
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
       const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*personality.pace:0;
-      const size=1-zoom*.12,room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
+      const size=(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
-      skin.scale.set((zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1)*size,size,1);
+      skin.scale.set((lesson?.facing??(zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1))*size,size,1);
       const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
-      skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX,-room,room);
+      skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
       outgoing.position.copy(skin.position);outgoing.scale.copy(skin.scale);
+      const pickup=request?.pose==='fetch'&&poseRun.settledAt!==null?(now-poseRun.settledAt)/1800:0;
+      trainingToy.visible=!!lesson?.toy&&!(pickup>.45&&pickup<.6);
+      if(trainingToy.visible){
+        const carry=!!lesson?.carrying;
+        trainingToy.position.set(carry?skin.position.x-.56*size*(lesson?.facing??1):request?.pose==='fetch'?room*.65+.56:-Math.min(.72,camera.right-.1),carry?skin.position.y+.08*size:-.78,.02);
+      }
       floor.position.x=skin.position.x;floor.scale.x=.63*size;floorMaterial.opacity=.08*(1-Math.sin(jump*Math.PI)*.55);
       if(pawTarget.current){const x=.5+(.21-.5)*2/(camera.right-camera.left),y=.5+(.53-.5)*2/(camera.top-camera.bottom);pawTarget.current.style.left=`${x*100}%`;pawTarget.current.style.top=`${y*100}%`;}
       renderer.info.reset();renderer.render(scene,camera);
+      canvas.dataset.performanceId=String(request?.id??0);canvas.dataset.performancePose=request?.pose??'none';
+      canvas.dataset.performanceDone=String(!!request&&poseRun.reported);
+      if(posed&&lesson?.done&&!poseRun.reported){poseRun.reported=true;canvas.dataset.performanceDone='true';canvas.dataset.completedAt=String(now);p.onPoseComplete?.(request!.id,now);}
       times.push(now);while(times.length&&now-times[0]>3000)times.shift();
       canvas.dataset.frames=String(++renders);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.drawCalls=String(renderer.info.render.calls);
       canvas.dataset.fps=times.length>2?((times.length-1)*1000/(now-times[0])).toFixed(1):'0';
@@ -358,7 +377,7 @@ function IllustratedStage(props: Props & {url:string}) {
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
-    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();renderer.dispose();canvas.remove();};
+    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
   },[dog.id,url,failed]);
 
   if(failed||!url)return <>{fallback}</>;

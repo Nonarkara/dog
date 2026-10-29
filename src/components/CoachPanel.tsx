@@ -38,14 +38,15 @@ import {
   timingVerdict,
 } from '../domain/training';
 import { PracticeDeck } from './PracticeDeck';
-import type { AvatarPose } from './DogAvatar3D';
+import type {PerformPose} from './trainingMotion';
 
 export interface CoachPanelProps {
   dog: DogProfile;
   petState: PetState;
   onPetStateChange: CommitPet;
   /** The practice field moves the dog on the stage. */
-  onPose?: (pose: AvatarPose) => void;
+  onPose?: PerformPose;
+  busy?:boolean;
 }
 
 /** Where a rep is in its life. */
@@ -89,7 +90,7 @@ const clock = (iso: string): string => {
 const signed = (value: number): string =>
   `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)}`;
 
-export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange, onPose }) => {
+export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange, onPose,busy }) => {
   /** PRACTICE trains the dog on the stage; LOG records reps with the real one. */
   const [mode, setMode] = useState<'practice' | 'log'>('practice');
   const [behaviourName, setBehaviourName] = useState<BehaviourName>('sit');
@@ -352,7 +353,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
           </div>
           )}
           {mode === 'log' && (
-          <span className="data text-[13px] leading-none text-accent" title="Strength of this behaviour">
+          <span className="data text-[13px] leading-none text-accent" title="Game estimate from your session logs; not a measured ability">
             {Math.round(behaviour.strength * 100)}%
           </span>
           )}
@@ -360,7 +361,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
       </div>
 
       {mode === 'practice' ? (
-        <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (() => {})} />
+        <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (async () => null)} busy={busy}/>
       ) : (
       <div className="panel-body">
         {/* ---- all eight behaviours ----------------------------------------- */}
@@ -405,7 +406,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
             /* ---- the outcome, in the space the controls were in ------------- */
             <div className="mt-1.5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="label text-[9px]">Strength</span>
+                <span className="label text-[9px]">Log estimate</span>
                 <span className="data text-[14px] leading-none text-zinc-100">
                   {Math.round(outcome.strength * 100)}%
                 </span>
@@ -507,7 +508,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 </button>
                 <span className="ml-auto truncate text-[9px] leading-none text-faint">
                   {real
-                    ? 'Only the real dog moves the strength.'
+                    ? 'Only your real-session logs change this estimate.'
                     : 'Rehearsal: your timing moves. The strength does not.'}
                 </span>
               </div>

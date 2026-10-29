@@ -6,9 +6,10 @@ import { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import { coatColorAt, coatOf, type CoatPart } from '../domain/coat';
 import { sound } from '../utils/proceduralAudio';
+import {bodyPoseFor,trainingMotion,type AvatarPose,type BodyPose,type PerformanceProps} from './trainingMotion';
+export type {AvatarPose} from './trainingMotion';
 
 /** What the body is doing. Training (and sleep) set it; the avatar eases into it. */
-export type AvatarPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep';
 
 export type AvatarInteractionTrigger =
   | 'pet'
@@ -24,7 +25,7 @@ export type AvatarInteractionTrigger =
   | 'rewardCalm'
   | null;
 
-interface DogAvatar3DProps {
+interface DogAvatar3DProps extends PerformanceProps {
   controlsHost?:HTMLElement|null;
   dog: DogProfile;
   petState: PetState;
@@ -50,7 +51,7 @@ interface DogAvatar3DProps {
  *   frontR     the right foreleg on its own (the paw lift)
  *   headY/headPitch  the head dropping toward the paws
  */
-const POSES: Record<AvatarPose, { rootY: number; pitch: number; front: number; frontR: number; back: number; headY: number; headPitch: number }> = {
+const POSES: Record<BodyPose, { rootY: number; pitch: number; front: number; frontR: number; back: number; headY: number; headPitch: number }> = {
   stand: { rootY: 0, pitch: 0, front: 0, frontR: 0, back: 0, headY: 0, headPitch: 0 },
   sit: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: 0.45, back: -1.45, headY: 0.02, headPitch: 0.3 },
   paw: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: -0.75, back: -1.45, headY: 0.02, headPitch: 0.3 },
@@ -65,6 +66,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   interactionTrigger,
   onInteractionEnd,
   pose = 'stand',
+  poseRequest,onPoseComplete,
   onPet,
   onClean,
   onMiniGameComplete,
@@ -83,6 +85,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   petStateRef.current = petState;
   const poseRef = useRef(pose);
   poseRef.current = pose;
+  const performanceRef=useRef({poseRequest,onPoseComplete});performanceRef.current={poseRequest,onPoseComplete};
   const onPetRef = useRef(onPet);
   onPetRef.current = onPet;
   const onCleanRef = useRef(onClean);
@@ -886,6 +889,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const clock = new THREE.Clock();
     let lastFrame = 0;
     const cur = { ...POSES.stand };
+    const trainingScale=dogRoot.scale.clone();
+    let poseRun={id:0,settledAt:null as number|null,reported:false};
+    const trainingToy=new THREE.Mesh(new THREE.SphereGeometry(.075,10,8),new THREE.MeshStandardMaterial({color:'#b37736'}));trainingToy.visible=false;scene.add(trainingToy);
     let nextBlink = 2 + Math.random() * 3;
     let blink = 0;
     const camLocal = new THREE.Vector3();
@@ -927,7 +933,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       bolsterGroup.visible = bolsterGroup.scale.x > 0.05;
 
       // 3D Food Bowl Feasting
-      const isFeeding = acting === 'feed';
+      const isFeeding = acting === 'feed'||poseRef.current==='reward';
       const targetBowlScale = isFeeding ? 1 : 0.001;
       bowlGroup.scale.lerp(new THREE.Vector3(targetBowlScale, targetBowlScale, targetBowlScale), 0.15);
       bowlGroup.visible = bowlGroup.scale.x > 0.05;
@@ -966,9 +972,14 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
       if (!beingPetted && petting.strokeTime > 0 && !petting.melt) petting.strokeTime = Math.max(0, petting.strokeTime - dt * 0.5);
       const melting = petting.melt > 0 && !asleep;
-      const target = POSES[asleep ? 'sleep' : isSick||ps.calmSince!==undefined ? 'down' : melting ? 'down' : poseRef.current];
+      const target = POSES[asleep ? 'sleep' : isSick||ps.calmSince!==undefined ? 'down' : melting ? 'down' : bodyPoseFor(poseRef.current)];
       const ease = 1 - Math.exp(-dt * 6);
       for (const k of Object.keys(cur) as (keyof typeof cur)[]) cur[k] += (target[k] - cur[k]) * ease;
+      const request=performanceRef.current.poseRequest;
+      if((request?.id??0)!==poseRun.id)poseRun={id:request?.id??0,settledAt:null,reported:false};
+      const posed=!!request&&!asleep&&!isSick&&acting==='idle'&&Object.keys(cur).every(k=>Math.abs(cur[k as keyof typeof cur]-target[k as keyof typeof target])<.015);
+      if(posed&&poseRun.settledAt===null)poseRun.settledAt=frameNow;
+      const lesson=request?trainingMotion(request.pose,poseRun.settledAt===null?0:frameNow-poseRun.settledAt,reducedMotion):null;
 
       dogRoot.rotation.y += (targetYaw - dogRoot.rotation.y) * 0.1;
       dogRoot.rotation.x += (targetTilt - dogRoot.rotation.x) * 0.1;
@@ -995,6 +1006,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         bounce = Math.abs(stride) * 0.04;
         walkX = Math.sin(t * 1.8) * 0.35;
       }
+      if(lesson?.run){stride=Math.sin(t*8);bounce=Math.abs(stride)*.04;}
 
       // Mini-Game Leaping
       if (gameLeap.current.dir !== null) {
@@ -1005,7 +1017,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         bounce = Math.sin(p * Math.PI) * 0.32;
       }
 
-      dogRoot.position.set(walkX + shiverX, cur.rootY + bounce, 0);
+      dogRoot.position.set(walkX + shiverX+(lesson?.x??0)*.5, cur.rootY + bounce, 0);
+      dogRoot.scale.copy(trainingScale).multiplyScalar(lesson?.scale??1);
       dogRoot.rotation.z = shiverRot;
       chassis.rotation.x = cur.pitch;
       frontL.rotation.x = cur.front + stride * 0.5;
@@ -1017,7 +1030,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       // The head: follows you, rests on bolster cushion asleep
       camLocal.copy(camera.position);
       dogRoot.worldToLocal(camLocal);
-      const gaze = asleep ? 0 : Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
+      const gaze = asleep ? 0 : lesson?.gaze||Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
       head.position.set(HEAD_REST.x, HEAD_REST.y + cur.headY + (friendly * 0.03 - tired * 0.03), HEAD_REST.z);
       head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 - head.rotation.y) * 0.08;
 
@@ -1120,7 +1133,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         if (s.userData.life <= 0) { sparksGroup.remove(s); const m = s as THREE.Mesh; m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
       });
 
+      trainingToy.visible=!!lesson?.toy;
+      if(trainingToy.visible)trainingToy.position.set(lesson?.carrying?dogRoot.position.x-.3:.65,lesson?.carrying ? .8 : .12,.25);
       renderer.render(scene, camera);
+      domElem.dataset.performanceId=String(request?.id??0);domElem.dataset.performancePose=request?.pose??'none';domElem.dataset.performanceDone=String(!!request&&poseRun.reported);
+      if(posed&&lesson?.done&&!poseRun.reported){poseRun.reported=true;domElem.dataset.performanceDone='true';domElem.dataset.completedAt=String(frameNow);performanceRef.current.onPoseComplete?.(request!.id,frameNow);}
       // Rendered evidence for the performance gate; no personal data.
       domElem.dataset.triangles = String(renderer.info.render.triangles);
       domElem.dataset.drawCalls = String(renderer.info.render.calls);

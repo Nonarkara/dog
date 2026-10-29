@@ -53,6 +53,7 @@ await page.locator('[aria-controls="dog-switcher"]').click();
 await page.getByRole('option',{name:'Enroll another dog'}).click();
 await page.getByRole('textbox',{name:'Dog name',exact:true}).fill('Review enrollment');
 await page.getByRole('textbox',{name:'Breed',exact:true}).fill('Mixed');
+await page.getByRole('combobox',{name:'Sex',exact:true}).selectOption('female');
 await hold(page);await page.getByRole('button',{name:'Create profile',exact:true}).click();
 assert(await page.getByRole('button',{name:'Create profile',exact:true}).isDisabled(),'Second enrollment must be disabled');
 await release(page);

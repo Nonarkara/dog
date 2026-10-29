@@ -511,7 +511,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     {
       label: 'Sex',
       mono: false,
-      value: `${dog.sex}, ${dog.isNeutered ? 'neutered' : 'intact'}`,
+      value: `${dog.sex}, ${dog.isNeutered===null ? 'neuter status not recorded' : dog.isNeutered ? 'neutered' : 'intact'}`,
     },
     { label: 'Weight', mono: true, value: dog.weightKg > 0 ? `${dog.weightKg} kg` : 'Not recorded' },
     { label: 'Coat', mono: false, value: dog.coatColor || 'Not recorded' },

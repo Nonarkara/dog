@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
 import { dailyLife } from './domain/dailyLife';
-import type { AvatarPose, AvatarInteractionTrigger } from './components/DogAvatar3D';
+import type { AvatarInteractionTrigger } from './components/DogAvatar3D';
+import type {PoseRequest,AvatarPose,PerformPose} from './components/trainingMotion';
+import {calmNeed} from './domain/calm';
 import { addTogether, answerCall, tickCall } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
 import { dogTheme, DOG_THEMES } from './data/dogThemes';
@@ -153,7 +155,26 @@ export const App: React.FC = () => {
   // Interactive 3D triggers
   /** What the practice field asked the dog's body to do. */
   const [gameControlsHost,setGameControlsHost]=useState<HTMLDivElement|null>(null);
-  const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
+  const [poseRequest,setPoseRequest]=useState<PoseRequest|null>(null);
+  const avatarPose:AvatarPose=poseRequest?.pose??'stand';
+  const poseCounter=useRef(0);
+  const pendingPose=useRef<{id:number;resolve:(at:number|null)=>void;timer:ReturnType<typeof setTimeout>}|null>(null);
+  const stageContext=useRef({blocked:false,model:false});
+  const performPose:PerformPose=useCallback((pose:AvatarPose)=>{
+    if(pendingPose.current){clearTimeout(pendingPose.current.timer);pendingPose.current.resolve(null);pendingPose.current=null;}
+    if(pose==='stand'){setPoseRequest(null);return Promise.resolve(null);}
+    if(stageContext.current.blocked||stageContext.current.model)return Promise.resolve(null);
+    const id=++poseCounter.current;
+    return new Promise<number|null>(resolve=>{
+      const timer=setTimeout(()=>{if(pendingPose.current?.id===id){pendingPose.current=null;setPoseRequest(null);resolve(null);}},6000);
+      pendingPose.current={id,resolve,timer};setPoseRequest({id,pose});
+    });
+  },[]);
+  const completePose=useCallback((id:number,at:number)=>{
+    const pending=pendingPose.current;if(!pending||pending.id!==id)return;
+    clearTimeout(pending.timer);pendingPose.current=null;pending.resolve(at);
+  },[]);
+  useEffect(()=>()=>{if(pendingPose.current){clearTimeout(pendingPose.current.timer);pendingPose.current.resolve(null);}},[]);
   useEffect(()=>{
     if(avatarPose!=='stand')void commitPet(prev=>({...prev,calmSince:undefined}));
   },[avatarPose,commitPet]);
@@ -195,11 +216,13 @@ export const App: React.FC = () => {
 
   const [newDogName, setNewDogName] = useState('');
   const [newDogBreed, setNewDogBreed] = useState('');
-  const [newDogBirth, setNewDogBirth] = useState('2023-01-01');
-  const [newDogSex, setNewDogSex] = useState<'male' | 'female'>('male');
+  const [newDogBirth, setNewDogBirth] = useState('');
+  const [newDogSex, setNewDogSex] = useState<'male' | 'female'|''>('');
   const [newDogCoat, setNewDogCoat] = useState(COAT_PRESETS[1].coat);
 
   const currentDog = dogs.find((d) => d.id === activeDogId) || dogs[0];
+  stageContext.current={blocked:!!calmNeed(petState,'training')||isInteracting||isAddDogOpen,model:!!currentDog.avatarConfig.customModelUrl};
+  useEffect(()=>{if(stageContext.current.blocked)void performPose('stand');},[petState.sleep.asleep,petState.sick,petState.needs.energy,petState.needs.hunger,petState.needs.hygiene,petState.life?.bladder,petState.life?.peeCount,petState.poopCount,isInteracting,isAddDogOpen,performPose]);
   // While a new dog is being enrolled, the stage shows the coat being chosen.
   const previewDog: DogProfile = {
     ...currentDog,
@@ -230,7 +253,7 @@ export const App: React.FC = () => {
     setInteractionTrigger(null);
     setIsInteracting(false);
     setPendingAction(null);
-    setAvatarPose('stand');
+    void performPose('stand');
     setNote(null);
   };
 
@@ -331,6 +354,7 @@ export const App: React.FC = () => {
    * written when the truth changes, never a second opinion about it.
    */
   const handleInteract = async (action: CareAction) => {
+    if(isAddDogOpen)return;
     if (interactionBusy.current) return;
     interactionBusy.current=true;
     const id=activeDogId;
@@ -353,6 +377,7 @@ export const App: React.FC = () => {
   };
 
   const handleMiniGameComplete = async (won: boolean, kind:'catch'|'find-treat'='catch') => {
+    if(isAddDogOpen)return;
     const id=activeDogId;let accepted=false;
     const next=await commitPet(base=>{
       if(base.sick||base.sleep.asleep)return base;
@@ -366,6 +391,7 @@ export const App: React.FC = () => {
   };
 
   const handleCommunicate = async (cue: string) => {
+    if(isAddDogOpen)return;
     if(interactionBusy.current)return;
     interactionBusy.current=true;
     setIsInteracting(true);
@@ -381,6 +407,7 @@ export const App: React.FC = () => {
   };
 
   const handleBed = async () => {
+    if(isAddDogOpen)return;
     if(interactionBusy.current)return;
     interactionBusy.current=true;setIsInteracting(true);
     const id=activeDogId;let message='';
@@ -405,7 +432,7 @@ export const App: React.FC = () => {
 
   const handleCreateNewDog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDogName.trim()) return;
+    if (!newDogName.trim()||!newDogSex) return;
     if(enrollmentBusy.current)return;
     enrollmentBusy.current=true;setIsEnrolling(true);
 
@@ -414,20 +441,20 @@ export const App: React.FC = () => {
       name: newDogName.trim(),
       callName: newDogName.trim(),
       breed: newDogBreed.trim() || 'Mixed Breed',
-      birthDate: newDogBirth || '2023-01-01',
+      birthDate: newDogBirth,
       sex: newDogSex,
-      isNeutered: true,
-      microchipId: `TH-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      weightKg: 20,
+      isNeutered: null,
+      microchipId: '',
+      weightKg: 0,
       coatColor: `${COAT_PRESETS.find((c) => c.coat.pattern === newDogCoat.pattern)?.label ?? 'Custom'} coat`,
-      distinctiveMarks: ['Healthy coat', 'Bright eyes'],
-      personalityTraits: ['Playful', 'Alert'],
-      favoriteFood: 'Fresh meats & kibble',
-      favoriteToy: 'Chew rope',
-      quirks: ['Loves outdoor walks'],
-      primaryVetClinic: 'Thonglor Pet Hospital',
-      emergencyPhone: '+66 2 712 6301',
-      primaryPhotoUrl: currentDog.primaryPhotoUrl,
+      distinctiveMarks: [],
+      personalityTraits: [],
+      favoriteFood: '',
+      favoriteToy: '',
+      quirks: [],
+      primaryVetClinic: '',
+      emergencyPhone: '',
+      primaryPhotoUrl: '',
       photos: [],
       vaccinations: [],
       parasiteControl: [],
@@ -437,10 +464,10 @@ export const App: React.FC = () => {
         happiness: 85,
         energy: 80,
         hygiene: 80,
-        lastFed: Date.now(),
-        lastPlayed: Date.now(),
-        lastWalked: Date.now(),
-        lastGroomed: Date.now(),
+        lastFed: 0,
+        lastPlayed: 0,
+        lastWalked: 0,
+        lastGroomed: 0,
       },
       metaverseTribe: 'The Roaming Pack',
       metaverseBio: 'Ready to explore the canine commons.',
@@ -463,6 +490,7 @@ export const App: React.FC = () => {
     setIsAddDogOpen(false);
     setNewDogName('');
     setNewDogBreed('');
+    setNewDogBirth('');setNewDogSex('');
     say(`${newDog.name.trim()} is enrolled.`);
   };
 
@@ -494,7 +522,8 @@ export const App: React.FC = () => {
               petState={petState}
               key={activeDogId}
               onPetStateChange={commitPet}
-              onPose={setAvatarPose}
+              onPose={performPose}
+              busy={isInteracting||isAddDogOpen}
             />
           </Suspense>
         );
@@ -606,6 +635,8 @@ export const App: React.FC = () => {
                     dog={isAddDogOpen ? previewDog : currentDog}
                     petState={petState}
                     pose={avatarPose}
+                    poseRequest={poseRequest}
+                    onPoseComplete={completePose}
                     onPet={() => handleInteract('pet')}
                     onClean={() => handleInteract('clean')}
                     controlsHost={gameControlsHost}
@@ -619,6 +650,8 @@ export const App: React.FC = () => {
                         dog={isAddDogOpen ? previewDog : currentDog}
                         petState={petState}
                         pose={avatarPose}
+                        poseRequest={poseRequest}
+                        onPoseComplete={completePose}
                         onPet={() => handleInteract('pet')}
                         onClean={() => handleInteract('clean')}
                         controlsHost={gameControlsHost}
@@ -729,16 +762,18 @@ export const App: React.FC = () => {
                 type="date"
                 value={newDogBirth}
                 onChange={(e) => setNewDogBirth(e.target.value)}
-                aria-label="Birth date"
+                aria-label="Birth date (optional)"
+                title="Birth date, if known"
                 className="px-2 py-1 text-xs shrink-0"
-                required
               />
               <select
                 value={newDogSex}
                 onChange={(e) => setNewDogSex(e.target.value as 'male' | 'female')}
                 aria-label="Sex"
+                required
                 className="px-2 py-1 text-xs shrink-0"
               >
+                <option value="" disabled>Sex</option>
                 <option value="male">He</option>
                 <option value="female">She</option>
               </select>
@@ -794,7 +829,7 @@ export const App: React.FC = () => {
         onToggleLabels={toggleLabels}
         dog={currentDog}
         petState={petState}
-        isInteracting={isInteracting}
+        isInteracting={isInteracting||isAddDogOpen}
         pendingAction={pendingAction}
         onInteract={handleInteract}
         onCommunicate={handleCommunicate}
