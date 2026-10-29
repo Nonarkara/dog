@@ -1,6 +1,6 @@
 import { dailyLife, dailyMood } from '../domain/dailyLife';
 import React from 'react';
-import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock, Moon, Sun, Flame} from 'lucide-react';
+import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import { happiness, readiness, temperament } from '../domain/pet';
@@ -109,23 +109,23 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
         </span>
       </header>
 
-      <div className="panel-body p-2.5 gap-2 @container">
+      <div className="panel-body care-body @container">
         {/* The meters follow the width the panel was given */}
-        <div className="grid grid-cols-2 @lg:grid-cols-3 content-between gap-x-4 gap-y-2.5 @lg:gap-y-1.5">
+        <div className="care-meter-grid">
           {meters.map((m) => {
             const isLow = m.inverted
               ? m.value > 75 || m.value < 20
               : m.value < LOW_THRESHOLD;
             const value = Math.round(m.value);
             return (
-              <div key={m.key} className="min-w-0">
-                <div className="flex items-baseline justify-between gap-1">
+              <div key={m.key} className="care-meter care-meter-reading min-w-0">
+                <div className="care-meter-symbols">
                   <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
                   {isLow && (
                     <span className="label text-rose-400 truncate">{m.lowMeans}</span>
                   )}
                 </div>
-                <div className="flex items-baseline gap-1">
+                <div className="care-meter-value flex items-baseline gap-1">
                   <span
                     className={`data text-[17px] leading-none ${isLow ? 'text-rose-400' : 'text-zinc-100'}`}
                   >
@@ -152,7 +152,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
         </div>
 
         {/* The sentence: advice, health, discipline and time together */}
-        <div className="border-hairline-t pt-2">
+        <div className="care-now border-hairline-t">
           <p className="label">Now</p>
           {petState.call ? (
             <p className="text-[12px] leading-snug text-accent mt-0.5" role="status">
@@ -161,20 +161,22 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           ) : (
             <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
           )}
-          <p className="data text-[10px] text-faint mt-1">
-            Ready {Math.round(ready * 100)}% · Disc {disciplineVal}% · {temperament(petState)}
-            {isSick ? ' · ⚠️ SICK' : poops > 0 ? ` · ${poops} mess` : ''}
+          <p className="care-summary text-[11px] text-faint mt-1">
+            <span className="data">Ready {Math.round(ready * 100)}%</span>
+            <span className="data">Disc {disciplineVal}%</span>
+            <span>{temperament(petState)}</span>
+            {isSick ? <span>Sick</span> : poops > 0 ? <span>{poops} mess</span> : null}
           </p>
           <p className="data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
-            Together today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
-            {minutes(petState.together?.totalSec ?? 0)} in all
+            Today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
+            Total {minutes(petState.together?.totalSec ?? 0)}
           </p>
         </div>
 
         {/* THE CARE LOG */}
-        <div className="border-hairline-t pt-2">
+        <div className="care-history border-hairline-t">
           <p className="label">Last</p>
-          <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-1 mt-1">
+          <dl className="care-history-times mt-1">
             {CARE_LOG.map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-1 min-w-0">
                 <dt className="label truncate" title={row.label}>{React.createElement(({fed:Utensils,played:Smile,walked:Activity,groomed:Sparkles})[row.key]||Clock,{size:14,'aria-hidden':true})}<span className="sr-only">{row.label}</span></dt>
@@ -182,7 +184,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
               </div>
             ))}
           </dl>
-          <p className="data text-[10px] text-faint mt-1.5 flex items-center justify-between">
+          <p className="care-health data text-[10px] text-faint mt-1 flex flex-wrap items-center justify-between gap-x-2">
             <span className="truncate">
               {asleep
                 ? `Asleep since ${clockTime(petState.sleep?.fellAsleepAt)}`
