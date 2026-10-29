@@ -64,6 +64,7 @@ fs.mkdirSync(out, { recursive: true });
   }
   assert.equal(new Set(fingerprints).size,5);
   // A visible target governs the score. Five correct choices must always win.
+  const trustBeforeGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust);
   await page.getByRole('button', {name:/^Play/}).click();
   for(let round=1;round<=5;round++) {
     await page.waitForFunction(r => document.querySelector('.catch-hud')?.textContent.includes(`Round ${r}/5`),round);
@@ -72,7 +73,8 @@ fs.mkdirSync(out, { recursive: true });
     await page.waitForTimeout(950);
   }
   assert.equal(await page.locator('.catch-hud').count(),0);
-  assert.match(await page.locator('[role="status"]').last().innerText(),/victory/i);
+  const trustAfterGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust);
+  assert(trustAfterGame >= Math.min(100, trustBeforeGame + 6.9), 'Play +2 and catch victory +5 reach persisted state');
   // New-game reset and close invalidate pending round callbacks.
   await page.getByRole('button',{name:/^Play/}).click();
   await page.getByRole('button',{name:'◀ Left',exact:true}).click();
