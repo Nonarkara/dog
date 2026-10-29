@@ -1,0 +1,123 @@
+{
+  "before": {
+    "updatedAt": 1793372400000,
+    "needs": {
+      "hunger": 90,
+      "energy": 30,
+      "hygiene": 100
+    },
+    "trust": 60,
+    "arousal": 40,
+    "personality": {
+      "boldness": 0,
+      "sociability": 0,
+      "foodDrive": 0.2,
+      "playDrive": 0.3,
+      "sensitivity": 0.2
+    },
+    "behaviours": {},
+    "associations": {},
+    "observations": [],
+    "sleep": {
+      "asleep": false,
+      "fellAsleepAt": null,
+      "wokenAt": 1793372400000,
+      "wakeCount": 3,
+      "restlessness": 0.72
+    },
+    "lastCareAt": 1793372400000,
+    "poopCount": 0,
+    "life": {
+      "bladder": 0,
+      "boredom": 0,
+      "digestionMinutes": 0,
+      "lowFullnessMinutes": 0,
+      "peeCount": 0
+    },
+    "sick": false,
+    "discipline": 60,
+    "weightKg": 24.8
+  },
+  "after": {
+    "updatedAt": 1793379600000,
+    "needs": {
+      "hunger": 86.7999999999995,
+      "energy": 35.82666666666747,
+      "hygiene": 97.16499999999917
+    },
+    "trust": 59.6666666666664,
+    "arousal": 12,
+    "personality": {
+      "boldness": 0,
+      "sociability": 0,
+      "foodDrive": 0.2,
+      "playDrive": 0.3,
+      "sensitivity": 0.2
+    },
+    "behaviours": {},
+    "associations": {},
+    "observations": [],
+    "sleep": {
+      "asleep": true,
+      "fellAsleepAt": 1793374440000,
+      "wokenAt": 1793372400000,
+      "wakeCount": 3,
+      "restlessness": 0.23466666666665925
+    },
+    "lastCareAt": 1793372400000,
+    "poopCount": 0,
+    "life": {
+      "bladder": 58.57142857142925,
+      "boredom": 78.49999999999756,
+      "digestionMinutes": 68.4000000000013,
+      "lowFullnessMinutes": 0,
+      "peeCount": 1,
+      "lastPeedAt": 1793374680000
+    },
+    "sick": false,
+    "discipline": 60,
+    "weightKg": 24.8
+  },
+  "final": {
+    "updatedAt": 1793383200000,
+    "needs": {
+      "hunger": 85.19999999999925,
+      "energy": 40.326666666668494,
+      "hygiene": 95.27499999999918
+    },
+    "trust": 59.4999999999996,
+    "arousal": 12,
+    "personality": {
+      "boldness": 0,
+      "sociability": 0,
+      "foodDrive": 0.2,
+      "playDrive": 0.3,
+      "sensitivity": 0.2
+    },
+    "behaviours": {},
+    "associations": {},
+    "observations": [],
+    "sleep": {
+      "asleep": true,
+      "fellAsleepAt": 1793374440000,
+      "wokenAt": 1793372400000,
+      "wakeCount": 0,
+      "restlessness": 0.014666666666657384
+    },
+    "lastCareAt": 1793372400000,
+    "poopCount": 1,
+    "life": {
+      "bladder": 1.4285714285725797,
+      "boredom": 63.49999999999594,
+      "digestionMinutes": 2.4000000000000723,
+      "lowFullnessMinutes": 0,
+      "peeCount": 2,
+      "lastPeedAt": 1793383080000
+    },
+    "sick": false,
+    "discipline": 60,
+    "weightKg": 24.8,
+    "lastPoopedAt": 1793382840000
+  },
+  "errors": []
+}
