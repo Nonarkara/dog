@@ -8,13 +8,13 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-calm';fs.mkdirSync(out,{recursive:
   const page=await browser.newPage({viewport:{width,height}}),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   const noon=new Date(2026,9,30,12).getTime();await page.clock.setFixedTime(noon);await page.goto(url);
-  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_pet_states_v1')||'{}')['expo-2021']);
+  await page.waitForFunction(()=>(JSON.parse(localStorage.getItem('canine_os_save_v3')||'null')?.pets||{})['expo-2021']);
   await page.evaluate(at=>{
-   const key='canine_os_pet_states_v1',states=JSON.parse(localStorage.getItem(key)),s=states['expo-2021'];
+   const key='canine_os_save_v3',states=JSON.parse(localStorage.getItem(key)).pets,s=states['expo-2021'];
    states['expo-2021']={...s,updatedAt:at,discipline:20,arousal:40,trust:60,needs:{hunger:85,energy:80,hygiene:90},poopCount:0,call:{reason:'tantrum',since:at},life:{bladder:0,boredom:0,digestionMinutes:0,lowFullnessMinutes:0,peeCount:0}};
-   localStorage.setItem(key,JSON.stringify(states));
+   localStorage.setItem(key,JSON.stringify({...JSON.parse(localStorage.getItem(key)),pets:states}));
   },noon);await page.reload();
-  const state=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['expo-2021']);
+  const state=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);
   const pose=art=>page.waitForFunction(art=>document.querySelector('canvas')?.dataset.artPose===art&&document.querySelector('canvas')?.dataset.transition==='0',art);
   await page.getByRole('textbox',{name:'Say a word to Expo'}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Scold/}).count(),0);
@@ -38,7 +38,7 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-calm';fs.mkdirSync(out,{recursive:
   await page.reload();await page.getByRole('button',{name:'Quiet time',exact:true}).waitFor();assert.equal((await state()).discipline,25);
   await page.getByRole('button',{name:'Quiet time',exact:true}).click();assert(await page.getByRole('button',{name:/Watch calm/}).isDisabled());assert.equal((await state()).discipline,25,'Cooldown cannot award twice');
   // Ordinary care interrupts the quiet observation and leaves its own pose free.
-  await page.waitForTimeout(2100);await page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:'Pet Expo',exact:true}).click();assert.equal((await state()).calmSince,undefined);
+  await page.waitForTimeout(2100);await page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:'Pet Expo',exact:true}).click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021'].calmSince===undefined);assert.equal((await state()).calmSince,undefined);
   // Reading help uses the existing information region, never a taller footer.
   await page.getByRole('button',{name:'Show control labels',exact:true}).click();
   const legend=page.locator('.control-reference .control-legend');await legend.waitFor();

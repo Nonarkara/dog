@@ -1,3 +1,4 @@
+import type {CommitPet} from '../utils/progressStore';
 /**
  * THE COACH PANEL.
  *
@@ -42,13 +43,13 @@ import type { AvatarPose } from './DogAvatar3D';
 export interface CoachPanelProps {
   dog: DogProfile;
   petState: PetState;
-  onPetStateChange: (state: PetState) => void;
+  onPetStateChange: CommitPet;
   /** The practice field moves the dog on the stage. */
   onPose?: (pose: AvatarPose) => void;
 }
 
 /** Where a rep is in its life. */
-type RepPhase = 'idle' | 'armed' | 'result';
+type RepPhase = 'idle' | 'armed' | 'result' | 'saving';
 
 /** What the panel shows after a rep has been applied. */
 interface RepOutcome {
@@ -105,6 +106,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
   const armedAtRef = useRef<number | null>(null);
   /** The newest state this panel knows about, so a late write never rolls
    *  back a rep that was recorded in the meantime. */
+  const savingRep=useRef(false);
+  const [isSavingRep,setIsSavingRep]=useState(false);
+  const selectedBehaviour=useRef(behaviourName);selectedBehaviour.current=behaviourName;
   const stateRef = useRef(petState);
   stateRef.current = petState;
   const cueCommitRef = useRef<number | null>(null);
@@ -178,12 +182,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
    * one letter at a time would otherwise leave "s" and "si" in the dog's
    * list of words.
    */
-  const commitCue = (value: string): void => {
+  const commitCue = async (value: string): Promise<void> => {
     const clean = value.trim();
     if (!clean) return;
-    const next = setCue(stateRef.current, behaviourName, clean);
-    stateRef.current = next;
-    onPetStateChange(next);
+    const next=await onPetStateChange(latest=>setCue(latest,behaviourName,clean));
+    if(next)stateRef.current=next;
   };
 
   const onCueChange = (value: string): void => {
@@ -201,17 +204,22 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
   };
 
   /* ---- one rep, applied --------------------------------------------------- */
-  const applyRep = (input: { performed: boolean; marked: boolean; delayMs?: number }): void => {
-    const result = recordRep(petState, {
+  const applyRep = async (input: { performed: boolean; marked: boolean; delayMs?: number }): Promise<void> => {
+    if(savingRep.current)return;
+    savingRep.current=true;setIsSavingRep(true);armedAtRef.current=null;setPhase('saving');
+    let result!:ReturnType<typeof recordRep>;
+    const saved=await onPetStateChange(latest=>{result=recordRep(latest, {
       behaviour: behaviourName,
       real,
       performed: input.performed,
       marked: input.marked,
       delayMs: input.delayMs,
       at: new Date().toISOString(),
-    });
-    stateRef.current = result.state;
-    onPetStateChange(result.state);
+    });return result.state;});
+    savingRep.current=false;setIsSavingRep(false);
+    if(!saved){setPhase('idle');showNote('Rep was not saved. Please try again.');return;}
+    if(selectedBehaviour.current!==behaviourName)return;
+    stateRef.current=saved;
     setOutcome({
       strength: result.outcome.behaviour.strength,
       delta: result.outcome.delta,
@@ -228,6 +236,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
   };
 
   const armTimer = (): void => {
+    if(savingRep.current)return;
     armedAtRef.current = performance.now();
     setElapsedMs(0);
     setPhase('armed');
@@ -240,6 +249,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
   };
 
   const logManual = (): void => {
+    if(savingRep.current)return;
     const parsed = Number.parseInt(manualDelay, 10);
     if (!Number.isFinite(parsed) || parsed < 0) return;
     setManualDelay('');
@@ -259,33 +269,25 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
      reward unpredictable" — steps that only mean something if the owner can
      put the behaviour on that schedule. So the schedule is a control here,
      and changing it resets the count of reps since the last reward. */
-  const setSchedule = (next: Schedule): void => {
-    const state = stateRef.current;
-    const current = getBehaviour(state, behaviourName);
-    const updated: PetState = {
-      ...state,
-      behaviours: {
-        ...state.behaviours,
-        [behaviourName]: { ...current, schedule: next, repsSinceReinforcement: 0 },
-      },
-    };
-    stateRef.current = updated;
-    onPetStateChange(updated);
-    const label = SCHEDULES.find((option) => option.id === next)?.label ?? next;
-    showNote(`Schedule for ${dog.name}'s ${behaviourName}: ${label}. ${SCHEDULES.find((option) => option.id === next)?.note ?? ''}`);
+  const setSchedule = async (next: Schedule): Promise<void> => {
+    const saved=await onPetStateChange(latest=>({...latest,behaviours:{...latest.behaviours,[behaviourName]:{...getBehaviour(latest,behaviourName),schedule:next,repsSinceReinforcement:0}}}));
+    if(!saved)return;
+    stateRef.current=saved;
+    const label=SCHEDULES.find(option=>option.id===next)?.label??next;
+    showNote(`Schedule for ${dog.name}'s ${behaviourName}: ${label}. ${SCHEDULES.find(option=>option.id===next)?.note??''}`);
   };
 
   /* ---- one observation, logged --------------------------------------------- */
-  const logObservation = (): void => {    const next = observe(petState, { tag: obsTag, at: new Date().toISOString() });
-    stateRef.current = next;
-    onPetStateChange(next);
-    const moved = TRAITS.map((t) => ({
-      label: t.label,
-      delta: next.personality[t.key] - petState.personality[t.key],
-    })).filter((t) => Math.abs(t.delta) > 0.0001);
-    const detail = moved.length
-      ? `, ${moved.map((t) => `${t.label} ${signed(t.delta)}`).join(', ')}`
-      : '';
+  const logObservation = async ():Promise<void> => {
+    let moved:{label:string;delta:number}[]=[];
+    const next=await onPetStateChange(latest=>{
+      const observed=observe(latest,{tag:obsTag,at:new Date().toISOString()});
+      moved=TRAITS.map(t=>({label:t.label,delta:observed.personality[t.key]-latest.personality[t.key]})).filter(t=>Math.abs(t.delta)>.0001);
+      return observed;
+    });
+    if(!next)return;
+    stateRef.current=next;
+    const detail=moved.length?`, ${moved.map(t=>`${t.label} ${signed(t.delta)}`).join(', ')}`:'';
     showNote(`Logged: ${OBSERVATION_LABELS[obsTag]}${detail}`);
   };
 
@@ -442,7 +444,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 <button
                   type="button"
                   onClick={armTimer}
-                  disabled={phase === 'armed'}
+                  disabled={phase === 'armed'||isSavingRep}
                   className={`btn flex-1 text-[11px] ${
                     phase === 'armed' ? 'btn-quiet border-hairline' : 'btn-accent'
                   }`}
@@ -452,7 +454,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 <button
                   type="button"
                   onClick={markNow}
-                  disabled={phase !== 'armed'}
+                  disabled={phase !== 'armed'||isSavingRep}
                   className={`btn flex-1 text-[11px] ${
                     phase === 'armed' ? 'btn-accent' : 'btn-quiet border-hairline'
                   }`}
@@ -465,6 +467,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 <button
                   type="button"
                   onClick={() => applyRep({ performed: true, marked: false })}
+                  disabled={isSavingRep}
                   className={`btn btn-quiet border-hairline flex-1 ${SMALL_BTN}`}
                 >
                   Not marked
@@ -472,6 +475,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 <button
                   type="button"
                   onClick={() => applyRep({ performed: false, marked: false })}
+                  disabled={isSavingRep}
                   className={`btn btn-quiet border-hairline flex-1 ${SMALL_BTN}`}
                 >
                   Didn&apos;t perform
@@ -496,7 +500,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                 <button
                   type="button"
                   onClick={logManual}
-                  disabled={manualDelay.trim() === ''}
+                  disabled={manualDelay.trim() === ''||isSavingRep}
                   className={`btn btn-quiet border-hairline shrink-0 ${TINY_BTN}`}
                 >
                   Log

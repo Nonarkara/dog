@@ -260,6 +260,8 @@ export interface PetState {
   calmSince?:number;
   /** Bounds repeat calm rewards, independent of the care/attention timer. */
   lastCalmRewardAt?:number;
+  /** Prevent overlapping tabs from counting the same attention interval twice. */
+  lastTogetherAt?:number;
   /** Biological weight in kg. Influenced by overfeeding vs active play. */
   weightKg?: number;
 }

@@ -1,3 +1,4 @@
+import type {CommitPet} from '../utils/progressStore';
 /**
  * THE PRACTICE FIELD.
  *
@@ -32,12 +33,12 @@ import {
 import type { AvatarPose } from './DogAvatar3D';
 import { sound } from '../utils/proceduralAudio';
 
-type Phase = 'ready' | 'waiting' | 'marked' | 'result';
+type Phase = 'ready' | 'waiting' | 'marked' | 'result' | 'saving';
 
 interface Props {
   dog: DogProfile;
   petState: PetState;
-  onPetStateChange: (state: PetState) => void;
+  onPetStateChange: CommitPet;
   onPose: (pose: AvatarPose) => void;
 }
 
@@ -51,6 +52,9 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const [cueCount, setCueCount] = useState(0);
 
   const stateRef = useRef(petState);
+  const saving=useRef(false),epoch=useRef(0),mounted=useRef(true);
+  const [isSaving,setIsSaving]=useState(false);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   stateRef.current = petState;
   const trial = useRef<{ cueAt: number; responds: boolean; doneAt: number; markAt?: number; count: number }>({
     cueAt: 0,
@@ -74,6 +78,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const cueLabel = lesson.stage === 0 ? 'Lure' : lesson.stage === 1 ? 'Signal' : `“${word}”`;
 
   const reset = () => {
+    epoch.current++;
     clearTimers();
     setPhase('ready');
     setResult(null);
@@ -95,24 +100,27 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     []
   );
 
-  const finish = (input: Omit<TrialInput, 'cueCount'>, prefix = '') => {
+  const finish = async (input: Omit<TrialInput, 'cueCount'>, prefix = '') => {
+    if(saving.current)return;
+    saving.current=true;setIsSaving(true);setPhase('saving');
+    const count=trial.current.count,submittedEpoch=epoch.current;
     clearTimers();
-    const state = stateRef.current;
-    const current = state.lessons?.[name] ?? newLesson();
-    const r = scoreTrial(current, { ...input, cueCount: trial.current.count });
-    const next: PetState = {
-      ...state,
-      trust: clamp(state.trust + r.trustDelta),
-      lessons: { ...state.lessons, [name]: r.lesson },
-    };
-    stateRef.current = next;
-    onPetStateChange(next);
+    let r!:ReturnType<typeof scoreTrial>;
+    const next=await onPetStateChange(latest=>{
+      r=scoreTrial(latest.lessons?.[name]??newLesson(),{...input,cueCount:count});
+      return {...latest,trust:clamp(latest.trust+r.trustDelta),lessons:{...latest.lessons,[name]:r.lesson}};
+    });
+    saving.current=false;setIsSaving(false);
+    if(!mounted.current||epoch.current!==submittedEpoch)return;
+    if(!next){setPhase('ready');setStatus('Practice was not saved. Please try again.');onPose('stand');return;}
+    stateRef.current=next;
     setResult({ verdict: prefix + r.verdict, tip: r.tip, score: r.score, advice: sessionAdvice(r.lesson, r.score) });
     setPhase('result');
     if (!input.responded) onPose('stand');
   };
 
   const cue = () => {
+    if(saving.current)return;
     if (asleep) return;
     if (phase === 'waiting') {
       trial.current.count += 1;
@@ -141,6 +149,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   };
 
   const mark = () => {
+    if(saving.current)return;
     if (phase !== 'waiting') return;
     const now = performance.now();
     if (!trial.current.responds) {
@@ -159,6 +168,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   };
 
   const treat = () => {
+    if(saving.current)return;
     sound.eatCrunch();
     if (phase === 'marked' && trial.current.markAt !== undefined) {
       finish({
@@ -177,6 +187,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
       if(document.querySelector('.dog-chooser,.control-reference'))return;
       if (e.key !== ' ' || (e.target as HTMLElement)?.closest('input, textarea, select, button, a, [role="button"], [role="tab"], [role="option"]')) return;
       e.preventDefault();
+      if(saving.current)return;
       if (phase === 'ready') cue();
       else if (phase === 'waiting') mark();
       else if (phase === 'marked') treat();
@@ -234,7 +245,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={cue}
-                disabled={asleep || phase === 'marked'}
+                disabled={asleep || phase === 'marked'||isSaving}
                 className={`btn flex-1 text-[12px] ${phase === 'ready' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
                 title={phase === 'waiting' ? 'Giving the cue again costs you' : 'Give the cue once'}
               >
@@ -244,7 +255,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={mark}
-                disabled={phase !== 'waiting'}
+                disabled={phase !== 'waiting'||isSaving}
                 className={`btn flex-1 text-[12px] ${phase === 'waiting' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
               >
                 Yes! (mark)
@@ -252,7 +263,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={treat}
-                disabled={phase !== 'marked' && phase !== 'waiting'}
+                disabled={isSaving||(phase !== 'marked' && phase !== 'waiting')}
                 className={`btn flex-1 text-[12px] ${phase === 'marked' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
               >
                 Treat

@@ -1,3 +1,4 @@
+import type {CommitDog} from '../utils/progressStore';
 import React, { useEffect, useRef, useState } from 'react';
 import { DogProfile, Vaccination } from '../types/dog';
 import { calculateDogAge, getVaccineStatus } from '../utils/dogCalculators';
@@ -46,8 +47,8 @@ import {
 
 export interface RecordPanelProps {
   dog: DogProfile;
-  onUpdateDog: (updated: DogProfile) => void;
-  onAddPhoto: (url: string, angle: 'front' | 'side' | 'closeup' | 'body') => void;
+  onUpdateDog: CommitDog;
+  onAddPhoto: (url: string, angle: 'front' | 'side' | 'closeup' | 'body') => Promise<boolean>;
 }
 
 type TabKey = 'identity' | 'vaccines' | 'parasites' | 'history' | 'photos';
@@ -295,6 +296,8 @@ const ProseList: React.FC<ProseListProps> = ({ title, items, empty }) => (
 );
 
 export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAddPhoto }) => {
+  const doseSaving=useRef(false);
+  const [isDoseSaving,setIsDoseSaving]=useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('identity');
   const [activeBar, setActiveBar] = useState<BarKey | null>(null);
   const [note, setNote] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
@@ -342,6 +345,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
   };
 
   const closeBar = () => {
+    if(doseSaving.current)return;
     setActiveBar(null);
     setExpandedStage(null);
   };
@@ -365,8 +369,10 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     setExpandedStage(null);
   };
 
-  const handleAddVaccine = (e: React.FormEvent) => {
+  const handleAddVaccine = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(doseSaving.current)return;
+    doseSaving.current=true;setIsDoseSaving(true);
     const newVac: Vaccination = {
       id: `vac-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: vacName.trim(),
@@ -377,10 +383,9 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
       clinic: vacClinic.trim(),
       veterinarian: vacVet.trim(),
     };
-    onUpdateDog({
-      ...dog,
-      vaccinations: [newVac, ...dog.vaccinations],
-    });
+    const saved=await onUpdateDog(latest=>({...latest,vaccinations:[newVac,...latest.vaccinations]}));
+    doseSaving.current=false;setIsDoseSaving(false);
+    if(!saved){setNote({tone:'error',text:'Vaccine record was not saved. Please try again.'});return;}
     closeBar();
     setNote({ tone: 'ok', text: `${newVac.name} recorded on ${dog.name}'s passport.` });
   };
@@ -411,9 +416,9 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       if (typeof reader.result !== 'string') return;
-      onAddPhoto(reader.result, captureAngle);
+      if(!await onAddPhoto(reader.result,captureAngle)){setNote({tone:'error',text:'Photo was not saved. Please try again.'});return;}
       setNote({
         tone: 'ok',
         text: `Photo stored on ${dog.name}'s record at ${ANGLE_LABEL[captureAngle].toLowerCase()}.`,
@@ -426,7 +431,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
 
   const isModelFile = (name: string) => /\.(glb|gltf)$/i.test(name);
 
-  const handleModelInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleModelInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
@@ -437,33 +442,27 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
       });
       return;
     }
-    onUpdateDog({
-      ...dog,
-      avatarConfig: { ...dog.avatarConfig, customModelUrl: URL.createObjectURL(file) },
-    });
+    const modelReference=URL.createObjectURL(file);
+    if(!await onUpdateDog(latest=>({...latest,avatarConfig:{...latest.avatarConfig,customModelUrl:modelReference}}))){URL.revokeObjectURL(modelReference);setNote({tone:'error',text:'Model reference was not saved.'});return;}
     setNote({
       tone: 'ok',
       text: `${file.name} read in this browser. Its reference is stored on ${dog.name}'s record.`,
     });
   };
 
-  const handleModelUrl = () => {
+  const handleModelUrl = async () => {
     const url = modelUrl.trim();
     if (!url) {
       setNote({ tone: 'error', text: 'Enter a model URL first.' });
       return;
     }
-    onUpdateDog({
-      ...dog,
-      avatarConfig: { ...dog.avatarConfig, customModelUrl: url },
-    });
+    if(!await onUpdateDog(latest=>({...latest,avatarConfig:{...latest.avatarConfig,customModelUrl:url}}))){setNote({tone:'error',text:'Model URL was not saved.'});return;}
     setModelUrl('');
     setNote({ tone: 'ok', text: `URL stored on ${dog.name}'s record.` });
   };
 
-  const handleClearModel = () => {
-    const { customModelUrl: _dropped, ...rest } = dog.avatarConfig;
-    onUpdateDog({ ...dog, avatarConfig: rest });
+  const handleClearModel = async () => {
+    if(!await onUpdateDog(latest=>{const {customModelUrl:_dropped,...rest}=latest.avatarConfig;return {...latest,avatarConfig:rest};})){setNote({tone:'error',text:'Model reference could not be removed.'});return;}
     setNote({ tone: 'ok', text: 'Model reference removed from this record.' });
   };
 
@@ -1166,7 +1165,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
               <button type="button" onClick={closeBar} className="btn min-h-7 px-2 text-[11px]">
                 Cancel
               </button>
-              <button type="submit" className="btn btn-accent min-h-7 px-2 text-[11px]">
+              <button type="submit" disabled={isDoseSaving} className="btn btn-accent min-h-7 px-2 text-[11px]">
                 Save to passport
               </button>
             </div>

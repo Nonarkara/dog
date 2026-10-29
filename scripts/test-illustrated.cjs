@@ -24,9 +24,9 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{rec
   await p.waitForTimeout(350);await shot(action.toLowerCase()+'-0');await p.waitForTimeout(250);await shot(action.toLowerCase()+'-1');await p.waitForTimeout(1700);
  }
  // Touch the painted torso, not only a command button.
- const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['paolo-pug'].trust);
+ const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].trust);
  await p.locator('canvas').first().click({position:{x:200,y:145}});await p.waitForTimeout(2500);
- const after=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['paolo-pug'].trust);assert(after>before,'Direct touch must reach the care state');
+ const after=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].trust);assert(after>before,'Direct touch must reach the care state');
  // Bed uses the persistent sleep state, not a temporary flattened image.
  await p.getByRole('button',{name:'Put Paolo to bed',exact:true}).click();await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.artPose==='sleep');await shot('sleep');
  // Headless Chrome keeps its compositor visible; simulate the visibility

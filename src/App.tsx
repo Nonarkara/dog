@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
 import { dailyLife } from './domain/dailyLife';
@@ -9,24 +9,22 @@ import { dogTheme, DOG_THEMES } from './data/dogThemes';
 import { DEFAULT_DOGS } from './data/defaultDogs';
 import {
   loadStoredDogs,
-  saveDogs,
   loadActiveDogId,
   saveActiveDogId,
   calculateDogAge,
   loadPetState,
-  savePetState,
 } from './utils/dogCalculators';
+import {mutatePet,mutateDogs,resetProgress,type PetMutation,type DogMutation} from './utils/progressStore';
+import {SAVE_KEY} from './utils/saveFormat';
 import { CommandBar,ControlLegend } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
 import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck } from 'lucide-react';
 import {
-  createPetState,
   interact,
   communicate,
   decay,
-  happiness,
   settleSleep,
   willSettle,
 } from './domain/pet';
@@ -119,14 +117,36 @@ function useWide(): boolean {
 }
 
 export const App: React.FC = () => {
-  const [dogs, setDogs] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
-  const [activeDogId, setActiveDogId] = useState<string>(() => loadActiveDogId(DEFAULT_DOGS[0].id));
+  const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
+  const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(DEFAULT_DOGS[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>('care');
 
   // The dog's inner life — trust, arousal, personality, associations, the
   // observation log and the ledger of behaviours being taught. One state per
   // dog, so Expo, Mali and Bangal never share a memory.
-  const [petState, setPetState] = useState<PetState>(() => loadPetState(activeDogId));
+  const [petState, setPetView] = useState<PetState>(() => loadPetState(activeDogId));
+  const activeDogRef=useRef(activeDogId);
+  const [saveError,setSaveError]=useState<string|null>(null);
+  const [legacyWarning,setLegacyWarning]=useState(false);
+  const refresh=useCallback(()=>{
+    const latest=loadStoredDogs(DEFAULT_DOGS);setDogsView(latest);
+    if(!latest.some(dog=>dog.id===activeDogRef.current)){
+      activeDogRef.current=latest[0].id;setActiveDogId(latest[0].id);
+    }
+    setPetView(loadPetState(activeDogRef.current));
+  },[]);
+  const failedSave=useCallback((error:unknown)=>{
+    console.error('Progress save failed',error);
+    setSaveError(error instanceof Error&&/recovery|could not be read/.test(error.message)?'Saved progress could not be read. It has not been replaced.':'Could not save this action. Previous progress is intact. Please try again.');
+  },[]);
+  const commitPet=useCallback(async(update:PetMutation,care?:'feed'|'play'|'walk'|'groom'):Promise<PetState|null>=>{
+    try{const next=await mutatePet(activeDogId,update,care);refresh();setSaveError(null);return next;}
+    catch(error){failedSave(error);return null;}
+  },[activeDogId,refresh,failedSave]);
+  const commitDogs=useCallback(async(update:(latest:DogProfile[])=>DogProfile[]):Promise<boolean>=>{
+    try{await mutateDogs(update);refresh();setSaveError(null);return true;}
+    catch(error){failedSave(error);return false;}
+  },[refresh,failedSave]);
 
   const isWide = useWide();
 
@@ -135,10 +155,11 @@ export const App: React.FC = () => {
   const [gameControlsHost,setGameControlsHost]=useState<HTMLDivElement|null>(null);
   const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
   useEffect(()=>{
-    if(avatarPose!=='stand')setPetState(prev=>prev.calmSince===undefined?prev:{...prev,calmSince:undefined});
-  },[avatarPose]);
+    if(avatarPose!=='stand')void commitPet(prev=>({...prev,calmSince:undefined}));
+  },[avatarPose,commitPet]);
   const [interactionTrigger, setInteractionTrigger] = useState<AvatarInteractionTrigger>(null);
   const [isInteracting, setIsInteracting] = useState(false);
+  const interactionBusy=useRef(false);
   const actionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (actionTimer.current) clearTimeout(actionTimer.current); }, []);
   const [pendingAction, setPendingAction] = useState<CareAction | null>(null);
@@ -169,6 +190,8 @@ export const App: React.FC = () => {
     window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);
   },[isDogMenuOpen,labelsVisible]);
   const [isAddDogOpen, setIsAddDogOpen] = useState(false);
+  const enrollmentBusy=useRef(false);
+  const [isEnrolling,setIsEnrolling]=useState(false);
 
   const [newDogName, setNewDogName] = useState('');
   const [newDogBreed, setNewDogBreed] = useState('');
@@ -199,9 +222,11 @@ export const App: React.FC = () => {
 
   // Switch identity and state in one React batch, before the save effect runs.
   const selectDog = (id: string) => {
+    interactionBusy.current=false;
     if (actionTimer.current) clearTimeout(actionTimer.current);
     setActiveDogId(id);
-    setPetState(loadPetState(id));
+    activeDogRef.current=id;
+    setPetView(loadPetState(id));
     setInteractionTrigger(null);
     setIsInteracting(false);
     setPendingAction(null);
@@ -209,13 +234,14 @@ export const App: React.FC = () => {
     setNote(null);
   };
 
-  useEffect(() => {
-    savePetState(activeDogId, petState);
-  }, [petState, activeDogId]);
-
-  useEffect(() => {
-    saveDogs(dogs);
-  }, [dogs]);
+  useEffect(()=>{void commitPet(state=>state);},[commitPet]);
+  useEffect(()=>{
+    const changed=(event:StorageEvent)=>{
+      if(event.key===SAVE_KEY)refresh();
+      else if(['canine_os_pet_states_v1','canine_os_dogs_v1'].includes(event.key??'')&&localStorage.getItem(SAVE_KEY))setLegacyWarning(true);
+    };
+    window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);
+  },[refresh]);
 
   useEffect(() => {
     saveActiveDogId(activeDogId);
@@ -232,7 +258,7 @@ export const App: React.FC = () => {
    */
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setPetState((prev) => {
+      void commitPet((prev) => {
         const drifted = decay(prev);
         // HE GOES TO BED ON HIS OWN.
         //
@@ -241,7 +267,6 @@ export const App: React.FC = () => {
         // you cannot make him stay awake.
         if (willSettle(drifted)) {
           const settled = settleSleep(drifted);
-          if (settled.note) say(settled.note);
           return { ...settled.state, call: undefined };
         }
         // HE CALLS YOU. A need runs low, or nobody has been near him for a
@@ -253,7 +278,7 @@ export const App: React.FC = () => {
       });
     }, 10_000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [commitPet]);
 
   /**
    * TIME TOGETHER — the currency.
@@ -270,13 +295,16 @@ export const App: React.FC = () => {
     const SLICE = 15;
     const id = window.setInterval(() => {
       if (document.visibilityState !== 'visible' || Date.now() - lastActive > 30_000) return;
-      setPetState((prev) => ({ ...prev, together: addTogether(prev.together, SLICE) }));
+      void commitPet(prev=>{
+        const now=Date.now(),seconds=Math.max(0,Math.min(SLICE,(now-(prev.lastTogetherAt??now-SLICE*1000))/1000));
+        return seconds?{...prev,together:addTogether(prev.together,seconds,now),lastTogetherAt:now}:prev;
+      });
     }, SLICE * 1000);
     return () => {
       window.clearInterval(id);
       events.forEach((e) => window.removeEventListener(e, touch));
     };
-  }, []);
+  }, [commitPet]);
 
   // A call shows in the tab title too, so it reaches you in another tab.
   useEffect(() => {
@@ -302,138 +330,87 @@ export const App: React.FC = () => {
    * exported. So the record follows the model — it is a copy of the truth,
    * written when the truth changes, never a second opinion about it.
    */
-  const syncDisplay = (state: PetState) => {
-    setDogs((prev) =>
-      prev.map((d) => {
-        if (d.id !== activeDogId) return d;
-        return {
-          ...d,
-          tamagotchi: {
-            ...d.tamagotchi,
-            hunger: state.needs.hunger,
-            energy: state.needs.energy,
-            hygiene: state.needs.hygiene,
-            happiness: Math.round(happiness(state)),
-          },
-        };
-      })
-    );
+  const handleInteract = async (action: CareAction) => {
+    if (interactionBusy.current) return;
+    interactionBusy.current=true;
+    const id=activeDogId;
+    setIsInteracting(true);setPendingAction(action);
+    let message='',trigger:AvatarInteractionTrigger=action;
+    const care=['feed','play','walk','groom'].includes(action)?action as 'feed'|'play'|'walk'|'groom':undefined;
+    const next=await commitPet(latest=>{
+      if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
+      const result=interact(latest,action,Date.now(),subject);
+      const answer=answerCall(latest,action);
+      message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called. Trust +${answer.trustBonus}.`:result.note;
+      if(action==='rewardCalm'&&result.state.lastCalmRewardAt===latest.lastCalmRewardAt)trigger=null;
+      if(action==='play'&&(latest.sick||result.state.sleep.asleep))trigger=null;
+      return answer.answered?{...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)}:result.state;
+    },care);
+    if(activeDogRef.current!==id)return;
+    if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
+    setInteractionTrigger(trigger);say(message);
+    actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);setInteractionTrigger(null);},2000);
   };
 
-  const handleInteract = (action: CareAction) => {
-    if (isInteracting) return;
-    if (action === 'play' && petState.sick) {
-      say(`${currentDog.name} needs rest. The catch game can wait until recovery.`);
-      return;
-    }
+  const handleMiniGameComplete = async (won: boolean, kind:'catch'|'find-treat'='catch') => {
+    const id=activeDogId;let accepted=false;
+    const next=await commitPet(base=>{
+      if(base.sick||base.sleep.asleep)return base;
+      accepted=true;
+      if(kind==='find-treat')return {...base,needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:Date.now(),calmSince:undefined,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call};
+      return won?{...base,arousal:Math.max(20,Math.min(80,base.arousal+15)),trust:Math.min(100,base.trust+5),weightKg:Math.max(15,(base.weightKg??24.8)-.1),calmSince:undefined}:base;
+    },'play');
+    if(!next||activeDogRef.current!==id)return;
+    if(!accepted){say(`${currentDog.name} needs rest. We can play again later.`);return;}
+    say(kind==='find-treat'?(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`):(won?`Agility catch victory! ${currentDog.name} caught the balls with joyful barks. Trust +5!`:`Good effort! ${currentDog.name} burned energy and enjoyed the practice.`));
+  };
+
+  const handleCommunicate = async (cue: string) => {
+    if(interactionBusy.current)return;
+    interactionBusy.current=true;
     setIsInteracting(true);
-    setPendingAction(action);
-
-    // The domain model: decay, trust, arousal, personality, and the
-    // classical-conditioning pairing of the last spoken cue with this outcome.
-    const result = interact(petState, action, Date.now(), subject);
-    // Elapsed body time can reveal a need after the button was rendered.
-    // A refused calm reward must not play the eating/success animation.
-    setInteractionTrigger(action==='rewardCalm'&&result.state.lastCalmRewardAt===petState.lastCalmRewardAt?null:action);
-    const answer = answerCall(petState, action);
-    const next = answer.answered
-      ? { ...result.state, call: undefined, trust: Math.min(100, result.state.trust + answer.trustBonus) }
-      : result.state;
-    setPetState(next);
-    syncDisplay(next);
-    say(answer.answered ? `${result.note} You came when ${subject.sex === 'female' ? 'she' : 'he'} called. Trust +${answer.trustBonus}.` : result.note);
-
-    actionTimer.current = setTimeout(() => {
-      setIsInteracting(false);
-      setPendingAction(null);
-      setInteractionTrigger(null);
-    }, 2000);
+    const id=activeDogId;let message='';
+    const next=await commitPet(latest=>{const result=communicate(latest,cue,Date.now(),subject);message=result.note;return result.state;});
+    if(activeDogRef.current!==id)return;
+    if(!next){interactionBusy.current=false;setIsInteracting(false);return;}
+    say(message);
+    if(message.includes('knows')){
+      setInteractionTrigger('communicate');setIsInteracting(true);
+      actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setInteractionTrigger(null);},2000);
+    }else{interactionBusy.current=false;setIsInteracting(false);}
   };
 
-  const handleMiniGameComplete = (won: boolean, kind: 'catch'|'find-treat' = 'catch') => {
-    if(kind==='find-treat'){
-      if(petState.sick||petState.sleep?.asleep)return;
-      const now=Date.now(),base=decay(petState,now);
-      if(base.sick||base.sleep?.asleep){setPetState(base);syncDisplay(base);say(`${currentDog.name} needs rest. We can play again later.`);return;}
-      const next:PetState={...base,needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:now,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call,updatedAt:now};
-      setPetState(next);syncDisplay(next);
-      setDogs(prev=>prev.map(d=>d.id===activeDogId?{...d,tamagotchi:{...d.tamagotchi,lastPlayed:now}}:d));
-      say(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`);
-      return;
-    }
-    if (won) {
-      setPetState((prev) => ({
-        ...prev,
-        arousal: Math.max(20, Math.min(80, prev.arousal + 15)),
-        trust: Math.min(100, prev.trust + 5),
-        weightKg: Math.max(15, (prev.weightKg ?? 24.8) - 0.1),
-      }));
-      say(`Agility catch victory! ${currentDog.name} caught the balls with joyful barks. Trust +5!`);
-    } else {
-      say(`Good effort! ${currentDog.name} burned energy and enjoyed the practice.`);
-    }
+  const handleBed = async () => {
+    if(interactionBusy.current)return;
+    interactionBusy.current=true;setIsInteracting(true);
+    const id=activeDogId;let message='';
+    const next=await commitPet(latest=>{const result=settleSleep(latest,Date.now(),subject);message=result.note;return result.state;});
+    if(activeDogRef.current!==id)return;
+    interactionBusy.current=false;setIsInteracting(false);
+    if(next)say(message);
   };
 
-  const handleCommunicate = (cue: string) => {
-    const result = communicate(petState, cue, Date.now(), subject);
-    setPetState(result.state);
-    syncDisplay(result.state);
-    say(result.note);
-
-    // A recognised cue triggers a visible reaction in the scene.
-    if (result.note.includes('knows')) {
-      setInteractionTrigger('communicate');
-      setIsInteracting(true);
-      actionTimer.current = setTimeout(() => {
-        setIsInteracting(false);
-        setInteractionTrigger(null);
-      }, 2000);
-    }
-  };
-
-  /**
-   * PUT HIM TO BED.
-   *
-   * Sometimes he will not go down — he is too wound up, or he has been woken
-   * too many times tonight. The control says so rather than failing quietly,
-   * because "he will not settle" is something you can act on.
-   */
-  const handleBed = () => {
-    const result = settleSleep(petState, Date.now(), subject);
-    if (result.state !== petState) {
-      setPetState(result.state);
-      syncDisplay(result.state);
-    }
-    say(result.note);
-  };
-
-  const handleUpdateCurrentDog = (updated: DogProfile) => {
-    setDogs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
-  };
-
-  const handleAddPhotoToDog = (url: string, angle: 'front' | 'side' | 'closeup' | 'body') => {
-    handleUpdateCurrentDog({
-      ...currentDog,
-      photos: [
-        ...currentDog.photos,
-        {
-          id: `photo-${Date.now()}`,
-          url,
-          angle,
-          dateTaken: new Date().toISOString().split('T')[0],
-          notes: `User uploaded ${angle} view`,
-        },
-      ],
+  const handleUpdateCurrentDog = (update:DogMutation) => {
+    const id=currentDog.id;
+    return commitDogs(latest=>{
+      if(!latest.some(dog=>dog.id===id))throw new Error('This dog is no longer in the saved record.');
+      return latest.map(dog=>dog.id===id?update(dog):dog);
     });
-    say('Photo stored on the record.');
   };
 
-  const handleCreateNewDog = (e: React.FormEvent) => {
+  const handleAddPhotoToDog = async (url:string,angle:'front'|'side'|'closeup'|'body') => {
+    const photo={id:`photo-${crypto.randomUUID()}`,url,angle,dateTaken:new Date().toISOString().split('T')[0],notes:`User uploaded ${angle} view`};
+    return handleUpdateCurrentDog(latest=>({...latest,photos:[...latest.photos,photo]}));
+  };
+
+  const handleCreateNewDog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDogName.trim()) return;
+    if(enrollmentBusy.current)return;
+    enrollmentBusy.current=true;setIsEnrolling(true);
 
     const newDog: DogProfile = {
-      id: `dog-${Date.now()}`,
+      id: `dog-${crypto.randomUUID()}`,
       name: newDogName.trim(),
       callName: newDogName.trim(),
       breed: newDogBreed.trim() || 'Mixed Breed',
@@ -479,20 +456,20 @@ export const App: React.FC = () => {
       },
     };
 
-    setDogs((prev) => [...prev, newDog]);
+    const enrolled=await commitDogs(latest=>[...latest,newDog]);
+    enrollmentBusy.current=false;setIsEnrolling(false);
+    if(!enrolled)return;
     selectDog(newDog.id);
-    setPetState(createPetState());
     setIsAddDogOpen(false);
     setNewDogName('');
     setNewDogBreed('');
     say(`${newDog.name.trim()} is enrolled.`);
   };
 
-  const resetToFactoryDefaults = () => {
+  const resetToFactoryDefaults = async () => {
     if (window.confirm('Reset all dog profiles to the factory defaults?')) {
-      setDogs(DEFAULT_DOGS);
+      try{await resetProgress();refresh();}catch(error){failedSave(error);return;}
       selectDog(DEFAULT_DOGS[0].id);
-      setPetState(createPetState());
       say('Profiles reset to the factory defaults.');
     }
   };
@@ -515,7 +492,8 @@ export const App: React.FC = () => {
             <CoachPanel
               dog={currentDog}
               petState={petState}
-              onPetStateChange={setPetState}
+              key={activeDogId}
+              onPetStateChange={commitPet}
               onPose={setAvatarPose}
             />
           </Suspense>
@@ -523,7 +501,7 @@ export const App: React.FC = () => {
       case 'record':
         return (
           <Suspense fallback={<RegionLoading label="Record" />}>
-            <RecordPanel
+            <RecordPanel key={activeDogId}
               dog={currentDog}
               onUpdateDog={handleUpdateCurrentDog}
               onAddPhoto={handleAddPhotoToDog}
@@ -538,6 +516,8 @@ export const App: React.FC = () => {
         );
     }
   };
+
+  const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
     <div className="cockpit" style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
@@ -654,14 +634,14 @@ export const App: React.FC = () => {
             </div>
 
             {/* Feedback has its own row: never place text over the dog. */}
-            <div className="stage-note-slot" data-open={!!note}>
-            {note && (
-              <div className="bar bar--note" role="status" key={note.id}>
-                <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={note.text}>
-                  {note.text}
+            <div className="stage-note-slot" data-open={!!stageNote}>
+            {stageNote && (
+              <div className="bar bar--note" role="status" key={stageNote.id}>
+                <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={stageNote.text}>
+                  {stageNote.text}
                 </p>
                 <button
-                  onClick={() => setNote(null)}
+                  onClick={() => {setNote(null);setSaveError(null);setLegacyWarning(false);}}
                   className="btn-quiet px-1.5 shrink-0"
                   aria-label="Dismiss"
                 >
@@ -794,12 +774,13 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
+                disabled={isEnrolling}
                 onClick={() => setIsAddDogOpen(false)}
                 className="btn btn-quiet text-[11px]"
               >
                 Cancel
               </button>
-              <button type="submit" className="btn btn-accent text-[11px]">
+              <button type="submit" disabled={isEnrolling} className="btn btn-accent text-[11px]">
                 Create profile
               </button>
             </div>

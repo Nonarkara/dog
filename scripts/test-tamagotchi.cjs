@@ -75,7 +75,7 @@ fs.mkdirSync(out, { recursive: true });
   }
   assert.equal(new Set(fingerprints).size,5);
   // A visible target governs the score. Five correct choices must always win.
-  const trustBeforeGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust);
+  const trustBeforeGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
   await page.getByRole('group',{name:'Care controls'}).getByRole('button', {name:/^Play/}).click();
   for(let round=1;round<=5;round++) {
     await page.waitForFunction(r => document.querySelector('.catch-hud')?.textContent.includes(`Round ${r}/5`),round);
@@ -84,7 +84,7 @@ fs.mkdirSync(out, { recursive: true });
     await page.waitForTimeout(950);
   }
   assert.equal(await page.locator('.catch-hud').count(),0);
-  const trustAfterGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust);
+  const trustAfterGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
   assert(trustAfterGame >= Math.min(100, trustBeforeGame + 6.9), 'Play +2 and catch victory +5 reach persisted state');
   // New-game reset and close invalidate pending round callbacks.
   await page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:/^Play/}).click();
@@ -94,55 +94,55 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(await page.locator('.catch-hud').count(),0);
   await page.waitForTimeout(1100);
   // Dog state never crosses identities, including during an active game.
-  await page.evaluate(()=>{const states=JSON.parse(localStorage.getItem('canine_os_pet_states_v1'));states['expo-2021'].needs.hunger=40;localStorage.setItem('canine_os_pet_states_v1',JSON.stringify(states));});
+  await page.evaluate(()=>{const states=JSON.parse(localStorage.getItem('canine_os_save_v3')).pets;states['expo-2021'].needs.hunger=40;localStorage.setItem('canine_os_save_v3',JSON.stringify({...JSON.parse(localStorage.getItem('canine_os_save_v3')),pets:states}));});
   await choose('Expo');
   await page.getByRole('button',{name:/^Feed/}).click();
   await page.waitForTimeout(2200);
-  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['expo-2021']);
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);
   await choose('Mali');
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1')));
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets);
   assert.equal(stored['expo-2021'].needs.hunger,before.needs.hunger);
   assert.notEqual(stored['mali-2022'].needs.hunger,before.needs.hunger);
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
-  const dogs = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_dogs_v1')));
+  const dogs = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs);
   assert.equal(dogs.find(d=>d.id==='mali-2022').breed,'Thai Bangkaew Dog');
   assert.equal(dogs.find(d=>d.id==='expo-2021').avatarConfig.pattern,'bangkaew');
   assert.equal(dogs.find(d=>d.id==='oreo-frenchie').avatarConfig.pattern,'spotted');
   assert.equal(dogs.find(d=>d.id==='paolo-pug').avatarConfig.baseColor,'#d8c5a3');
   // An older starter Paolo gains his photo-matched palette without losing his history.
   await page.evaluate(() => {
-    const dogs=JSON.parse(localStorage.getItem('canine_os_dogs_v1'));
+    const dogs=JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs;
     const p=dogs.find(d=>d.id==='paolo-pug');
     Object.assign(p.avatarConfig,{baseColor:'#c29b68',secondaryColor:'#e7d4ad',maskColor:'#302823'});
     p.metaverseBio='Preserved owner note';
     p.distinctiveMarks=['Owner recorded Paolo’s markings'];
-    localStorage.setItem('canine_os_dogs_v1',JSON.stringify(dogs));
+    localStorage.setItem('canine_os_save_v3',JSON.stringify({...JSON.parse(localStorage.getItem('canine_os_save_v3')),dogs:dogs}));
   });
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
-  const paolo = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_dogs_v1')).find(d=>d.id==='paolo-pug'));
+  const paolo = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs.find(d=>d.id==='paolo-pug'));
   assert.equal(paolo.avatarConfig.baseColor,'#d8c5a3');
   assert.equal(paolo.metaverseBio,'Preserved owner note');
   assert.deepEqual(paolo.distinctiveMarks,['Owner recorded Paolo’s markings']);
   assert.equal(dogs.find(d=>d.id==='shiba-chai').name,'Hachiku');
   assert.equal(dogs.find(d=>d.id==='shiba-chai').breed,'Akita Inu');
   // Simulate the previous Shiba starter without touching its state ID.
-  const savedTrust = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust);
+  const savedTrust = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
   await page.evaluate(() => {
-    const dogs=JSON.parse(localStorage.getItem('canine_os_dogs_v1'));
+    const dogs=JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs;
     const d=dogs.find(d=>d.id==='shiba-chai'); d.name='Chai'; d.callName='Chai'; d.breed='Shiba Inu';
     d.distinctiveMarks=['Owner’s Hachiku note'];
     Object.assign(d.avatarConfig,{baseColor:'#bb713d',secondaryColor:'#fff1d9',maskColor:'#493023'});
-    localStorage.setItem('canine_os_dogs_v1',JSON.stringify(dogs));
+    localStorage.setItem('canine_os_save_v3',JSON.stringify({...JSON.parse(localStorage.getItem('canine_os_save_v3')),dogs:dogs}));
   });
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
-  const hachiku=await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_dogs_v1')).find(d=>d.id==='shiba-chai'));
+  const hachiku=await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs.find(d=>d.id==='shiba-chai'));
   assert.equal(hachiku.name,'Hachiku'); assert.equal(hachiku.callName,'Hachiku');
   assert.equal(hachiku.breed,'Akita Inu'); assert.equal(hachiku.avatarConfig.baseColor,'#e2d6bb');
   assert.deepEqual(hachiku.distinctiveMarks,['Owner’s Hachiku note']);
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_pet_states_v1'))['shiba-chai'].trust),savedTrust);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust),savedTrust);
   assert.equal(dogs.length,7); // Five requested dogs plus two preserved companions.
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/measurements.json`,JSON.stringify(metrics,null,2));

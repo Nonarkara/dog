@@ -2,6 +2,7 @@ import { DogProfile, TamagotchiStats } from '../types/dog';
 import type { PetState, Behaviour, BehaviourName, Schedule } from '../domain/types';
 import { createPetState, decay } from '../domain/pet';
 import { dailyLife } from '../domain/dailyLife';
+import {readSave} from './saveFormat';
 
 export interface AgeCalculation {
   years: number;
@@ -278,13 +279,8 @@ function writeSchemaVersion(): void {
   }
 }
 
-export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return fallback;
-
+/** Pure normalization shared by the atomic writer; avoids re-parsing the full photo record. */
+export function normalizeDogs(parsed:unknown[],fallback:DogProfile[],strict=false):DogProfile[]{
     const migrated = parsed
       .map(migrateDog)
       .filter((d): d is DogProfile => d !== null)
@@ -322,10 +318,25 @@ export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
         if (d.avatarConfig?.pattern) return d;
         return { ...d, coatColor: def.coatColor, avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig?.customModelUrl } };
       });
+    if(strict&&migrated.length!==parsed.length)throw new Error('A dog record could not be read.');
     if (migrated.length === 0) return fallback;
-    if (readSchemaVersion() !== SCHEMA_VERSION) writeSchemaVersion();
     return [...migrated, ...fallback.filter(d => !migrated.some(saved => saved.id === d.id))];
+}
+
+export function loadStoredDogs(fallback: DogProfile[],strict=false): DogProfile[] {
+  try {
+    const canonical=readSave();
+    if(canonical)return normalizeDogs(canonical.dogs,fallback,strict);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return fallback;
+
+    const dogs=normalizeDogs(parsed,fallback,strict);
+    if(readSchemaVersion()!==SCHEMA_VERSION)writeSchemaVersion();
+    return dogs;
   } catch (e) {
+    if(strict)throw e;
     console.warn('Failed to load dogs from localStorage, using fallback', e);
   }
   return fallback;
@@ -362,20 +373,29 @@ export function saveActiveDogId(id: string) {
  * behaviour ledger. Keyed by dog id so Expo, Mali and Bangal never share a
  * state.
  */
-export function loadStoredPetStates(): Record<string, PetState> {
-  try {
-    const raw = localStorage.getItem(PET_STATE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!isObject(parsed)) return {};
+export function normalizePetStates(parsed:Record<string,unknown>,strict=false):Record<string,PetState>{
     const migrated: Record<string, PetState> = {};
     for (const [id, value] of Object.entries(parsed)) {
       const state = migratePetState(value);
       if (state) migrated[id] = state;
+      else if(strict)throw new Error('A dog state could not be read.');
     }
-    if (readSchemaVersion() !== SCHEMA_VERSION) writeSchemaVersion();
     return migrated;
+}
+
+export function loadStoredPetStates(strict=false): Record<string, PetState> {
+  try {
+    const canonical=readSave();
+    if(canonical)return normalizePetStates(canonical.pets,strict);
+    const raw = localStorage.getItem(PET_STATE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!isObject(parsed)) return {};
+    const states=normalizePetStates(parsed,strict);
+    if(readSchemaVersion()!==SCHEMA_VERSION)writeSchemaVersion();
+    return states;
   } catch (e) {
+    if(strict)throw e;
     console.warn('Failed to load pet states from localStorage', e);
   }
   return {};
