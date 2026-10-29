@@ -1,0 +1,9 @@
+# A continuous dog day
+
+The benchmark needs a complete care/play/training/rest loop with persistent individual dogs, rather than isolated green panels. First exercise the existing UI as one player: feed, pet, play both games, complete virtual practice, log a real-session observation/rep/cue, reach toilet pressure and clean an accident, rest and wake naturally, recover from poor care, switch dogs and reload. Advance wall-clock time without replacing the state's needs between steps; separate initial fixtures may test extreme/negative states, but cannot stand in for the continuous day.
+
+Confirmed gap before implementation: `Lesson.sessionTrials` and `sessionStartedAt` persist indefinitely; the UI has no way to end a session while retaining learned skills. Reuse the current trial button row for Take a break, save it atomically, reset session counts/timestamps and consecutive-trial counters across this dog's lessons, and preserve stages, skill and real logs. The session advice must count practice across behaviors. Existing Next trial remains available; the player chooses the break.
+
+Validation: domain invariants for preserving skill/real logs; browser session save/reload/failure handling; a continuous day script and real-log workflow; existing training and care regressions as appropriate. Independent adversarial/pixel review, commit/push/deploy and live flow verification are release gates. Starter clinical-record provenance remains a separate open audit; don't silently remove potentially owner-edited records.
+
+The real-log phone capture exposed another composition defect: fixed form sections exceeded the available panel and only the tiny trailing history area could scroll. The full real log now owns one reading scroll, with mode controls remaining in its existing header. Care and the stage remain fixed. Verification uses an actual wheel gesture to reach Last attempts, not Playwright's programmatic scroll into overflow-hidden content.

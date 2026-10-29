@@ -363,7 +363,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
       {mode === 'practice' ? (
         <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (async () => null)} busy={busy}/>
       ) : (
-      <div className="panel-body">
+      <div className="panel-body coach-log">
         {/* ---- all eight behaviours ----------------------------------------- */}
         <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
           {BEHAVIOURS.map((b) => {

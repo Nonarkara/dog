@@ -28,7 +28,7 @@
  * same habits that work with a real dog.
  */
 
-import type { BehaviourName } from './types';
+import type { BehaviourName, PetState } from './types';
 import { timingQuality } from './training';
 
 export const STAGES = [
@@ -211,6 +211,16 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
     tip = `Five clean reps in a row. Moving on to: ${STAGES[next.stage].label}.`;
   }
   return { lesson: next, score, verdict, tip, trustDelta, stageChange };
+}
+
+/** Session pacing spans behaviors; learned skills and real-session logs survive a break. */
+export function practiceSession(lessons:PetState['lessons']) {
+  const active=Object.values(lessons??{}).filter((lesson):lesson is Lesson=>!!lesson&&lesson.sessionTrials>0);
+  return {sessionTrials:active.reduce((sum,lesson)=>sum+lesson.sessionTrials,0),
+    sessionStartedAt:active.length?Math.min(...active.map(lesson=>lesson.sessionStartedAt??Date.now())):undefined};
+}
+export function endPracticeSession(state:PetState):PetState {
+  return {...state,lessons:Object.fromEntries(Object.entries(state.lessons??{}).map(([name,lesson])=>[name,lesson?{...lesson,sessionTrials:0,sessionStartedAt:undefined,streak:0,misses:0}:lesson]))};
 }
 
 /** Should this session end? End on a success, and before he gets bored. */

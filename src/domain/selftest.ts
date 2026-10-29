@@ -15,7 +15,7 @@ import { dailyLife, dailyMood } from './dailyLife';
 import { settleSleep, willSettle } from './pet';
 import { coatColorAt } from './coat';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
-import { dogResponds, newLesson, scoreTrial, type Lesson } from './lesson';
+import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
 
 let failures = 0;
 let checks = 0;
@@ -312,6 +312,12 @@ for (let i = 0; i < 400; i++) {
 ok('a spotted coat has spots, and is mostly not spots', darkSpots > 20 && darkSpots < 250, `${darkSpots}/400 dark`);
 
 import {bodyPoseFor,trainingMotion} from '../components/trainingMotion';
+const sessionDog={...createPetState(),lessons:{sit:{...newLesson(),skill:.87,stage:2 as const,streak:4,sessionTrials:8,sessionStartedAt:1000},down:{...newLesson(),sessionTrials:7,sessionStartedAt:2000}}};
+const ended=endPracticeSession(sessionDog);
+ok('session advice counts practice across behaviors',practiceSession(sessionDog.lessons).sessionTrials===15&&practiceSession(sessionDog.lessons).sessionStartedAt===1000);
+ok('a practice break clears all session clocks and trial counts',practiceSession(ended.lessons).sessionTrials===0&&practiceSession(ended.lessons).sessionStartedAt===undefined);
+ok('a break preserves stages, learned skill and real logs',ended.lessons?.sit?.skill===.87&&ended.lessons?.sit?.stage===2&&ended.behaviours===sessionDog.behaviours&&ended.observations===sessionDog.observations);
+ok('a break clears consecutive misses and streaks',ended.lessons?.sit?.streak===0&&ended.lessons?.sit?.misses===0);
 console.log('\nTHE PRACTICE FIELD');
 const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
 const clean = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100, treatDelayMs: 800 });

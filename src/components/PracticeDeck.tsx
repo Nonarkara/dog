@@ -26,6 +26,8 @@ import {
   dogResponds,
   newLesson,
   scoreTrial,
+  practiceSession,
+  endPracticeSession,
   sessionAdvice,
   type Lesson,
   type TrialInput,
@@ -119,10 +121,23 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     if(!next||!r){setPhase('ready');setStatus(!next?'Practice was not saved. Please try again.':'Care first; this trial was paused.');void onPose('stand');return;}
     const scored=r as ReturnType<typeof scoreTrial>;
     stateRef.current=next;
-    setResult({ verdict: prefix + scored.verdict, tip: scored.tip, score: scored.score, advice: sessionAdvice(scored.lesson, scored.score) });
+    setResult({ verdict: prefix + scored.verdict, tip: scored.tip, score: scored.score, advice: sessionAdvice({...scored.lesson,...practiceSession(next.lessons)}, scored.score) });
     setPhase('result');
     // Deliver stay/wait rewards in position, as the real-dog instructions teach.
     if(offered&&!['sit','stay','wait'].includes(name))void onPose('reward');else if(!input.responded)void onPose('stand');
+  };
+
+  const takeBreak=async()=>{
+    if(saving.current||!['ready','result'].includes(phase))return;
+    saving.current=true;setIsSaving(true);setPhase('saving');
+    const currentEpoch=++epoch.current;
+    clearTimers();void onPose('stand');
+    const next=await onPetStateChange(endPracticeSession);
+    saving.current=false;setIsSaving(false);
+    if(!mounted.current||epoch.current!==currentEpoch)return;
+    setPhase('ready');setResult(null);setCueCount(0);
+    if(next){stateRef.current=next;setStatus('Practice paused. Skills saved. Take a break together.');}
+    else setStatus('The break was not saved. Please try again.');
   };
 
   const cue = () => {
@@ -243,7 +258,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               ? result.verdict
               : status || 'Cue once, wait, mark the moment, treat. Space bar does all four.'}
         </p>
-        <div className="mt-1.5 flex gap-1.5">
+        <div className="mt-1.5 flex gap-1.5 flex-wrap">
           {phase === 'result' ? (
             <button type="button" onClick={reset} className="btn btn-accent flex-1 text-[12px]">
               Next trial
@@ -278,6 +293,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               </button>
             </>
           )}
+          {['ready','result'].includes(phase)&&practiceSession(petState.lessons).sessionTrials>0&&<button type="button" onClick={takeBreak} disabled={isSaving} className="btn btn-quiet border-hairline text-[12px]" title="End this dog's practice session while keeping learned skills">Take a break</button>}
         </div>
         {phase === 'result' && result && (
           <p className="mt-1 text-[11px] leading-snug text-zinc-300">

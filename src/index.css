@@ -741,3 +741,8 @@
 /* ResizeObserver reports integer client sizes; clamp the visible canvas to
    its fractional flex box during the feedback-row height transition. */
 .stage-canvas canvas {display:block;max-width:100%;max-height:100%;}
+
+/* A real-session log is a reading surface: scroll the complete form and
+   history together, rather than clipping the controls above a tiny list. */
+.region-coach .coach-log {overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
+.coach-log>.panel-scroll {flex:0 0 auto;overflow:visible;}

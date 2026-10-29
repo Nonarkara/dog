@@ -1,0 +1,985 @@
+[
+  {
+    "name": "full-belly feedback and affection",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 75,
+        "hygiene": 85
+      },
+      "trust": 64,
+      "arousal": 32,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.3,
+        "sensitivity": 0.2
+      },
+      "behaviours": {},
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.95
+    }
+  },
+  {
+    "name": "completed catch",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 59,
+        "hygiene": 85
+      },
+      "trust": 71,
+      "arousal": 64.5,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {},
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.799999999999997
+    }
+  },
+  {
+    "name": "completed find the treat",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 55,
+        "hygiene": 85
+      },
+      "trust": 74,
+      "arousal": 70.5,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {},
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.799999999999997,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000
+    }
+  },
+  {
+    "name": "rewarded virtual practice",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 55,
+        "hygiene": 85
+      },
+      "trust": 75,
+      "arousal": 70.5,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {},
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.799999999999997,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 1,
+          "misses": 0,
+          "sessionTrials": 1,
+          "sessionStartedAt": 1793336400000
+        }
+      }
+    }
+  },
+  {
+    "name": "real log, cue, rehearsal and observation",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 55,
+        "hygiene": 85
+      },
+      "trust": 76.5,
+      "arousal": 70.5,
+      "personality": {
+        "boldness": 0.06,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.09535824999999998,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793336400000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.799999999999997,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 1,
+          "misses": 0,
+          "sessionTrials": 1,
+          "sessionStartedAt": 1793336400000
+        }
+      },
+      "lastRealSessionAt": 1793336400000
+    }
+  },
+  {
+    "name": "practice break and reload preserve skills and real logs",
+    "at": 1793336400000,
+    "state": {
+      "updatedAt": 1793336400000,
+      "needs": {
+        "hunger": 70,
+        "energy": 55,
+        "hygiene": 85
+      },
+      "trust": 76.5,
+      "arousal": 70.5,
+      "personality": {
+        "boldness": 0.06,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.09535824999999998,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793336400000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336400000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.799999999999997,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000
+    }
+  },
+  {
+    "name": "answered toilet call",
+    "at": 1793337900000,
+    "state": {
+      "updatedAt": 1793337900000,
+      "needs": {
+        "hunger": 69.33333333333323,
+        "energy": 42.54166666666673,
+        "hygiene": 80.70833333333289
+      },
+      "trust": 78.43055555555657,
+      "arousal": 44.16666666666643,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.0951993195833333,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793337900000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793337900000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 38.33333333333351,
+        "digestionMinutes": 25.00000000000004,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000
+    }
+  },
+  {
+    "name": "accident and cleanup",
+    "at": 1793340060000,
+    "state": {
+      "updatedAt": 1793340060000,
+      "needs": {
+        "hunger": 68.37333333333308,
+        "energy": 41.88166666666682,
+        "hygiene": 100
+      },
+      "trust": 82.33055555555802,
+      "arousal": 32.16666666666609,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.09497084121633331,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793340060000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793340060000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 2.857142857143099,
+        "boredom": 100,
+        "digestionMinutes": 60.99999999999967,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0,
+        "lastPeedAt": 1793340000000
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000
+    }
+  },
+  {
+    "name": "natural nap and waking",
+    "at": 1793361720000,
+    "state": {
+      "updatedAt": 1793361720000,
+      "needs": {
+        "hunger": 58.74666666666491,
+        "energy": 64.0411111111144,
+        "hygiene": 83.75416666666577
+      },
+      "trust": 81.32777777779484,
+      "arousal": 14.166666666666089,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.09269293393281249,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793361720000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": 1793340060000,
+        "wokenAt": 1793358560000,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793340060000,
+      "poopCount": 2,
+      "life": {
+        "bladder": 73.5714285714309,
+        "boredom": 100,
+        "digestionMinutes": 56.99999999999975,
+        "lowFullnessMinutes": 0,
+        "peeCount": 3,
+        "lastPeedAt": 1793360180000
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000,
+      "lastPoopedAt": 1793357910000
+    }
+  },
+  {
+    "name": "poor care pauses play and practice",
+    "at": 1793534520000,
+    "state": {
+      "updatedAt": 1793534520000,
+      "needs": {
+        "hunger": 0,
+        "energy": 79.92866666668937,
+        "hygiene": 0
+      },
+      "trust": 63.446527777852836,
+      "arousal": 0,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.12000000000000001,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.0748958906177125,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793534520000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": 1793458800000,
+        "wokenAt": 1793487600000,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793340060000,
+      "poopCount": 3,
+      "life": {
+        "bladder": 45.00000000002212,
+        "boredom": 100,
+        "digestionMinutes": 36.999999999769095,
+        "lowFullnessMinutes": 1052.0000000002713,
+        "peeCount": 3,
+        "lastPeedAt": 1793533580000
+      },
+      "sick": true,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000,
+      "lastPoopedAt": 1793424180000,
+      "sickSince": 1793392240000
+    }
+  },
+  {
+    "name": "care restores virtual health",
+    "at": 1793534520000,
+    "state": {
+      "updatedAt": 1793534520000,
+      "needs": {
+        "hunger": 52,
+        "energy": 100,
+        "hygiene": 65
+      },
+      "trust": 83.44652777785284,
+      "arousal": 20,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.2,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.0748958906177125,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793534520000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": 1793458800000,
+        "wokenAt": 1793487600000,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793534520000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 45.00000000002212,
+        "boredom": 100,
+        "digestionMinutes": 36.999999999769095,
+        "lowFullnessMinutes": 1052.0000000002713,
+        "peeCount": 0,
+        "lastPeedAt": 1793533580000
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000,
+      "lastPoopedAt": 1793424180000
+    }
+  },
+  {
+    "name": "dog isolation and final reload",
+    "at": 1793534520000,
+    "state": {
+      "updatedAt": 1793534520000,
+      "needs": {
+        "hunger": 52,
+        "energy": 100,
+        "hygiene": 65
+      },
+      "trust": 83.44652777785284,
+      "arousal": 20,
+      "personality": {
+        "boldness": 0.09,
+        "sociability": 0,
+        "foodDrive": 0.2,
+        "playDrive": 0.35,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.0748958906177125,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [
+            "sit please"
+          ],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:00.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793534520000,
+          "lastReinforcedAt": "2026-10-30T05:00:00.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [
+        {
+          "tag": "succeededAtCue",
+          "at": "2026-10-30T05:00:00.000Z"
+        }
+      ],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": 1793458800000,
+        "wokenAt": 1793487600000,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793534520000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 45.00000000002212,
+        "boredom": 100,
+        "digestionMinutes": 36.999999999769095,
+        "lowFullnessMinutes": 1052.0000000002713,
+        "peeCount": 0,
+        "lastPeedAt": 1793533580000
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.72,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336400000,
+      "lessons": {
+        "sit": {
+          "stage": 0,
+          "skill": 0.344,
+          "streak": 0,
+          "misses": 0,
+          "sessionTrials": 0
+        }
+      },
+      "lastRealSessionAt": 1793336400000,
+      "lastPoopedAt": 1793424180000
+    }
+  }
+]
