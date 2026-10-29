@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Utensils, Brush, Footprints, HandMetal, Volleyball, Moon, Pill, Sparkles, AlertTriangle } from 'lucide-react';
+import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, AlertTriangle, Send, ShieldAlert, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -30,7 +30,7 @@ interface CommandBarProps {
  * SAY, and the one thing they can do to STOP.
  */
 const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: string }[] = [
-  { action: 'pet', label: 'Pet', icon: HandMetal, key: '1' },
+  { action: 'pet', label: 'Pet', icon: HandHeart, key: '1' },
   { action: 'feed', label: 'Feed', icon: Utensils, key: '2' },
   { action: 'play', label: 'Play', icon: Volleyball, key: '3' },
   { action: 'walk', label: 'Walk', icon: Footprints, key: '4' },
@@ -58,6 +58,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   onBed,
 }) => {
   const [cueText, setCueText] = useState('');
+  const [labelsVisible,setLabelsVisible]=useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
@@ -97,7 +98,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   }, [onInteract, isSick, poops]);
 
   return (
-    <div className="command-bar no-print" role="group" aria-label="Care controls">
+    <div className={`command-bar no-print icon-commands ${labelsVisible?'labels-visible':''}`} role="group" aria-label="Care controls">
       <div className="flex items-center gap-1 shrink-0">
         {BASE_ACTIONS.map(({ action, label, icon: Icon, key }) => {
           // Dynamic clean adaptation if stage has waste
@@ -121,8 +122,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
                 action === 'groom' && poops > 0 ? 'text-amber-400 border-amber-600/40' : '',
               ].join(' ')}
             >
-              <CurrentIcon size={12} aria-hidden="true" className="hidden sm:block" />
-              {busy ? GERUND[currentAction] : currentLabel}
+              <CurrentIcon size={21} aria-hidden="true" />
+              <span className="sr-only">{busy ? GERUND[currentAction] : currentLabel}</span>
             </button>
           );
         })}
@@ -137,12 +138,13 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             title="Administer medicine (M)"
             className="btn bg-rose-600 text-white hover:bg-rose-500 px-2.5 text-[11px] font-semibold whitespace-nowrap animate-pulse"
           >
-            <Pill size={12} aria-hidden="true" className="hidden sm:block" />
-            Medicine
+            <Pill size={21} aria-hidden="true" /><span className="sr-only">Medicine</span>
           </button>
         )}
       </div>
 
+<button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} title="Control labels" onClick={()=>setLabelsVisible(v=>!v)}><CircleHelp size={20} aria-hidden="true"/></button>
+      {labelsVisible&&<div className="control-legend flex flex-wrap gap-x-3 gap-y-1 basis-full" aria-label="Control legend">{BASE_ACTIONS.map(({action,label,icon:Icon})=><span key={action} className="inline-flex items-center gap-1"><Icon size={14} aria-hidden="true"/>{label}</span>)}<span className="inline-flex items-center gap-1"><Moon size={14} aria-hidden="true"/>Bed</span>{[[Utensils,'Fullness'],[Battery,'Energy'],[Sparkles,'Hygiene'],[Smile,'Happiness'],[Heart,'Trust'],[Activity,'Excitement'],[Heart,'Care'],[GraduationCap,'Coach'],[BookOpen,'Record'],[Trees,'Commons']].map(([Icon,label])=><span key={String(label)} className="inline-flex items-center gap-1">{React.createElement(Icon as typeof Heart,{size:14,'aria-hidden':true})}{String(label)}</span>)}</div>}
       {/* Cue field or Tantrum Scold action */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
         {isTantrum ? (
@@ -158,7 +160,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
               className="btn btn-accent text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold"
               title="Discipline: firm 'No!' to curb tantrums"
             >
-              Scold ("No!")
+              <ShieldAlert size={21} aria-hidden="true"/><span className="sr-only">Scold ("No!")</span>
             </button>
           </div>
         ) : (
@@ -188,7 +190,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
               disabled={isInteracting || !cueText.trim()}
               className="btn btn-accent text-[11px] px-2.5 shrink-0 disabled:opacity-40"
             >
-              Say
+              <Send size={19} aria-hidden="true"/><span className="sr-only">Say</span>
             </button>
           </>
         )}
@@ -206,8 +208,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         aria-label={asleep ? `${dog.name} is asleep` : `Put ${dog.name} to bed`}
         title={asleep ? `${dog.name} is asleep` : 'Put him to bed (6)'}
       >
-        <Moon size={12} aria-hidden="true" className="hidden sm:block" />
-        {asleep ? 'Asleep' : 'Bed'}
+        <Moon size={21} aria-hidden="true" /><span className="sr-only">{asleep ? 'Asleep' : 'Bed'}</span>
       </button>
 
       <span className="data text-[10px] text-faint shrink-0 hidden xl:inline">

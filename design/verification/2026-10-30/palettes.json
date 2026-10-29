@@ -1,0 +1,67 @@
+[
+  {
+    "id": "expo-2021",
+    "ground": "rgb(244, 243, 228)",
+    "paper": "rgb(251, 250, 238)",
+    "ink": "rgb(41, 68, 52)",
+    "muted": "rgb(82, 100, 73)",
+    "action": "rgb(56, 99, 68)",
+    "field": "rgb(225, 233, 213)",
+    "helper": "rgb(41, 68, 52)",
+    "pageW": 390,
+    "pageH": 844,
+    "fps": 30
+  },
+  {
+    "id": "mali-2022",
+    "ground": "rgb(250, 238, 238)",
+    "paper": "rgb(255, 248, 245)",
+    "ink": "rgb(101, 59, 73)",
+    "muted": "rgb(121, 87, 96)",
+    "action": "rgb(148, 81, 102)",
+    "field": "rgb(240, 217, 221)",
+    "helper": "rgb(101, 59, 73)",
+    "pageW": 390,
+    "pageH": 844,
+    "fps": 30
+  },
+  {
+    "id": "oreo-frenchie",
+    "ground": "rgb(250, 245, 217)",
+    "paper": "rgb(255, 251, 238)",
+    "ink": "rgb(36, 73, 93)",
+    "muted": "rgb(80, 103, 112)",
+    "action": "rgb(39, 92, 115)",
+    "field": "rgb(222, 235, 237)",
+    "helper": "rgb(36, 73, 93)",
+    "pageW": 390,
+    "pageH": 844,
+    "fps": 30
+  },
+  {
+    "id": "paolo-pug",
+    "ground": "rgb(246, 237, 219)",
+    "paper": "rgb(255, 248, 236)",
+    "ink": "rgb(97, 76, 55)",
+    "muted": "rgb(119, 98, 78)",
+    "action": "rgb(132, 90, 47)",
+    "field": "rgb(234, 219, 192)",
+    "helper": "rgb(97, 76, 55)",
+    "pageW": 390,
+    "pageH": 844,
+    "fps": 30
+  },
+  {
+    "id": "shiba-chai",
+    "ground": "rgb(243, 237, 244)",
+    "paper": "rgb(253, 248, 244)",
+    "ink": "rgb(86, 59, 96)",
+    "muted": "rgb(114, 93, 121)",
+    "action": "rgb(121, 82, 127)",
+    "field": "rgb(233, 224, 237)",
+    "helper": "rgb(86, 59, 96)",
+    "pageW": 390,
+    "pageH": 844,
+    "fps": 30
+  }
+]

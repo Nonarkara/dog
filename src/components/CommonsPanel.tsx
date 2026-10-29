@@ -291,8 +291,9 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
     setWebglError(null);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x09090b);
-    scene.fog = new THREE.FogExp2(0x09090b, 0.022);
+    const stageColor=getComputedStyle(container.closest('.cockpit')||container).getPropertyValue('--stage-ground').trim()||'#e1e9d5';
+    scene.background = new THREE.Color(stageColor);
+    scene.fog = new THREE.FogExp2(stageColor, 0.022);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 120);
     camera.position.set(0, 18, 22);
@@ -321,7 +322,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
 
     // Terrain: the park ground
     const groundGeo = new THREE.PlaneGeometry(60, 60, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.9 });
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0xc5d4b2, roughness: 0.9 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -329,7 +330,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
 
     // Grid floor lines (Vignelli / architectural grid). Dim neutral on both
     // axes — a full-bleed amber grid decorates the floor and steals the accent.
-    const grid = new THREE.GridHelper(60, 30, 0x27272a, 0x27272a);
+    const grid = new THREE.GridHelper(60, 30, 0xa5b78e, 0xa5b78e);
     grid.position.y = 0.01;
     scene.add(grid);
 

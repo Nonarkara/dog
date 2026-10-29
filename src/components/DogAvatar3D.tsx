@@ -280,7 +280,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const height = container.clientHeight || 320;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0c0c0e);
+    scene.background = new THREE.Color(getComputedStyle(container.closest('.cockpit')||container).getPropertyValue('--stage-ground').trim()||'#e1e9d5');
 
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
     const DOG_HEIGHT = 2.12;
@@ -338,7 +338,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     const podium = new THREE.Mesh(
       new THREE.CylinderGeometry(1.9, 2.0, 0.1, 48),
-      new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.75, metalness: 0.1 })
+      new THREE.MeshStandardMaterial({ color: 0xc5d4b2, roughness: 0.75, metalness: 0.1 })
     );
     podium.position.y = -0.05;
     podium.receiveShadow = true;

@@ -134,7 +134,7 @@ export const RiggedAvatar: React.FC<RiggedAvatarProps> = ({
         renderer.setSize(container.clientWidth || 1, container.clientHeight || 1);
 
         const scene3d = new THREE.Scene();
-        scene3d.background = new THREE.Color(0x0c0c0e);
+        scene3d.background = new THREE.Color(getComputedStyle(container.closest('.cockpit')||container).getPropertyValue('--stage-ground').trim()||'#e1e9d5');
         scene3d.add(pivot);
 
         const ambient = new THREE.AmbientLight(0xd8dbe4, 0.5);

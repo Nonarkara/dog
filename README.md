@@ -1,4 +1,4 @@
-# Expo — A Digital Tamagotchi for Expo, Mali & Bangal
+# Expo — Dog-Tamagotchi
 
 Live production system: [dog.nonarkara.org](https://dog.nonarkara.org)
 
@@ -14,7 +14,7 @@ Expo is a local-first digital Tamagotchi built around real dogs — starting wit
 
 It fulfills four core objectives:
 
-1. **Pet & React**: Pet, feed, play, walk, groom — and now **talk** to your dog. Each interaction moves trust, arousal, and personality on the dog's inner state. The 3D avatar reacts with tail speed, ear position, head tilt, and body language that matches its mood.
+1. **Pet & React**: Pet, feed, play, walk, groom — and now **talk** to your dog. Each interaction moves trust, arousal, and personality on the dog's inner state. The illustrated dog reacts with head tilts, tail movement, breathing, care motions, and authored sitting/resting/sleeping poses.
 2. **Talk & Learn (Classical Conditioning)**: Say a word ("dinner", "come", "good boy") and Expo responds based on whether that word has been paired with food, petting, or play. Say it, then act within 30 seconds, and Expo learns the association — just like Pavlov.
 3. **Train & Coach (Operant Conditioning)**: The Coach region teaches you how to train your dog. It **measures your marker timing** — tap when the dog performs, tap again when you mark, and the app computes the real delay in milliseconds and tells you what it means. The behaviour's strength moves up or down, and a readiness coach tells you when to move from continuous rewards to every-third to unpredictable schedules. Extinction bursts are named so you don't mistake them for stubbornness.
 4. **Meet Other Dogs**: The Canine Commons park lets your dog roam with neighbors. Import a friend's exported dog JSON and their dog appears in the park as a visitor — amber beacon, sniffs, greet, chase.
@@ -67,9 +67,9 @@ Also in the household: **Mali** (Expo’s sister, a shorter, broader female Bang
 ## Architecture & Technical Stack
 
 - **Frontend**: React 19 + TypeScript + Vite.
-- **3D Graphics Engine**: Three.js WebGL with custom articulated canine procedural geometry, physics, raycasting, dynamic lighting, and particle systems. If the browser cannot draw (no WebGL), the stage says so in words instead of showing a black rectangle.
+- **Dog stage**: Five photo-informed illustrated companions, alpha WebP art, an articulated Three.js image mesh, and a 30 fps scheduler. Each has authored standing, sitting, lying, lifted-paw, feeding, affection and sleeping artwork, with registered opaque transitions and staged settling. Hidden tabs pause; reduced-motion mode lowers the render rate and removes looping movement. Customized coats and the older companions retain the procedural 3D renderer; imported models retain their existing path. See [the animation implementation](design/illustrated-animation.md).
 - **Audio Synthesis**: Zero-latency procedural Web Audio synthesizer for woofs, barks, eating crunches, ball bounces, and happy yips without MP3 latency.
-- **Design System**: Dieter Rams × Vignelli planar grid — Amber `#f59e0b` single accent, zero border-radius, zero gradients, zero shadows, Josefin Sans display + Source Sans 3 body + JetBrains Mono.
+- **Game design**: Five light personality palettes consulted from Palette’s Wada source combinations; icon-led care, navigation and meters, with a touch-accessible label legend. Josefin Sans display, Source Sans 3 body and JetBrains Mono for data. The dog remains the visual focus; no decorative gradients or card effects. See [palette provenance](design/personality-palettes.md).
 - **Psychology Model**: Operant conditioning (marker timing, continuous/fixed/variable ratio schedules, diminishing returns, shaping, readiness-to-advance coach) and classical conditioning (cue-outcome pairing with expiry) — self-tested in `src/domain/selftest.ts`.
 - **One model, one number**: needs decay is owned by the domain (`decay()`), applied on load and on a timer. Happiness is *computed* from the other five numbers, never stored twice. The record mirrors the model; it does not keep a second opinion.
 - **Storage**: Local-first LocalStorage with a versioned schema — a record written by an older build is brought forward, not discarded.

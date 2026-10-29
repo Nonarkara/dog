@@ -1,4 +1,5 @@
 import React from 'react';
+import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock, Moon, Sun, Flame} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import { happiness, readiness, temperament } from '../domain/pet';
@@ -116,7 +117,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
             return (
               <div key={m.key} className="min-w-0">
                 <div className="flex items-baseline justify-between gap-1">
-                  <span className="label">{m.label}</span>
+                  <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
                   {isLow && (
                     <span className="label text-rose-400 truncate">{m.lowMeans}</span>
                   )}
@@ -173,7 +174,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-1 mt-1">
             {CARE_LOG.map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-1 min-w-0">
-                <dt className="label truncate">{row.label}</dt>
+                <dt className="label truncate" title={row.label}>{React.createElement(({fed:Utensils,played:Smile,walked:Activity,groomed:Sparkles})[row.key]||Clock,{size:14,'aria-hidden':true})}<span className="sr-only">{row.label}</span></dt>
                 <dd className="data text-[10px] text-zinc-300 shrink-0">{since(row.at)}</dd>
               </div>
             ))}

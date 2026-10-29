@@ -26,7 +26,7 @@ fs.mkdirSync(out, { recursive: true });
   // Capture the actual frame through CDP, as scripts/shots.py already does.
   const cdp = await page.context().newCDPSession(page);
   const capture = async path => {
-    const {data} = await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+    const {data} = await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,...page.viewportSize(),scale:1},captureBeyondViewport:true});
     const bytes=Buffer.from(data,'base64');
     if(path) fs.writeFileSync(path,bytes);
     return bytes;

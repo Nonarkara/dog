@@ -62,3 +62,7 @@ Removing photographic image conditioning produced flux-cel-v1.png, a genuine 2D 
 For any eventual atlas, remove the background only after art review; keep identical canvas size, foot baseline, scale and pivots across poses. Export alpha correctly and inspect against both light and dark stages. Do not ship a white rectangle or let the dog change size between frames.
 
 The current research question is whether to use illustrated 2D animation or actual rotatable 3D dogs for the MVP. Flux can produce source art for either; the renderer/rigging work is different. No live source code was changed during the local generation experiment.
+
+## Owner decision and implementation
+
+Resolved: the owner selected illustrated 2D animation for the MVP. The implementation and artwork provenance are recorded in [illustrated-animation.md](illustrated-animation.md). Local Flux supplied a style study; final photo-informed illustrations and authored poses were refined with the built-in reference-image editor. Runtime movement uses an image mesh and a 30 fps display scheduler, rather than independently generated display frames.

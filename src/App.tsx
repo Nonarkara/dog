@@ -4,6 +4,7 @@ import type { PetState } from './domain/types';
 import type { AvatarPose, AvatarInteractionTrigger } from './components/DogAvatar3D';
 import { CALL_TEXT, addTogether, answerCall, tickCall } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
+import { dogTheme, DOG_THEMES } from './data/dogThemes';
 import { DEFAULT_DOGS } from './data/defaultDogs';
 import {
   loadStoredDogs,
@@ -17,7 +18,7 @@ import {
 import { CommandBar } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
-import { Dog, Plus, X, ChevronDown, RotateCcw } from 'lucide-react';
+import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck } from 'lucide-react';
 import {
   createPetState,
   interact,
@@ -46,6 +47,8 @@ import {
  *
  * There is no page to scroll to, because there is no second page.
  */
+
+const IllustratedDog = lazy(() => import('./components/IllustratedDog').then(m => ({ default: m.IllustratedDog })));
 
 const DogAvatar3D = lazy(() =>
   import('./components/DogAvatar3D').then((m) => ({ default: m.DogAvatar3D }))
@@ -499,12 +502,12 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="cockpit" data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className="cockpit" style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
-        <div className="h-13 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
+        <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
           <span className="hidden sm:inline font-display text-[15px] text-white shrink-0">
-            Canine OS
+            Dog days
           </span>
 
           {/* Which dog. The dog is the subject of the app, so the switcher sits
@@ -587,8 +590,8 @@ export const App: React.FC = () => {
             <span className="data">{currentDog.birthDate ? `${age.dogYears} dog years` : 'Virtual companion'}</span>
           </p>
 
-          <span className="hidden lg:inline text-[11px] text-faint shrink-0">
-            Local-first. Nothing leaves this device.
+          <span title="Saved on this device" className="hidden lg:inline text-[11px] text-faint shrink-0">
+            {DOG_THEMES[currentDog.id]?.name || 'Your companion'}
           </span>
 
           <button
@@ -632,7 +635,7 @@ export const App: React.FC = () => {
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />
                 ) : (
-                  <DogAvatar3D
+                  <IllustratedDog
                     key={currentDog.id}
                     dog={isAddDogOpen ? previewDog : currentDog}
                     petState={petState}
@@ -641,6 +644,19 @@ export const App: React.FC = () => {
                     onClean={() => handleInteract('clean')}
                     onMiniGameComplete={handleMiniGameComplete}
                     interactionTrigger={interactionTrigger}
+                    fallback={
+                      <DogAvatar3D
+                        key={currentDog.id}
+                        dog={isAddDogOpen ? previewDog : currentDog}
+                        petState={petState}
+                        pose={avatarPose}
+                        onPet={() => handleInteract('pet')}
+                        onClean={() => handleInteract('clean')}
+                        onMiniGameComplete={handleMiniGameComplete}
+                        interactionTrigger={interactionTrigger}
+                        onInteractionEnd={() => setInteractionTrigger(null)}
+                      />
+                    }
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />
                 )}
@@ -685,6 +701,8 @@ export const App: React.FC = () => {
                     key={r.key}
                     role="tab"
                     type="button"
+                    aria-label={r.label}
+                    title={r.label}
                     aria-selected={active}
                     aria-current={active ? 'page' : undefined}
                     onClick={() => setActiveRegion(r.key)}
@@ -692,7 +710,8 @@ export const App: React.FC = () => {
                       active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
                     }`}
                   >
-                    {r.label}
+                    {React.createElement(({care:Heart,coach:GraduationCap,record:BookOpen,commons:Trees})[r.key],{size:20,'aria-hidden':true})}
+                    <span className="sr-only">{r.label}</span>
                   </button>
                 );
               })}
