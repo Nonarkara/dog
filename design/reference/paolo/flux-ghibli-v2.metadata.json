@@ -1,0 +1,32 @@
+{
+    "mflux_version": "0.24.0",
+    "model": "black-forest-labs/FLUX.1-schnell",
+    "model_path": null,
+    "base_model": null,
+    "seed": 7306,
+    "steps": 8,
+    "guidance": null,
+    "height": 608,
+    "width": 1024,
+    "precision": "mlx.core.bfloat16",
+    "quantize": null,
+    "generation_time_seconds": 146.06,
+    "created_at": "2026-10-29T22:29:18.600971",
+    "lora_paths": [
+        "/Users/nonarkara/Library/Caches/mflux/loras/portrait-illustration.safetensors"
+    ],
+    "lora_scales": [
+        1.2
+    ],
+    "image_path": "/Users/nonarkara/Projects/dog/design/reference/paolo/standing-studio-reference.png",
+    "image_paths": null,
+    "image_strength": 0.35,
+    "controlnet_image_path": null,
+    "controlnet_strength": null,
+    "masked_image_path": null,
+    "depth_image_path": null,
+    "redux_image_paths": null,
+    "redux_image_strengths": null,
+    "prompt": "A hand drawn Studio Ghibli inspired animation cel of Paolo, the same stocky adult cream pug in the reference image, in the same full body three-quarter standing pose. Preserve his real identity and proportions: heavy broad cream body, very broad short flat charcoal muzzle with drooping jowls, thick folded forehead, small folded dark button ears, warm dark brown eyes, short sturdy legs, curled tail and little pink tongue peeking out. Beautiful restrained Japanese feature animation character art, fine expressive ink contours, warm cream and charcoal colors, simple cel shadows, soft hand painted color, gentle appealing expression, natural coherent dog anatomy. One single dog with all four paws visible, isolated against a clean plain white background. Maintain the exact standing pose and body proportions of the input. No furniture, no clothes, no collar, no lettering or decoration. Avoid toy sphere anatomy and exaggerated globe eyes.",
+    "negative_prompt": null
+}

@@ -1,0 +1,32 @@
+{
+    "mflux_version": "0.24.0",
+    "model": "black-forest-labs/FLUX.1-schnell",
+    "model_path": null,
+    "base_model": null,
+    "seed": 7306,
+    "steps": 4,
+    "guidance": null,
+    "height": 768,
+    "width": 768,
+    "precision": "mlx.core.bfloat16",
+    "quantize": null,
+    "generation_time_seconds": 125.92,
+    "created_at": "2026-10-29T22:37:07.442675",
+    "lora_paths": [
+        "/Users/nonarkara/Library/Caches/mflux/loras/portrait-illustration.safetensors"
+    ],
+    "lora_scales": [
+        1.0
+    ],
+    "image_path": null,
+    "image_paths": null,
+    "image_strength": null,
+    "controlnet_image_path": null,
+    "controlnet_strength": null,
+    "masked_image_path": null,
+    "depth_image_path": null,
+    "redux_image_paths": null,
+    "redux_image_strengths": null,
+    "prompt": "One single 2D hand-drawn Japanese animation character drawing, Studio Ghibli inspired dog character design. Full body Paolo, a very stocky adult cream fawn pug standing naturally on four short sturdy legs in front three-quarter view. Wide broad head, heavy drooping charcoal jowls, extremely short flat black muzzle, deeply folded forehead, tiny folded black button ears, gentle sleepy dark brown eyes, a little pink tongue peeking out on one side, tightly curled short tail. Warm affectionate comic personality. Thick round barrel body, short legs, large soft paws, recognizably an adult pug rather than a puppy. Beautiful thin expressive ink outlines and flat opaque cream, brown and charcoal color shapes, only two simple cel shadow tones. Hand drawn feature-animation cel, soft asymmetrical drawing, simplified fur indicated by a few small ink strokes. Entire dog including tail and all four paws centered with room around the silhouette on an empty pure white background. Single pose, single character, no grid, no lettering, no collar, no objects, no scene. This is a flat 2D animation drawing with solid color fills, not a photograph, not a 3D render, not a plastic figurine, no individual hairs or realistic fur texture. Keep the eyes naturally small and softly drooping, the face broad and kindly.",
+    "negative_prompt": null
+}
