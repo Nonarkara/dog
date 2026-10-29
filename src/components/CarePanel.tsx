@@ -187,7 +187,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
                   : 'Awake'}
             </span>
             <span className="text-zinc-400 shrink-0 ml-2">
-              {petState.weightKg ? `${petState.weightKg.toFixed(1)} kg` : `${dog.weightKg} kg`}
+              {dog.weightKg > 0 ? `${dog.weightKg} kg recorded` : 'Virtual companion'}
               {isSick ? ' · Sick' : poops > 0 ? ` · ${poops} mess` : ' · Healthy'}
             </span>
           </p>

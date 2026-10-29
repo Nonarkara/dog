@@ -130,6 +130,8 @@ export const App: React.FC = () => {
   const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
   const [interactionTrigger, setInteractionTrigger] = useState<AvatarInteractionTrigger>(null);
   const [isInteracting, setIsInteracting] = useState(false);
+  const actionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (actionTimer.current) clearTimeout(actionTimer.current); }, []);
   const [pendingAction, setPendingAction] = useState<CareAction | null>(null);
 
   // The note — what the dog just did, said once, under the animal.
@@ -168,9 +170,17 @@ export const App: React.FC = () => {
   const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
   const subject = { name: currentDog.name, sex: currentDog.sex } as const;
 
-  useEffect(() => {
-    setPetState(loadPetState(activeDogId));
-  }, [activeDogId]);
+  // Switch identity and state in one React batch, before the save effect runs.
+  const selectDog = (id: string) => {
+    if (actionTimer.current) clearTimeout(actionTimer.current);
+    setActiveDogId(id);
+    setPetState(loadPetState(id));
+    setInteractionTrigger(null);
+    setIsInteracting(false);
+    setPendingAction(null);
+    setAvatarPose('stand');
+    setNote(null);
+  };
 
   useEffect(() => {
     savePetState(activeDogId, petState);
@@ -284,6 +294,10 @@ export const App: React.FC = () => {
 
   const handleInteract = (action: CareAction) => {
     if (isInteracting) return;
+    if (action === 'play' && petState.sick) {
+      say(`${currentDog.name} needs rest. The catch game can wait until recovery.`);
+      return;
+    }
     setIsInteracting(true);
     setPendingAction(action);
     setInteractionTrigger(action);
@@ -299,7 +313,7 @@ export const App: React.FC = () => {
     syncDisplay(next);
     say(answer.answered ? `${result.note} You came when ${subject.sex === 'female' ? 'she' : 'he'} called. Trust +${answer.trustBonus}.` : result.note);
 
-    window.setTimeout(() => {
+    actionTimer.current = setTimeout(() => {
       setIsInteracting(false);
       setPendingAction(null);
       setInteractionTrigger(null);
@@ -330,7 +344,7 @@ export const App: React.FC = () => {
     if (result.note.includes('knows')) {
       setInteractionTrigger('communicate');
       setIsInteracting(true);
-      window.setTimeout(() => {
+      actionTimer.current = setTimeout(() => {
         setIsInteracting(false);
         setInteractionTrigger(null);
       }, 2000);
@@ -426,7 +440,7 @@ export const App: React.FC = () => {
     };
 
     setDogs((prev) => [...prev, newDog]);
-    setActiveDogId(newDog.id);
+    selectDog(newDog.id);
     setPetState(createPetState());
     setIsAddDogOpen(false);
     setNewDogName('');
@@ -437,7 +451,7 @@ export const App: React.FC = () => {
   const resetToFactoryDefaults = () => {
     if (window.confirm('Reset all dog profiles to the factory defaults?')) {
       setDogs(DEFAULT_DOGS);
-      setActiveDogId(DEFAULT_DOGS[0].id);
+      selectDog(DEFAULT_DOGS[0].id);
       setPetState(createPetState());
       say('Profiles reset to the factory defaults.');
     }
@@ -533,7 +547,7 @@ export const App: React.FC = () => {
                         role="option"
                         aria-selected={dog.id === activeDogId}
                         onClick={() => {
-                          setActiveDogId(dog.id);
+                          selectDog(dog.id);
                           setIsDogMenuOpen(false);
                         }}
                         className={`w-full min-h-10 px-3 text-left text-[13px] ${
@@ -570,7 +584,7 @@ export const App: React.FC = () => {
             <span className="text-zinc-600"> / </span>
             <span className="data">{age.formattedCalendarAge}</span>
             <span className="text-zinc-600"> / </span>
-            <span className="data">{age.dogYears} dog years</span>
+            <span className="data">{currentDog.birthDate ? `${age.dogYears} dog years` : 'Virtual companion'}</span>
           </p>
 
           <span className="hidden lg:inline text-[11px] text-faint shrink-0">
@@ -619,6 +633,7 @@ export const App: React.FC = () => {
                   />
                 ) : (
                   <DogAvatar3D
+                    key={currentDog.id}
                     dog={isAddDogOpen ? previewDog : currentDog}
                     petState={petState}
                     pose={avatarPose}

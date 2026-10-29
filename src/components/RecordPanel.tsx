@@ -496,11 +496,11 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     { label: 'Microchip', mono: true, value: dog.microchipId || 'Not recorded' },
     { label: 'Date of birth', mono: true, value: formatDate(dog.birthDate) },
     { label: 'Calendar age', mono: true, value: age.formattedCalendarAge },
-    { label: 'Dog years', mono: true, value: `about ${age.dogYears}` },
+    { label: 'Dog years', mono: true, value: dog.birthDate ? `about ${age.dogYears}` : 'Not recorded' },
     {
       label: 'Next birthday',
       mono: false,
-      value: age.isBirthdayToday ? (
+      value: !dog.birthDate ? 'Not recorded' : age.isBirthdayToday ? (
         <span className="font-body font-semibold text-accent">Today</span>
       ) : (
         <>
@@ -514,7 +514,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
       mono: false,
       value: `${dog.sex}, ${dog.isNeutered ? 'neutered' : 'intact'}`,
     },
-    { label: 'Weight', mono: true, value: `${dog.weightKg} kg` },
+    { label: 'Weight', mono: true, value: dog.weightKg > 0 ? `${dog.weightKg} kg` : 'Not recorded' },
     { label: 'Coat', mono: false, value: dog.coatColor || 'Not recorded' },
     { label: 'Primary clinic', mono: false, value: dog.primaryVetClinic || 'Not recorded' },
     {

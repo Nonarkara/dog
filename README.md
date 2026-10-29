@@ -60,7 +60,7 @@ The spatial gate enforces this: `scripts/spatial/spatial-check.mjs` now fails th
 - **Tribe**: Phitsanulok Bangkaew Order
 - **Signature Quirk**: Refuses to sleep without resting his chin on a bolster cushion (*Bolster Connoisseur*).
 
-Also in the household: **Mali** (Thai Mix, food-motivated, golden tan & white) and **Bangal** (Thai Ridgeback, bold guardian, red & black). Each dog carries their own trust, arousal, personality, and training progress — they never share a state.
+Also in the household: **Mali** (Expo’s sister, a shorter, broader female Bangkaew), **Oreo** (French Bulldog), **Paolo** (Pug), and **Chai** (Shiba Inu). Existing companions Bangal and Kofi remain available. Each dog carries their own trust, arousal, personality, and training progress — they never share a state.
 
 ---
 
@@ -93,3 +93,5 @@ npm run test:domain
 node scripts/spatial/spatial-check.mjs   # the spatial gate
 npx wrangler deploy
 ```
+
+The 29 October Dog-Tamagotchi likeness, interaction and rendering audit is in [docs/tamagotchi-audit.md](docs/tamagotchi-audit.md).

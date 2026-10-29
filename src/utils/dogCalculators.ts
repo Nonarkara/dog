@@ -13,6 +13,10 @@ export interface AgeCalculation {
 }
 
 export function calculateDogAge(birthDateStr: string, weightKg: number = 24, now: Date = new Date()): AgeCalculation {
+  if (!birthDateStr || !Number.isFinite(Date.parse(birthDateStr))) return {
+    years: 0, months: 0, days: 0, dogYears: 0, daysUntilNextBirthday: 0,
+    formattedCalendarAge: 'Age not recorded', isBirthdayToday: false,
+  };
   const birth = new Date(birthDateStr);
 
   let years = now.getFullYear() - birth.getFullYear();
@@ -142,11 +146,11 @@ function migrateDog(raw: unknown): DogProfile | null {
     id: typeof dog.id === 'string' && dog.id ? dog.id : `dog-migrated-${nameKey(dog.name)}`,
     name: typeof dog.name === 'string' && dog.name ? dog.name : 'Unnamed',
     breed: dog.breed || 'Mixed Breed',
-    birthDate: dog.birthDate || '2023-01-01',
+    birthDate: typeof dog.birthDate === 'string' ? dog.birthDate : '',
     sex: dog.sex === 'female' ? 'female' : 'male',
     isNeutered: Boolean(dog.isNeutered),
     microchipId: dog.microchipId || 'Not recorded',
-    weightKg: Number(dog.weightKg) || 20,
+    weightKg: Number.isFinite(Number(dog.weightKg)) ? Number(dog.weightKg) : 0,
     coatColor: dog.coatColor || 'Not recorded',
     distinctiveMarks: Array.isArray(dog.distinctiveMarks) ? dog.distinctiveMarks : [],
     personalityTraits: Array.isArray(dog.personalityTraits) ? dog.personalityTraits : [],
@@ -173,6 +177,7 @@ function migrateDog(raw: unknown): DogProfile | null {
     metaverseTribe: dog.metaverseTribe || 'The Roaming Pack',
     metaverseBio: dog.metaverseBio || '',
     avatarConfig: {
+      ...avatar,
       baseColor: avatar.baseColor || '#854d0e',
       secondaryColor: avatar.secondaryColor || '#fef3c7',
       maskColor: avatar.maskColor || '#451a03',
@@ -284,12 +289,18 @@ export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
       // the defaults, keeping any model the owner imported.
       .map((d) => {
         const def = fallback.find((f) => f.id === d.id);
-        if (!def || d.avatarConfig?.pattern) return d;
+        if (!def) return d;
+        if (d.id === 'mali-2022' && d.breed === 'Thai Mix') {
+          return { ...d, breed: def.breed, thaiBreed: def.thaiBreed, sex: 'female' as const, isNeutered: true,
+            distinctiveMarks: def.distinctiveMarks, metaverseBio: def.metaverseBio, coatColor: def.coatColor,
+            avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig.customModelUrl } };
+        }
+        if (d.avatarConfig?.pattern) return d;
         return { ...d, coatColor: def.coatColor, avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig?.customModelUrl } };
       });
     if (migrated.length === 0) return fallback;
     if (readSchemaVersion() !== SCHEMA_VERSION) writeSchemaVersion();
-    return migrated;
+    return [...migrated, ...fallback.filter(d => !migrated.some(saved => saved.id === d.id))];
   } catch (e) {
     console.warn('Failed to load dogs from localStorage, using fallback', e);
   }

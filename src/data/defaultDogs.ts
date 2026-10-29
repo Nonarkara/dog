@@ -1,6 +1,6 @@
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 
-export const DEFAULT_DOGS: DogProfile[] = [
+const LEGACY_DOGS: DogProfile[] = [
   {
     id: 'expo-2021',
     name: 'Expo',
@@ -397,6 +397,47 @@ export const DEFAULT_DOGS: DogProfile[] = [
       tailShape: 'plume',
     },
   },
+];
+
+/** The requested household comes first. Existing companions and all records survive. */
+const expo = LEGACY_DOGS[0];
+const mali = LEGACY_DOGS.find(d => d.id === 'mali-2022')!;
+const companion = (id: string, name: string, breed: string, config: DogProfile['avatarConfig'], quirks: string[]): DogProfile => ({
+  ...expo, id, name, callName: name, thaiName: '', breed, thaiBreed: '',
+  // New companions are game characters. No invented clinical history or identifiers.
+  birthDate: '', weightKg: 0, microchipId: '', primaryVetClinic: '', emergencyPhone: '',
+  sex: 'male', isNeutered: false, primaryPhotoUrl: '', photos: [],
+  vaccinations: [], parasiteControl: [], medicalHistory: [],
+  distinctiveMarks: quirks, personalityTraits: quirks, quirks,
+  favoriteFood: 'Small training treats', favoriteToy: 'Soft ball',
+  coatColor: breed === 'French Bulldog' ? 'Black and white pied' : 'Fawn and cream',
+  metaverseTribe: 'The home pack', metaverseBio: `${name}, a virtual ${breed.toLowerCase()} companion.`,
+  avatarConfig: config,
+  tamagotchi: { ...expo.tamagotchi },
+});
+
+export const DEFAULT_DOGS: DogProfile[] = [
+  expo,
+  { ...mali, breed: 'Thai Bangkaew Dog', thaiBreed: 'ไทยบางแก้ว',
+    sex: 'female', isNeutered: true,
+    distinctiveMarks: ['Expo’s sister', 'Shorter legs and a broad, round body', 'Dark mask and white chest ruff'],
+    metaverseBio: 'Expo’s sister. A low, round Bangkaew who leans into a good scratch.',
+    avatarConfig: { ...expo.avatarConfig },
+    coatColor: 'Sable and white',
+  },
+  companion('oreo-frenchie', 'Oreo', 'French Bulldog', {
+    pattern: 'spotted', baseColor: '#f5efe3', secondaryColor: '#fff8eb', maskColor: '#302c2b',
+    furFluff: 0, earShape: 'pricked', tailShape: 'bob',
+  }, ['Tall bat ears', 'Short, broad muzzle', 'Pied black and white coat']),
+  companion('paolo-pug', 'Paolo', 'Pug', {
+    pattern: 'mask', baseColor: '#c29b68', secondaryColor: '#e7d4ad', maskColor: '#302823',
+    furFluff: 0, earShape: 'floppy', tailShape: 'curl',
+  }, ['Folded button ears', 'Dark muzzle and brow wrinkles', 'Round body and tightly curled tail']),
+  companion('shiba-chai', 'Chai', 'Shiba Inu', {
+    pattern: 'solid', baseColor: '#bb713d', secondaryColor: '#fff1d9', maskColor: '#493023',
+    furFluff: 0.4, earShape: 'pricked', tailShape: 'curl',
+  }, ['Small triangular ears', 'Foxlike russet face and cream cheeks', 'Curled tail']),
+  ...LEGACY_DOGS.filter(d => d.id !== expo.id && d.id !== mali.id),
 ];
 
 export const METAVERSE_NEIGHBORS: MetaverseNeighborDog[] = [

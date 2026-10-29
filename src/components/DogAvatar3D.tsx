@@ -99,16 +99,21 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   const interactionState = useRef<{
     type: AvatarInteractionTrigger;
     timer: number;
-  }>({ type: 'idle', timer: 0 });
+  }>({ type: null, timer: 0 });
+
+  const gameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameBusy = useRef(false);
+  useEffect(() => () => { if (gameTimer.current) clearTimeout(gameTimer.current); }, []);
 
   // Tamagotchi Agility Catch Mini-Game state
   const [miniGame, setMiniGame] = useState<{
     active: boolean;
+    target: 'left' | 'right';
     round: number; // 1..5
     score: number;
     lastResult: 'hit' | 'miss' | null;
     leaping: 'left' | 'right' | null;
-  }>({ active: false, round: 1, score: 0, lastResult: null, leaping: null });
+  }>({ active: false, target: 'left', round: 1, score: 0, lastResult: null, leaping: null });
 
   const gameLeap = useRef<{ dir: 'left' | 'right' | null; progress: number }>({ dir: null, progress: 0 });
 
@@ -116,6 +121,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     if (!interactionTrigger) return;
     interactionState.current = { type: interactionTrigger, timer: 2.2 };
 
+    if (interactionTrigger === 'play') {
+      if (gameTimer.current) clearTimeout(gameTimer.current);
+      gameBusy.current = false;
+      gameLeap.current = { dir: null, progress: 0 };
+    }
     if (interactionTrigger === 'pet') {
       sound.happyYip();
       spawnHeart();
@@ -124,7 +134,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     } else if (interactionTrigger === 'play') {
       sound.ballBounce();
       sound.bark();
-      setMiniGame({ active: true, round: 1, score: 0, lastResult: null, leaping: null });
+      setMiniGame({ active: true, target: Math.random() < 0.5 ? 'left' : 'right', round: 1, score: 0, lastResult: null, leaping: null });
     } else if (interactionTrigger === 'groom') {
       sound.happyYip();
       spawnSparkAtCenter();
@@ -202,6 +212,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
   const spawnBall = (targetX: number) => {
     if (!dogParts.current) return;
+    const previous = dogParts.current.ballItem;
+    if (previous) { previous.removeFromParent(); previous.geometry.dispose(); (previous.material as THREE.Material).dispose(); }
     const ball = new THREE.Mesh(
       new THREE.SphereGeometry(0.12, 16, 16),
       new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.8 })
@@ -214,15 +226,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
   // Mini-Game Player Choice (Left or Right)
   const handleMiniGameChoice = (choice: 'left' | 'right') => {
-    if (miniGame.leaping !== null) return;
-    // High trust gives dog slightly more intuitive cooperation
-    const trust = petStateRef.current.trust / 100;
-    const matchChance = 0.5 + trust * 0.25;
-    const dogChoice: 'left' | 'right' = Math.random() < matchChance ? choice : choice === 'left' ? 'right' : 'left';
-
-    const isHit = choice === dogChoice;
+    if (!miniGame.active || miniGame.leaping !== null || gameBusy.current) return;
+    gameBusy.current = true;
+    // The ball's direction is visible before the player chooses. No hidden coin toss.
+    const dogChoice = choice;
+    const isHit = choice === miniGame.target;
     gameLeap.current = { dir: dogChoice, progress: 0 };
-    spawnBall(dogChoice === 'left' ? -0.7 : 0.7);
+    spawnBall(miniGame.target === 'left' ? -0.7 : 0.7);
 
     if (isHit) {
       sound.bark();
@@ -239,27 +249,26 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       lastResult: isHit ? 'hit' : 'miss',
     }));
 
-    setTimeout(() => {
-      setMiniGame((prev) => {
-        if (prev.round >= 5) {
-          const won = prev.score >= 3;
-          if (won) sound.chimeSuccess();
-          onMiniGameCompleteRef.current?.(won);
-          return { ...prev, active: false, leaping: null };
-        }
-        return {
-          ...prev,
-          round: prev.round + 1,
-          leaping: null,
-          lastResult: null,
-        };
-      });
+    const score = miniGame.score + (isHit ? 1 : 0);
+    gameTimer.current = setTimeout(() => {
+      gameBusy.current = false;
+      if (miniGame.round >= 5) {
+        const won = score >= 3;
+        if (won) sound.chimeSuccess();
+        setMiniGame(prev => ({ ...prev, active: false, leaping: null }));
+        onMiniGameCompleteRef.current?.(won);
+      } else {
+        setMiniGame(prev => ({ ...prev, round: prev.round + 1, leaping: null,
+          lastResult: null, target: Math.random() < 0.5 ? 'left' : 'right' }));
+      }
       gameLeap.current = { dir: null, progress: 0 };
-    }, 1300);
+    }, 850);
   };
 
   const closeMiniGame = () => {
-    setMiniGame({ active: false, round: 1, score: 0, lastResult: null, leaping: null });
+    if (gameTimer.current) clearTimeout(gameTimer.current);
+    gameBusy.current = false;
+    setMiniGame({ active: false, target: 'left', round: 1, score: 0, lastResult: null, leaping: null });
     gameLeap.current = { dir: null, progress: 0 };
   };
 
@@ -274,7 +283,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     scene.background = new THREE.Color(0x0c0c0e);
 
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
-    const DOG_HEIGHT = 1.92;
+    const DOG_HEIGHT = 2.12;
     const DOG_WIDTH = 1.95;
     const fitCamera = (w: number, h: number) => {
       const vFov = (camera.fov * Math.PI) / 180;
@@ -300,7 +309,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       return;
     }
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
@@ -452,52 +461,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const { pattern, colors } = coatOf(dog.avatarConfig);
     const fluff = 0.45 + 0.75 * (dog.avatarConfig.furFluff ?? 0.6);
 
-    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-    const SHELLS = coarse ? 7 : 11;
-
-    const strandTex = (() => {
-      const size = 128;
-      const data = new Uint8Array(size * size * 4);
-      for (let i = 0; i < size * size; i++) {
-        const v = Math.floor(Math.random() * 255);
-        data[i * 4] = v;
-        data[i * 4 + 1] = v;
-        data[i * 4 + 2] = v;
-        data[i * 4 + 3] = 255;
-      }
-      const tex = new THREE.DataTexture(data, size, size);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(9, 5);
-      tex.magFilter = THREE.LinearFilter;
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.generateMipmaps = true;
-      tex.needsUpdate = true;
-      return tex;
-    })();
-
-    const skinMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
-    const shellMats = Array.from({ length: SHELLS }, (_, i) => {
-      const k = (i + 1) / SHELLS;
-      const m = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 1,
-        alphaMap: strandTex,
-        alphaTest: 0.08 + 0.86 * k,
-      });
-      m.color.setScalar(0.7 + 0.3 * k);
-      m.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader
-          .replace('#include <common>', '#include <common>\nattribute float furLen;')
-          .replace(
-            '#include <begin_vertex>',
-            `#include <begin_vertex>
-             transformed += normal * furLen * ${k.toFixed(3)};
-             transformed.y -= furLen * ${(k * k * 0.35).toFixed(3)};`
-          );
-      };
-      m.customProgramCacheKey = () => `shell-${i}`;
-      return m;
-    });
+    // Solid cel surfaces: no alpha-tested fur shells or procedural strand texture.
+    const skinMat = new THREE.MeshToonMaterial({ vertexColors: true });
+    const compact = /French Bulldog|Pug/i.test(dog.breed);
+    const pug = /Pug/i.test(dog.breed);
+    const frenchie = /French Bulldog/i.test(dog.breed);
+    const mali = dog.id === 'mali-2022';
+    const bangkaew = /Bangkaew/i.test(dog.breed);
+    const muzzleDepth = compact ? 0.45 : 1;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const paint = (
       geo: THREE.BufferGeometry,
@@ -523,20 +495,18 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       return geo;
     };
 
-    const blob = (sx: number, sy: number, sz: number, w = 40, h = 28) =>
-      new THREE.SphereGeometry(1, w, h).scale(sx, sy, sz);
+    const blob = (sx: number, sy: number, sz: number, w = 24, h = 16) =>
+      new THREE.SphereGeometry(1, Math.min(w, 24), Math.min(h, 16)).scale(sx, sy, sz);
 
     const skins: THREE.Mesh[] = [];
-    const furry = (geo: THREE.BufferGeometry, shells = true, region = 'body') => {
+    const furry = (geo: THREE.BufferGeometry, _shells = true, region = 'body') => {
       const group = new THREE.Group();
       const skin = new THREE.Mesh(geo, skinMat);
       skin.castShadow = true;
       skin.userData.region = region;
       skins.push(skin);
       group.add(skin);
-      if (shells) {
-        for (const m of shellMats) group.add(new THREE.Mesh(geo, m));
-      }
+      // Sparse ink describes the ruff; the silhouette carries the volume.
       return group;
     };
 
@@ -554,13 +524,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     };
 
     // 1. Body & lion mane
-    const torsoGeo = paint(blob(0.4, 0.36, 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
+    const torsoGeo = paint(blob(mali ? 0.49 : compact ? 0.39 : 0.4, mali ? 0.39 : compact ? 0.3 : 0.36, compact ? 0.49 : 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
     const maneGeo = paint(
-      blob(0.46, 0.4, 0.3),
+      blob(bangkaew ? 0.43 : compact ? 0.29 : 0.33, bangkaew ? 0.35 : 0.26, compact ? 0.23 : 0.3),
       'mane',
       (x, y, z) => 0.09 + Math.max(0, z) * 0.06 + Math.max(0, -y) * 0.12 + Math.max(0, Math.abs(x) - 0.3) * 0.25
     ).translate(0, 0.82, 0.26);
-    const neckGeo = paint(blob(0.3, 0.3, 0.3), 'mane', (_x, y) => 0.1 + Math.max(0, -y) * 0.15, (x, y, z) => [x, y + 0.08, z - 0.08])
+    const neckGeo = paint(blob(compact ? 0.24 : 0.3, compact ? 0.21 : 0.27, 0.27), 'mane', (_x, y) => 0.1 + Math.max(0, -y) * 0.15, (x, y, z) => [x, y + 0.08, z - 0.08])
       .translate(0, 1.02, 0.44);
     const body = furry(mergeGeometries([torsoGeo, maneGeo, neckGeo])!);
     const breathing = new THREE.Group();
@@ -569,23 +539,23 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     // 2. The Head & Articulated Jaw
     const head = new THREE.Group();
-    onChassis(head, 0, 1.3, 0.66);
+    onChassis(head, 0, 1.2, 0.59);
     const HEAD_REST = head.position.clone();
-    const skullGeo = paint(blob(0.3, 0.28, 0.27), 'head', 0.028);
-    const cheekL = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, x) * 0.2).translate(0.16, -0.08, -0.02);
-    const cheekR = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, -x) * 0.2).translate(-0.16, -0.08, -0.02);
-    const muzzleGeo = paint(blob(0.12, 0.095, 0.18, 28, 20), 'muzzle', 0.012).translate(0, -0.1, 0.25);
-    const muzzleTip = paint(blob(0.085, 0.07, 0.08, 20, 14), 'muzzle', 0.008).translate(0, -0.1, 0.38);
+    const skullGeo = paint(blob(compact ? 0.34 : 0.32, 0.29, 0.28), 'head', 0.028);
+    const cheekL = paint(blob(bangkaew ? 0.18 : 0.13, 0.15, 0.13, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, x) * 0.2).translate(0.16, -0.08, -0.02);
+    const cheekR = paint(blob(bangkaew ? 0.18 : 0.13, 0.15, 0.13, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, -x) * 0.2).translate(-0.16, -0.08, -0.02);
+    const muzzleGeo = paint(blob(compact ? 0.16 : 0.13, 0.095, 0.18 * muzzleDepth, 24, 16), 'muzzle', 0.012).translate(0, -0.1, 0.25);
+    const muzzleTip = paint(blob(0.085, 0.07, 0.08, 20, 14), 'muzzle', 0.008).translate(0, -0.1, compact ? 0.28 : 0.38);
     head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo, muzzleTip])!, true, 'head'));
 
     const glossy = (color: number, roughness = 0.2) => new THREE.MeshStandardMaterial({ color, roughness });
     const nose = new THREE.Mesh(blob(0.062, 0.046, 0.046, 20, 14), glossy(0x121010, 0.22));
-    nose.position.set(0, -0.06, 0.455);
+    nose.position.set(0, -0.06, compact ? 0.325 : 0.455);
     head.add(nose);
 
     // Articulated Jaw
     const jaw = new THREE.Group();
-    jaw.position.set(0, -0.13, 0.22);
+    jaw.position.set(0, -0.13, compact ? 0.11 : 0.22);
     head.add(jaw);
 
     const mouth = new THREE.Mesh(blob(0.08, 0.03, 0.07, 16, 10), glossy(0x3a1616, 0.6));
@@ -600,9 +570,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const eyes: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const eye = new THREE.Group();
-      eye.position.set(0.115 * side, 0.045, 0.228);
+      eye.position.set(0.135 * side, 0.045, 0.238);
       const almond = new THREE.Group();
-      almond.scale.set(1.3, 0.82, 1);
+      almond.scale.set(1.3, 1.1, 1);
       almond.rotation.z = 0.28 * side;
       const ball = new THREE.Mesh(new THREE.SphereGeometry(0.052, 24, 16), glossy(0x8c5a24, 0.12));
       almond.add(ball);
@@ -624,11 +594,12 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const ears: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const ear = new THREE.Group();
-      ear.position.set(0.17 * side, 0.19, -0.04);
-      const outer = paint(new THREE.ConeGeometry(0.135, 0.27, 24, 6).scale(1, 1, 0.55), 'ear', 0.03).translate(0, 0.135, 0);
+      ear.position.set((pug ? 0.28 : 0.17) * side, pug ? 0.16 : 0.19, pug ? 0.02 : -0.04);
+      const outer = paint((frenchie ? new THREE.CapsuleGeometry(0.105, 0.18, 4, 10) : new THREE.ConeGeometry(0.135, 0.27, 12, 2)).scale(1, 1, 0.55), 'ear', 0.03).translate(0, 0.135, 0);
       ear.add(furry(outer, true, 'head'));
       const tuft = paint(new THREE.ConeGeometry(0.08, 0.17, 16, 4).scale(1, 1, 0.35), 'muzzle', 0.035).translate(0, 0.1, 0.045);
       ear.add(furry(tuft, true, 'head'));
+      if (pug || dog.avatarConfig.earShape === 'floppy') { ear.scale.set(0.8, 0.55, 1); ear.rotation.x = 1.4; }
       head.add(ear);
       ears.push(ear);
     }
@@ -673,7 +644,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       new THREE.Vector3(0, 0.5, 0.15),
       new THREE.Vector3(0, 0.44, 0.32),
     ]);
-    const TAIL_BALLS = 14;
+    const TAIL_BALLS = compact ? 5 : 7;
     const tailParts: THREE.BufferGeometry[] = [];
     for (let i = 0; i < TAIL_BALLS; i++) {
       const t = i / (TAIL_BALLS - 1);
@@ -684,6 +655,26 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       );
     }
     tail.add(furry(mergeGeometries(tailParts)!, true, 'tail'));
+    if (frenchie) tail.scale.setScalar(0.22);
+    else if (pug) tail.scale.setScalar(0.45);
+
+    // A few tapered manga marks, attached to the animated body and head.
+    const ink = new THREE.LineBasicMaterial({ color: 0x302923 });
+    const stroke = (parent: THREE.Object3D, points: number[][]) => {
+      const geometry = new THREE.BufferGeometry().setFromPoints(points.map(p => new THREE.Vector3(...p as [number, number, number])));
+      parent.add(new THREE.Line(geometry, ink));
+    };
+    if (bangkaew) for (const side of [-1, 1]) {
+      stroke(head, [[side * 0.22, -0.03, 0.21], [side * 0.32, -0.1, 0.17], [side * 0.27, -0.11, 0.21]]);
+      stroke(head, [[side * 0.23, -0.12, 0.18], [side * 0.31, -0.19, 0.12]]);
+      stroke(body, [[side * 0.3, 0.88, 0.5], [side * 0.38, 0.73, 0.47], [side * 0.32, 0.77, 0.52]]);
+    }
+    if (compact) for (const side of [-1, 1]) {
+      stroke(head, [[side * 0.04, 0.14, 0.268], [side * 0.12, 0.17, 0.255], [side * 0.19, 0.12, 0.24]]);
+    }
+    // Mali is deliberately broad and low; short-coated companions have short legs.
+    dogRoot.scale.set(mali ? 1.13 : 1, mali ? 0.83 : compact ? 0.74 : 1, mali ? 1.06 : 1);
+
 
     const heartsGroup = new THREE.Group();
     scene.add(heartsGroup);
@@ -775,6 +766,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
       mode = spot ? 'stroke' : 'orbit';
       if (spot) {
+        domElem.setPointerCapture(e.pointerId);
         petting.spot = spot;
         petting.until = performance.now() + 900;
         spawnTouchSpark(point);
@@ -819,6 +811,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     // THE LIVING LOOP
     // ==========================================
     const clock = new THREE.Clock();
+    let lastFrame = 0;
     const cur = { ...POSES.stand };
     let nextBlink = 2 + Math.random() * 3;
     let blink = 0;
@@ -826,6 +819,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
+      const frameNow = performance.now();
+      if (document.hidden || frameNow - lastFrame < (reducedMotion ? 100 : 32)) return;
+      lastFrame = frameNow;
       const dt = Math.min(clock.getDelta(), 0.05);
       const t = clock.getElapsedTime();
       const ps = petStateRef.current;
@@ -913,13 +909,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
 
       // Breathing: slow asleep, strained when sick
-      const breath = Math.sin(t * (asleep ? 1.0 : isSick ? 3.5 : 2.6 + arousal * 2)) * (asleep ? 0.035 : 0.014 + energy * 0.012);
+      const breath = (reducedMotion ? 0 : 1) * Math.sin(t * (asleep ? 1.0 : isSick ? 3.5 : 2.6 + arousal * 2)) * (asleep ? 0.035 : 0.014 + energy * 0.012);
       breathing.scale.set(1 + breath, 1 + breath * 0.8, 1);
 
       let bounce = 0;
       let walkX = 0;
       let stride = 0;
-      if (acting === 'pet' || acting === 'groom') bounce = Math.abs(Math.sin(t * 9)) * 0.05;
+      if (!reducedMotion && (acting === 'pet' || acting === 'groom')) bounce = Math.abs(Math.sin(t * 9)) * 0.05;
       if (acting === 'play') bounce = Math.abs(Math.sin(t * 12)) * 0.1;
       if (acting === 'walk' && !asleep) {
         stride = Math.sin(t * 8);
@@ -958,7 +954,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         (isFeeding ? 0.48 : 0) +
         (spot === 'chin' ? -0.32 : 0);
       head.rotation.z =
-        acting === 'communicate' && trust < 0.6
+        acting === 'communicate'
           ? 0.2
           : spot === 'chest' || melting
             ? 0.18
@@ -977,7 +973,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const flat = asleep ? 0.7 : isSick ? 0.95 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
       ears.forEach((ear, i) => {
         const s = i === 0 ? 1 : -1;
-        ear.rotation.x = -flat * 0.8;
+        ear.rotation.x = (pug || dog.avatarConfig.earShape === 'floppy' ? 1.4 : 0) - flat * 0.8;
         ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert;
       });
 
@@ -1012,7 +1008,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         wagA = 0.02;
         wagF = 1;
       }
-      tail.rotation.y = Math.sin(t * wagF) * wagA;
+      tail.rotation.y = reducedMotion ? 0 : Math.sin(t * wagF) * wagA;
       tail.rotation.x = asleep ? 0.9 : 0;
 
       // Ball item physics
@@ -1029,6 +1025,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         }
         if (acting !== 'play' && gameLeap.current.dir === null) {
           dogRoot.remove(ball);
+          ball.geometry.dispose();
+          (ball.material as THREE.Material).dispose();
           parts.ballItem = null;
         }
       }
@@ -1037,7 +1035,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         h.position.y += h.userData.vy * dt;
         h.userData.life -= dt * 0.9;
         h.scale.setScalar(Math.max(0.01, h.userData.life));
-        if (h.userData.life <= 0) heartsGroup.remove(h);
+        if (h.userData.life <= 0) { heartsGroup.remove(h); const m = h as THREE.Mesh; m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
       });
 
       sparksGroup.children.slice().forEach((s) => {
@@ -1046,10 +1044,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         s.position.z += s.userData.vz * dt;
         s.userData.life -= dt * 1.5;
         s.scale.setScalar(Math.max(0.01, s.userData.life));
-        if (s.userData.life <= 0) sparksGroup.remove(s);
+        if (s.userData.life <= 0) { sparksGroup.remove(s); const m = s as THREE.Mesh; m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
       });
 
       renderer.render(scene, camera);
+      // Rendered evidence for the performance gate; no personal data.
+      domElem.dataset.triangles = String(renderer.info.render.triangles);
+      domElem.dataset.drawCalls = String(renderer.info.render.calls);
     };
     animate();
 
@@ -1072,11 +1073,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       scene.traverse((o) => {
-        if (o instanceof THREE.Mesh) o.geometry.dispose();
+        if (o instanceof THREE.Mesh || o instanceof THREE.Line) {
+          o.geometry.dispose();
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(m => m.dispose());
+        }
       });
-      shellMats.forEach((m) => m.dispose());
+      ink.dispose();
       skinMat.dispose();
-      strandTex.dispose();
+
       renderer.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1088,16 +1093,16 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
       {/* Interactive Tamagotchi Agility Catch Mini-Game HUD */}
       {miniGame.active && (
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between bg-zinc-950/90 border-hairline px-3 py-1.5 text-[11px] z-10 backdrop-blur-sm">
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between catch-hud bg-zinc-950 border-hairline px-2 py-1.5 text-[11px] z-10">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="label text-accent font-semibold whitespace-nowrap">Agility Catch</span>
+            <span className="label text-accent font-semibold whitespace-nowrap">Catch · ball {miniGame.target === 'left' ? '◀ left' : 'right ▶'}</span>
             <span className="data text-zinc-300 whitespace-nowrap">
               Round {miniGame.round}/5 · Score {miniGame.score}
             </span>
             {miniGame.lastResult && (
               <span
                 className={`label truncate ${
-                  miniGame.lastResult === 'hit' ? 'text-emerald-400' : 'text-zinc-500'
+                  miniGame.lastResult === 'hit' ? 'text-accent' : 'text-zinc-500'
                 }`}
               >
                 {miniGame.lastResult === 'hit' ? '✓ Caught!' : 'Missed!'}

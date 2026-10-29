@@ -86,7 +86,7 @@ export const ANSWERS: Record<CallReason, Answer[]> = {
   dirty: ['groom', 'clean'],
   lonely: ['pet', 'play', 'walk'],
   sick: ['medicine'],
-  tantrum: ['scold'],
+  tantrum: ['play', 'walk', 'scold'],
 };
 
 export const CALL_TEXT: Record<CallReason, string> = {
@@ -94,7 +94,7 @@ export const CALL_TEXT: Record<CallReason, string> = {
   dirty: 'is in a messy area and needs cleaning',
   lonely: 'is looking for you',
   sick: 'is shivering, whimpering and needs medicine',
-  tantrum: 'is barking for treats without being hungry (misbehaving)',
+  tantrum: 'is asking for something to do; try play or a sniff walk',
 };
 
 /**

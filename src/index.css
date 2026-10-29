@@ -585,3 +585,7 @@
 .print-only {
   display: none;
 }
+
+/* Catch controls stay readable on the phone stage. */
+.catch-hud { flex-wrap: wrap; gap: 6px; }
+.catch-hud button { min-height: 32px; }
