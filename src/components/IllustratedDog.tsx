@@ -273,7 +273,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching';let driftX=0;
+    const times:number[]=[];let ambientLabel='watching';let driftX=0,nextGreeting=performance.now()+18000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       const interval=reduced.matches?1000/6:1000/30;
@@ -288,6 +288,8 @@ function IllustratedStage(props: Props & {url:string}) {
       const activeFun=fun.current&&now<fun.current.until&&!asleep&&!p.petState.sick&&(!p.pose||p.pose==='stand')?fun.current:null;
       const mood=dailyMood(p.petState),toilet=now<toiletUntil.current&&!asleep&&!p.petState.sick;
       const free=!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
+      // Keep the household's earlier spontaneous greetings alongside daily life.
+      if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(personality.idle);}
       const phase=(t*personality.pace)%44;
       let idle=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':mood==='tired'?'tired':mood==='bored'?(phase<22?'bored':'sighing'):phase<5?'watching':phase<8?'sniffing':phase<14?'wandering':phase<19?'sitting':phase<22?'stretching':phase<27?'watching':phase<33?'wandering':phase<36?'sniffing':phase<41?'resting':p.petState.needs.energy>55?'trotting':'watching'):'watching';
       if(reduced.matches&&['wandering','trotting','stretching','sniffing'].includes(idle))idle='watching';
