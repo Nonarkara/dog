@@ -29,7 +29,7 @@ export function TreatGame({name,onClose,onComplete,onReact}:Props){
  useEffect(()=>{
   const keys=(event:KeyboardEvent)=>{
    const target=event.target as HTMLElement|null;
-   if(document.querySelector('.dog-chooser'))return;
+   if(document.querySelector('.dog-chooser,.control-reference'))return;
    if(target?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}
    else if(event.key===' '&&!target?.closest('button,a,[role="button"],[role="tab"],[role="option"]')){event.preventDefault();event.stopPropagation();}

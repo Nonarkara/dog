@@ -10,7 +10,9 @@ Quiet time lowers virtual excitement and restlessness without awarding trust or 
 
 Other care, a spoken cue, sleep, a new physical need or a training pose cancels the calm observation. Quiet time closes active games and holds the illustrated dog out of spontaneous travel/tricks. Reward uses the existing feeding drawing and eating sound, then releases the dog back to normal activity. Existing procedural companions retain their down-pose path and cancel Catch safely; imported rigs use their available clips. No punishment buzzer is played.
 
-The cue input remains available beside the calm control, including old saves with an activity call. Leaf means quiet time, a timer and visible seconds mean observe, and a biscuit means reward; all have accessible names and a label legend. Default header/footer dimensions remain 150px combined on phone and 100px in the other tested viewports. Feedback stays below the dog canvas. No CSS, palette, eye artwork or illustration asset changed.
+The cue input remains available beside the calm control, including old saves with an activity call. Leaf means quiet time, a timer and visible seconds mean observe, and a biscuit means reward; all have accessible names and a label legend. Header/footer dimensions remain 150px combined on phone and 100px in the other tested viewports. Feedback stays below the dog canvas. Palette, eye artwork and illustration assets are unchanged.
+
+An expanded-help check found that the old footer legend clipped 27px of Care on phone, 23px at 1024×768 and 52px at 1280×720. Help now temporarily uses the existing information region, like the dog chooser. All 24 symbol labels form a compact three-column reference; its close button and Escape return to the previous region and restore help-button focus. Navigation and dog choice leave help cleanly. No footer expansion or dog overlay is needed. Restoring the old footer legend in an isolated fixture fails the same 150px combined-chrome budget.
 
 ## Compatibility and honesty
 

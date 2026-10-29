@@ -618,6 +618,8 @@
 .meter-symbol {display:inline-flex;align-items:center;color:var(--text-muted);}
 .cockpit .icon-commands input {min-height:40px;}
 .cockpit .control-legend {font-family:var(--font-body);font-size:11px;line-height:1.4;}
+.cockpit .control-reference .control-legend {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;gap:8px 6px;font-size:12px;line-height:18px;}
+.control-reference .panel-head button {min-width:28px;min-height:28px;padding:3px;}
 
 @media (prefers-reduced-motion: no-preference) { .cockpit,.panel,.panel-head,.illustrated-stage {transition:background-color .25s ease,color .25s ease;} }
 

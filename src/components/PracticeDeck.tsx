@@ -174,7 +174,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   // One key for the whole trial.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if(document.querySelector('.dog-chooser'))return;
+      if(document.querySelector('.dog-chooser,.control-reference'))return;
       if (e.key !== ' ' || (e.target as HTMLElement)?.closest('input, textarea, select, button, a, [role="button"], [role="tab"], [role="option"]')) return;
       e.preventDefault();
       if (phase === 'ready') cue();

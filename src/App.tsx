@@ -16,7 +16,7 @@ import {
   loadPetState,
   savePetState,
 } from './utils/dogCalculators';
-import { CommandBar } from './components/CommandBar';
+import { CommandBar,ControlLegend } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
@@ -148,17 +148,26 @@ export const App: React.FC = () => {
   const noteTimer = useRef<number | null>(null);
 
   const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
+  const [labelsVisible,setLabelsVisible]=useState(false);
+  const regionBeforeLabels=useRef<RegionKey>('care');
+  const closeLabels=()=>{setLabelsVisible(false);setActiveRegion(regionBeforeLabels.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="Show control labels"]')?.focus());};
+  const toggleLabels=()=>{
+    if(labelsVisible){closeLabels();return;}
+    regionBeforeLabels.current=isDogMenuOpen?regionBeforeChooser.current:activeRegion;
+    setIsDogMenuOpen(false);setActiveRegion('care');setLabelsVisible(true);
+    requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="Close control labels"]')?.focus());
+  };
   const regionBeforeChooser=useRef<RegionKey>('care');
   const closeDogChooser=()=>{setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus());};
   const toggleDogChooser=()=>{
     if(isDogMenuOpen){closeDogChooser();return;}
-    regionBeforeChooser.current=activeRegion;setActiveRegion('care');setIsDogMenuOpen(true);
+    regionBeforeChooser.current=labelsVisible?regionBeforeLabels.current:activeRegion;setLabelsVisible(false);setActiveRegion('care');setIsDogMenuOpen(true);
   };
   useEffect(()=>{
-    if(!isDogMenuOpen)return;
-    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus();}};
+    if(!isDogMenuOpen&&!labelsVisible)return;
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();if(labelsVisible){closeLabels();return;}setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus();}};
     window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);
-  },[isDogMenuOpen]);
+  },[isDogMenuOpen,labelsVisible]);
   const [isAddDogOpen, setIsAddDogOpen] = useState(false);
 
   const [newDogName, setNewDogName] = useState('');
@@ -498,6 +507,7 @@ export const App: React.FC = () => {
   const renderRegion = (key: RegionKey) => {
     switch (key) {
       case 'care':
+        if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
         return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} />;
       case 'coach':
         return (
@@ -687,7 +697,7 @@ export const App: React.FC = () => {
                     title={r.label}
                     aria-selected={active}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => {setIsDogMenuOpen(false);setActiveRegion(r.key);}}
+                    onClick={() => {setIsDogMenuOpen(false);setLabelsVisible(false);setActiveRegion(r.key);}}
                     className={`flex-1 min-h-9 px-1 text-[11px] border-hairline-r last:border-hairline-r-0 ${
                       active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
                     }`}
@@ -799,6 +809,8 @@ export const App: React.FC = () => {
 
       {/* ---- the controls ---------------------------------------------------- */}
       <CommandBar
+        labelsVisible={labelsVisible}
+        onToggleLabels={toggleLabels}
         dog={currentDog}
         petState={petState}
         isInteracting={isInteracting}

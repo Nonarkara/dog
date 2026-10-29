@@ -39,6 +39,37 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-calm';fs.mkdirSync(out,{recursive:
   await page.getByRole('button',{name:'Quiet time',exact:true}).click();assert(await page.getByRole('button',{name:/Watch calm/}).isDisabled());assert.equal((await state()).discipline,25,'Cooldown cannot award twice');
   // Ordinary care interrupts the quiet observation and leaves its own pose free.
   await page.waitForTimeout(2100);await page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:'Pet Expo',exact:true}).click();assert.equal((await state()).calmSince,undefined);
+  // Reading help uses the existing information region, never a taller footer.
+  await page.getByRole('button',{name:'Show control labels',exact:true}).click();
+  const legend=page.locator('.control-reference .control-legend');await legend.waitFor();
+  assert.equal(await legend.locator(':scope > span').count(),24);
+  assert(await legend.evaluate(el=>el.scrollHeight<=el.clientHeight+1));
+  assert(await legend.evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+  report[report.length-1].legend=await legend.evaluate(el=>({height:el.clientHeight,contentHeight:el.scrollHeight,width:el.clientWidth,contentWidth:el.scrollWidth,labels:el.children.length}));
+  assert.equal(await page.locator('.command-bar').evaluate(el=>el.getBoundingClientRect().height),m.footer.h);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight),height);
+  await page.screenshot({path:`${out}/${width}x${height}-labels.png`});
+  const legendHTML=await legend.innerHTML();await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.control-reference').count(),0);
+  assert.equal(await page.locator('.region-care [role="progressbar"]').count(),6);
+  await page.waitForFunction(()=>document.activeElement.getAttribute('aria-label')==='Show control labels');
+  if(await page.getByRole('tab',{name:'Coach',exact:true}).count()){
+   await page.getByRole('tab',{name:'Coach',exact:true}).click();await page.getByRole('button',{name:'Show control labels',exact:true}).click();
+   await page.locator('[aria-controls="dog-switcher"]').click();assert.equal(await page.locator('.control-reference').count(),0);
+   await page.keyboard.press('Escape');assert.equal(await page.getByRole('tab',{name:'Coach',exact:true}).getAttribute('aria-selected'),'true');
+   await page.getByRole('tab',{name:'Care',exact:true}).click();
+  }
+  if(width===390){
+   await page.getByRole('button',{name:'Find the treat',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.treat-instruction')?.textContent.startsWith('Which cup'));
+   const instruction=await page.locator('.treat-instruction').innerText();await page.getByRole('button',{name:'Show control labels',exact:true}).click();
+   await page.keyboard.press('1');assert.equal(await page.locator('.treat-instruction').innerText(),instruction);
+   await page.keyboard.press('Escape');await page.locator('.control-reference').waitFor({state:'detached'});
+   assert.equal(await page.locator('.treat-game').count(),1,'Escape closes help without consuming the game');
+   await page.getByRole('button',{name:'Close treat game',exact:true}).click();
+   await page.evaluate(html=>{const old=document.createElement('div');old.className='control-legend';old.style.cssText='display:flex;flex-wrap:wrap;flex-basis:100%;gap:4px 12px';old.innerHTML=html;document.querySelector('.command-bar').append(old);},legendHTML);
+   const expandedChrome=await page.evaluate(()=>document.querySelector('header').getBoundingClientRect().height+document.querySelector('.command-bar').getBoundingClientRect().height);
+   assert(expandedChrome>150,'Old footer expansion must fail the same 150px chrome budget');
+  }
   assert.deepEqual(errors,[]);await page.close();
  }
  const legacy=await browser.newPage({viewport:{width:390,height:844}});await legacy.clock.setFixedTime(new Date(2026,9,30,12));await legacy.goto(url);

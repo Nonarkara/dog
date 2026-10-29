@@ -1,6 +1,6 @@
 import { dailyLife } from '../domain/dailyLife';
 import React, { useEffect, useRef, useState } from 'react';
-import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, Send, Leaf, Cookie, Timer, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone } from 'lucide-react';
+import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, Send, Leaf, Cookie, Timer, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -9,6 +9,8 @@ import {calmNeed,calmRewardWait} from '../domain/calm';
 export type CareAction = import('../domain/pet').Interaction;
 
 interface CommandBarProps {
+  labelsVisible:boolean;
+  onToggleLabels:()=>void;
   dog: DogProfile;
   petState: PetState;
   /** TRUE while an interaction is running; the controls wait for it. */
@@ -55,6 +57,8 @@ const GERUND: Record<CareAction, string> = {
 export const CommandBar: React.FC<CommandBarProps> = ({
   dog,
   petState,
+  labelsVisible,
+  onToggleLabels,
   isInteracting,
   pendingAction,
   onInteract,
@@ -62,7 +66,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   onBed,
 }) => {
   const [cueText, setCueText] = useState('');
-  const [labelsVisible,setLabelsVisible]=useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
@@ -90,7 +93,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if(document.querySelector('.dog-chooser'))return;
+      if(document.querySelector('.dog-chooser,.control-reference'))return;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isSick && (e.key === 'm' || e.key === 'M')) {
@@ -157,8 +160,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         )}
       </div>
 
-<button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} title="Control labels" onClick={()=>setLabelsVisible(v=>!v)}><CircleHelp size={20} aria-hidden="true"/></button>
-      {labelsVisible&&<div className="control-legend flex flex-wrap gap-x-3 gap-y-1 basis-full" aria-label="Control legend">{BASE_ACTIONS.map(({action,label,icon:Icon})=><span key={action} className="inline-flex items-center gap-1"><Icon size={14} aria-hidden="true"/>{label}</span>)}<span className="inline-flex items-center gap-1"><Moon size={14} aria-hidden="true"/>Bed</span>{[[Leaf,'Quiet time'],[Timer,'Watch calm'],[Cookie,'Reward calm'],[Utensils,'Fullness'],[Battery,'Energy'],[Sparkles,'Hygiene'],[Smile,'Happiness'],[Heart,'Trust'],[Activity,'Excitement'],[Heart,'Care'],[GraduationCap,'Coach'],[BookOpen,'Record'],[Trees,'Commons'],[Hand,'High five'],[ChevronsDown,'Play bow'],[Music2,'Happy wiggle'],[Wind,'Zoomies'],[Bone,'Find the treat']].map(([Icon,label])=><span key={String(label)} className="inline-flex items-center gap-1">{React.createElement(Icon as typeof Heart,{size:14,'aria-hidden':true})}{String(label)}</span>)}</div>}
+<button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} aria-expanded={labelsVisible} aria-controls="control-reference" title="Control labels" onClick={onToggleLabels}><CircleHelp size={20} aria-hidden="true"/></button>
+
       {/* Quiet observation and reward stay beside the cue, without extra chrome. */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
         <button type="button" className={watching&&!wait?'btn-accent':'btn-quiet'}
@@ -219,3 +222,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
     </div>
   );
 };
+
+export function ControlLegend({onClose}:{onClose:()=>void}){
+ return <section id="control-reference" className="panel region-care control-reference h-full" aria-label="Control labels">
+  <header className="panel-head"><h2 className="label">Control labels</h2><button type="button" className="btn-quiet" aria-label="Close control labels" onClick={onClose}><X size={16} aria-hidden="true"/></button></header>
+  <div className="panel-body control-legend">{BASE_ACTIONS.map(({action,label,icon:Icon})=><span key={action} className="inline-flex items-center gap-1"><Icon size={14} aria-hidden="true"/>{label}</span>)}<span className="inline-flex items-center gap-1"><Moon size={14} aria-hidden="true"/>Bed</span>{[[Leaf,'Quiet time'],[Timer,'Watch calm'],[Cookie,'Reward calm'],[Utensils,'Fullness'],[Battery,'Energy'],[Sparkles,'Hygiene'],[Smile,'Happiness'],[Heart,'Trust'],[Activity,'Excitement'],[Heart,'Care'],[GraduationCap,'Coach'],[BookOpen,'Record'],[Trees,'Commons'],[Hand,'High five'],[ChevronsDown,'Play bow'],[Music2,'Happy wiggle'],[Wind,'Zoomies'],[Bone,'Find the treat']].map(([Icon,label])=><span key={String(label)} className="inline-flex items-center gap-1">{React.createElement(Icon as typeof Heart,{size:14,'aria-hidden':true})}{String(label)}</span>)}</div>
+ </section>;
+}
