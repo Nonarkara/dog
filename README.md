@@ -2,6 +2,12 @@
 
 Live production system: [dog.nonarkara.org](https://dog.nonarkara.org)
 
+> **Where this came from.** Expo is the end of a thirty-year line: desktop
+> pets in 1992, *Dogz* in 1995, the Tamagotchi egg in 1996, Nintendogs in
+> 2005, and now. The full research — the design, the mechanics worth keeping,
+> and the ones the genre got wrong — is in
+> **[The History of the Digital Pet](docs/history-of-digital-pets.md)**.
+
 ## Overview
 
 Expo is a local-first digital Tamagotchi built around real dogs — starting with Expo (a Thai Bangkaew Dog), with Mali and Bangal alongside. It is the kind of digital pet I would have built for myself if I'd had programming skills back when I queued at Loft in Siam Center for one of three Tamagotchis a day at 390 baht.
