@@ -13,3 +13,9 @@ Real-log form and history now scroll together under the fixed mode header. Real 
 Obsidian get_context and log_decision were attempted but their transport was closed; this repository receipt retains the evidence. Starter clinical-record provenance remains unverified and is the next benchmark audit, without silently overwriting owner edits.
 
 Live release closeout follows below.
+
+## Live closeout
+
+Implementation `d58f6e1` pushed to main, Cloudflare version `2f3fe75a-ac79-4f07-a82e-c879850677e9`, entry `index-OuEfx0dj.js`. The whole-day script passed on https://dog.nonarkara.org/ with no state patches and no browser errors. Live pending-save suite passed all eight cases, including queued break/behavior switch. HTML, entry JavaScript, CSS and Coach bytes match the production build (`live-assets.json`). Full live state checkpoints are in `live.json`.
+
+The benchmark remains active. Next closeout checks are real-log timer handling when changing modes/hiding the page, and provenance/qualification of prefilled starter clinical facts. Existing records must survive that work.
