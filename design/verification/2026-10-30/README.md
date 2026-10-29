@@ -29,3 +29,11 @@ The original resized-browser captures exposed a Chrome render-surface mismatch:8
 35 runtime WebP files total1,377,686 bytes across all five dogs. Only the selected dog's seven drawings load: Expo316,716; Mali312,800; Oreo239,996; Paolo278,236; Hachiku229,938 bytes. Source sheets and this evidence stay outside the production asset bundle. Final drawings were refined with the built-in image editor; local Flux supplied an earlier style study. No Meshy/Tripo generation, paid download or subscription was used.
 
 Live deployment verification is recorded below after publishing.
+
+## Live result
+
+Deployed code commit `b18b473` to https://dog.nonarkara.org with Cloudflare version `26cb2d38-ed82-4133-8203-3e87474f7f1f`. Live HTML and38 critical JS/CSS/dog assets matched local build bytes by SHA-256.
+
+The live game-design suite passed all five personality palettes at30fps, rendered contrast, touch legend, medicine/cleanup and full viewport geometry. The live Tamagotchi suite passed deterministic catch, close cleanup, per-dog isolation and migration/persistence, with zero runtime errors. `live-palettes.json` stores the live measurements.
+
+The recorded rapid-interruption trace averaged26.5fps; ordinary staged settling averaged30.0fps, including an isolated repeat. Thus30fps is the render target and observed normal viewport rate, not a guarantee that every cold/interrupted action maintains30fps. Physical phones and seamless full skeletal motion remain outside this verification.
