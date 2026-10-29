@@ -410,7 +410,7 @@ const companion = (id: string, name: string, breed: string, config: DogProfile['
   vaccinations: [], parasiteControl: [], medicalHistory: [],
   distinctiveMarks: quirks, personalityTraits: quirks, quirks,
   favoriteFood: 'Small training treats', favoriteToy: 'Soft ball',
-  coatColor: breed === 'French Bulldog' ? 'Black and white pied' : 'Fawn and cream',
+  coatColor: breed === 'French Bulldog' ? 'Black and white pied' : breed === 'Akita Inu' ? 'Cream' : 'Fawn and cream',
   metaverseTribe: 'The home pack', metaverseBio: `${name}, a virtual ${breed.toLowerCase()} companion.`,
   avatarConfig: config,
   tamagotchi: { ...expo.tamagotchi },
@@ -433,10 +433,10 @@ export const DEFAULT_DOGS: DogProfile[] = [
     pattern: 'mask', baseColor: '#d8c5a3', secondaryColor: '#e9dfc9', maskColor: '#302c29',
     furFluff: 0, earShape: 'floppy', tailShape: 'curl',
   }, ['Cream coat and broad, low body', 'Folded black ears and heavy forehead wrinkles', 'Flat dark jowls and a little tongue peeking out']),
-  companion('shiba-chai', 'Chai', 'Shiba Inu', {
-    pattern: 'solid', baseColor: '#bb713d', secondaryColor: '#fff1d9', maskColor: '#493023',
+  companion('shiba-chai', 'Hachiku', 'Akita Inu', {
+    pattern: 'solid', baseColor: '#e2d6bb', secondaryColor: '#f5efdf', maskColor: '#51483b',
     furFluff: 0.4, earShape: 'pricked', tailShape: 'curl',
-  }, ['Small triangular ears', 'Foxlike russet face and cream cheeks', 'Curled tail']),
+  }, ['Hachikō-inspired cream Akita coat', 'Broad head, sturdy body and thick curled tail', 'One softly folded ear']),
   ...LEGACY_DOGS.filter(d => d.id !== expo.id && d.id !== mali.id),
 ];
 

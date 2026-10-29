@@ -295,6 +295,21 @@ export function loadStoredDogs(fallback: DogProfile[]): DogProfile[] {
             distinctiveMarks: def.distinctiveMarks, metaverseBio: def.metaverseBio, coatColor: def.coatColor,
             avatarConfig: { ...def.avatarConfig, customModelUrl: d.avatarConfig.customModelUrl } };
         }
+        // Retain the original ID: care/training history is keyed by it.
+        if (d.id === 'shiba-chai') {
+          const oldPalette = d.avatarConfig.baseColor === '#bb713d' && d.avatarConfig.secondaryColor === '#fff1d9' && d.avatarConfig.maskColor === '#493023';
+          const oldMarks = ['Small triangular ears', 'Foxlike russet face and cream cheeks', 'Curled tail'];
+          const upgradeMarks = (marks: string[]) => JSON.stringify(marks) === JSON.stringify(oldMarks) ? def.distinctiveMarks : marks;
+          return { ...d,
+            metaverseBio: d.metaverseBio === 'Chai, a virtual shiba inu companion.' ? def.metaverseBio : d.metaverseBio,
+            coatColor: d.coatColor === 'Fawn and cream' ? def.coatColor : d.coatColor,
+            distinctiveMarks: upgradeMarks(d.distinctiveMarks), personalityTraits: upgradeMarks(d.personalityTraits), quirks: upgradeMarks(d.quirks),
+            name: ['Chai', 'Chiba'].includes(d.name) ? 'Hachiku' : d.name,
+            callName: !d.callName || ['Chai', 'Chiba'].includes(d.callName) ? 'Hachiku' : d.callName,
+            breed: d.breed === 'Shiba Inu' ? 'Akita Inu' : d.breed,
+            avatarConfig: oldPalette ? { ...d.avatarConfig, baseColor: def.avatarConfig.baseColor,
+              secondaryColor: def.avatarConfig.secondaryColor, maskColor: def.avatarConfig.maskColor } : d.avatarConfig };
+        }
         if (d.id === 'paolo-pug' && d.avatarConfig.baseColor === '#c29b68' && d.avatarConfig.secondaryColor === '#e7d4ad' && d.avatarConfig.maskColor === '#302823') {
           return { ...d,
             avatarConfig: { ...d.avatarConfig, baseColor: def.avatarConfig.baseColor,

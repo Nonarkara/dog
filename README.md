@@ -60,7 +60,7 @@ The spatial gate enforces this: `scripts/spatial/spatial-check.mjs` now fails th
 - **Tribe**: Phitsanulok Bangkaew Order
 - **Signature Quirk**: Refuses to sleep without resting his chin on a bolster cushion (*Bolster Connoisseur*).
 
-Also in the household: **Mali** (Expo’s sister, a shorter, broader female Bangkaew), **Oreo** (French Bulldog), **Paolo** (Pug), and **Chai** (Shiba Inu). Existing companions Bangal and Kofi remain available. Each dog carries their own trust, arousal, personality, and training progress — they never share a state.
+Also in the household: **Mali** (Expo’s sister, a shorter, broader female Bangkaew), **Oreo** (French Bulldog), **Paolo** (Pug), and **Hachiku** (Hachikō-inspired Akita Inu). Existing companions Bangal and Kofi remain available. Each dog carries their own trust, arousal, personality, and training progress — they never share a state.
 
 ---
 

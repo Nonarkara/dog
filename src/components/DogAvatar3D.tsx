@@ -466,6 +466,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const compact = /French Bulldog|Pug/i.test(dog.breed);
     const pug = /Pug/i.test(dog.breed);
     const frenchie = /French Bulldog/i.test(dog.breed);
+    const oreo = dog.id === 'oreo-frenchie';
+    const akita = /Akita/i.test(dog.breed);
     const mali = dog.id === 'mali-2022';
     const bangkaew = /Bangkaew/i.test(dog.breed);
     const muzzleDepth = compact ? 0.45 : 1;
@@ -492,6 +494,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
           const color = new THREE.Color(dark ? colors.dark : part === 'head' || part === 'cheek' ? colors.base : colors.light);
           // THREE.Color has already converted this colour to linear space.
           tmp.copy(color);
+        } else if (oreo) {
+          // Oreo's face is black with a narrow blaze; body is predominantly white.
+          const dark = part === 'head' ? cy > -0.14 :
+            part === 'ear' ? cx > 0 :
+            part === 'torso' ? cy > 0.16 && cz < -0.22 : false;
+          tmp.set(dark ? colors.dark : colors.light);
+        } else if (akita) {
+          // A cream Akita, without the former Shiba's russet fox mask.
+          tmp.set(part === 'muzzle' || part === 'cheek' || part === 'leg' || part === 'mane' ? colors.light : colors.base);
         } else
         tmp.setRGB(r, g, b, THREE.SRGBColorSpace);
         col[i * 3] = tmp.r;
@@ -533,7 +544,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     };
 
     // 1. Body & lion mane
-    const torsoGeo = paint(blob(mali ? 0.49 : pug ? 0.47 : compact ? 0.39 : 0.4, mali ? 0.39 : compact ? 0.3 : 0.36, pug ? 0.57 : compact ? 0.49 : 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
+    const torsoGeo = paint(blob(mali ? 0.49 : pug ? 0.47 : compact ? 0.39 : akita ? 0.45 : 0.4, mali ? 0.39 : compact ? 0.3 : 0.36, pug ? 0.57 : compact ? 0.49 : 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
     const maneGeo = paint(
       blob(bangkaew ? 0.43 : compact ? 0.29 : 0.33, bangkaew ? 0.35 : 0.26, compact ? 0.23 : 0.3),
       'mane',
@@ -550,14 +561,31 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const head = new THREE.Group();
     onChassis(head, 0, pug ? 1.12 : 1.2, 0.59);
     if (pug) head.scale.setScalar(1.12);
+    else if (oreo || akita) head.scale.setScalar(1.08);
     const HEAD_REST = head.position.clone();
-    const skullGeo = paint(blob(pug ? 0.37 : compact ? 0.34 : 0.32, pug ? 0.3 : 0.29, 0.28), 'head', 0.028);
+    const skullGeo = paint(blob(pug ? 0.37 : compact ? 0.34 : akita ? 0.36 : 0.32, pug ? 0.3 : 0.29, 0.28), 'head', 0.028);
     const cheekL = paint(blob(bangkaew ? 0.18 : 0.13, 0.15, 0.13, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, x) * 0.2).translate(0.16, -0.08, -0.02);
     const cheekR = paint(blob(bangkaew ? 0.18 : 0.13, 0.15, 0.13, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, -x) * 0.2).translate(-0.16, -0.08, -0.02);
-    const muzzleGeo = paint(blob(pug ? 0.22 : compact ? 0.16 : 0.13, pug ? 0.13 : 0.095, 0.18 * muzzleDepth, 24, 16), 'muzzle', 0.012).translate(0, -0.1, 0.25);
+    const muzzleGeo = paint(blob(pug ? 0.22 : compact ? 0.19 : akita ? 0.155 : 0.13, pug ? 0.13 : 0.095, 0.18 * muzzleDepth, 24, 16), 'muzzle', 0.012).translate(0, -0.1, 0.25);
     const muzzleTip = paint(blob(0.085, 0.07, 0.08, 20, 14), 'muzzle', 0.008).translate(0, -0.1, compact ? 0.28 : 0.38);
     head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo, muzzleTip])!, true, 'head'));
 
+    if (oreo) {
+      // A narrow curved blaze avoids a broad stripe from coarse vertex interpolation.
+      const positions: number[] = [];
+      const indices: number[] = [];
+      const levels = [0.26, 0.22, 0.16, 0.1, 0.03, -0.035];
+      levels.forEach((y, i) => {
+        const width = 0.009 + (0.26 - y) * 0.014;
+        const z = 0.28 * Math.sqrt(1 - (y / 0.29) ** 2) + 0.005;
+        positions.push(-width, y, z, width, y, z);
+        if (i) { const n = i * 2; indices.push(n - 2, n, n - 1, n - 1, n, n + 1); }
+      });
+      const blaze = new THREE.BufferGeometry();
+      blaze.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      blaze.setIndex(indices); blaze.computeVertexNormals();
+      head.add(furry(paint(blaze, 'muzzle', 0), false, 'head'));
+    }
     if (pug) for (const side of [-1, 1]) {
       const jowl = paint(blob(0.125, 0.115, 0.07, 16, 12), 'muzzle', 0);
       head.add(furry(jowl.translate(side * 0.1, -0.115, 0.265), false, 'head'));
@@ -589,7 +617,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const almond = new THREE.Group();
       almond.scale.set(1.3, pug ? 1.05 : 1.1, 1);
       almond.rotation.z = 0.28 * side;
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.052, 24, 16), glossy(0x8c5a24, 0.12));
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.052, 24, 16), glossy(oreo || akita ? 0x4b3425 : 0x8c5a24, 0.12));
       almond.add(ball);
       const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.033, 20, 14), glossy(0x0c0806, 0.08));
       pupil.position.set(0, 0, 0.026);
@@ -610,10 +638,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     for (const side of [1, -1]) {
       const ear = new THREE.Group();
       ear.position.set((pug ? 0.28 : 0.17) * side, pug ? 0.14 : 0.19, pug ? 0.075 : -0.04);
-      const outer = paint((pug ? blob(0.11, 0.1, 0.06, 12, 8) : frenchie ? new THREE.CapsuleGeometry(0.105, 0.18, 4, 10) : new THREE.ConeGeometry(0.135, 0.27, 12, 2)).scale(1, 1, pug ? 1 : 0.55), 'ear', 0.03).translate(0, pug ? -0.025 : 0.135, 0);
+      const outer = paint((pug ? blob(0.11, 0.1, 0.06, 12, 8) : frenchie ? new THREE.CapsuleGeometry(0.105, 0.18, 4, 10) : new THREE.ConeGeometry(0.135, 0.27, 12, 2)).scale(1, 1, pug ? 1 : 0.55), 'ear', 0.03, (x, y, z) => [oreo ? x + side * 0.4 : x, y, z]).translate(0, pug ? -0.025 : 0.135, 0);
       ear.add(furry(outer, true, 'head'));
       const tuft = paint(new THREE.ConeGeometry(0.08, 0.17, 16, 4).scale(1, 1, 0.35), 'muzzle', 0.035).translate(0, 0.1, 0.045);
-      if (!pug) ear.add(furry(tuft, true, 'head'));
+      if (!pug && !oreo) ear.add(furry(tuft, true, 'head'));
+      if (oreo) {
+        const inside = new THREE.Mesh(new THREE.CapsuleGeometry(0.067, 0.15, 3, 8).scale(1, 1, 0.22), new THREE.MeshToonMaterial({color: 0xb88d83}));
+        inside.position.set(0, 0.14, 0.06);
+        ear.add(inside);
+      }
       if (pug || dog.avatarConfig.earShape === 'floppy') { ear.scale.set(pug ? 1.1 : 0.8, pug ? 1 : 0.55, 1); ear.rotation.x = pug ? 0.25 : 1.4; }
       head.add(ear);
       ears.push(ear);
@@ -692,6 +725,14 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     }
     if (compact && !pug) for (const side of [-1, 1]) {
       stroke(head, [[side * 0.04, 0.14, 0.268], [side * 0.12, 0.17, 0.255], [side * 0.19, 0.12, 0.24]]);
+    }
+    if (oreo) {
+      // Six freckles are one tiny mesh, rather than a detailed skin texture.
+      const freckles: THREE.BufferGeometry[] = [];
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+        freckles.push(blob(0.009, 0.008, 0.004, 6, 4).translate(side * (0.065 + i * 0.035), -0.1 - (i % 2) * 0.025, 0.323 - i * 0.012));
+      }
+      head.add(new THREE.Mesh(mergeGeometries(freckles)!, new THREE.MeshBasicMaterial({color: 0x443b34})));
     }
     // Mali is deliberately broad and low; short-coated companions have short legs.
     dogRoot.scale.set(mali ? 1.13 : 1, mali ? 0.83 : compact ? 0.74 : 1, mali ? 1.06 : 1);
@@ -994,7 +1035,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const flat = asleep ? 0.7 : isSick ? 0.95 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
       ears.forEach((ear, i) => {
         const s = i === 0 ? 1 : -1;
-        ear.rotation.x = (pug ? 0.25 : dog.avatarConfig.earShape === 'floppy' ? 1.4 : 0) - flat * 0.8;
+        ear.rotation.x = (akita && i === 0 ? 0.85 : pug ? 0.25 : dog.avatarConfig.earShape === 'floppy' ? 1.4 : 0) - flat * 0.8;
         ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert;
       });
 
