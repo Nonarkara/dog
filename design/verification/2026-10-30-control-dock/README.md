@@ -14,3 +14,5 @@ Independent source/pixel review cleared phone game/result/cup controls, all eigh
 Live deployment closeout follows below.
 
 A separate Bangal legacy 3D check also passed: Catch uses the external dock, a direction choice works and closing removes the HUD. The final native-hidden mode passed the combined chooser/game test without resetting its guess phase or round.
+
+A first live chooser check also caught a 0.484375px raw canvas overhang during the animated feedback resize (integer renderer clientHeight versus fractional flex height). The stage already clipped it visually; the canvas CSS is now clamped to its container as well. The strict zero-intersection threshold was kept. Five chooser cases passed again on the clamped build before publication.
