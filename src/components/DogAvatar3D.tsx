@@ -166,7 +166,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     // THE FRAMING IS A FUNCTION OF THE BOX, NOT A CONSTANT: the distance is
     // solved so the whole dog — paw to ear tip, nose to plume — fits in both
     // axes of whatever region the cockpit gives the stage.
-    const DOG_HEIGHT = 1.85;
+    const DOG_HEIGHT = 1.92;
     const DOG_WIDTH = 1.95;
     const fitCamera = (w: number, h: number) => {
       const vFov = (camera.fov * Math.PI) / 180;
@@ -363,9 +363,18 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     // 1. Body and mane, one mesh. The mane is longer fur, longest low in front.
     const torsoGeo = paint(blob(0.4, 0.36, 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
-    const maneGeo = paint(blob(0.4, 0.4, 0.34), 'mane', (_x, y, z) => 0.085 + Math.max(0, z) * 0.08 - Math.min(0, y) * 0.07)
-      .translate(0, 0.86, 0.32);
-    const body = furry(mergeGeometries([torsoGeo, maneGeo])!);
+    // The Bangkaew mane is a lion's ruff: wider than the face, longest in the
+    // bib that hangs down the chest and at the sides where it flares.
+    const maneGeo = paint(
+      blob(0.46, 0.4, 0.3),
+      'mane',
+      (x, y, z) => 0.09 + Math.max(0, z) * 0.06 + Math.max(0, -y) * 0.12 + Math.max(0, Math.abs(x) - 0.3) * 0.25
+    ).translate(0, 0.82, 0.26);
+    // The neck ruff joins the head to the mane: dark on top where the saddle
+    // runs up to the skull, white underneath where the bib begins.
+    const neckGeo = paint(blob(0.3, 0.3, 0.3), 'mane', (_x, y) => 0.1 + Math.max(0, -y) * 0.15, (x, y, z) => [x, y + 0.08, z - 0.08])
+      .translate(0, 1.02, 0.44);
+    const body = furry(mergeGeometries([torsoGeo, maneGeo, neckGeo])!);
     const breathing = new THREE.Group();
     breathing.add(body);
     onChassis(breathing, 0, 0, 0);
@@ -373,42 +382,53 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     // 2. The head: skull, cheek ruff and muzzle as one furry mesh, eyes,
     // nose and mouth as smooth pieces on top.
     const head = new THREE.Group();
-    onChassis(head, 0, 1.24, 0.58);
+    // The head sits ON the ruff and juts forward of it, the way his does —
+    // not sunk into it like a pom-pom.
+    onChassis(head, 0, 1.3, 0.66);
     const HEAD_REST = head.position.clone();
-    const skullGeo = paint(blob(0.32, 0.29, 0.28), 'head', 0.026);
-    const cheekL = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(0.17, -0.09, 0.05);
-    const cheekR = paint(blob(0.14, 0.13, 0.14, 24, 16), 'cheek', 0.05).translate(-0.17, -0.09, 0.05);
-    const muzzleGeo = paint(blob(0.13, 0.1, 0.15, 28, 20), 'muzzle', 0.012).translate(0, -0.09, 0.24);
-    head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo])!, true, 'head'));
+    const skullGeo = paint(blob(0.3, 0.28, 0.27), 'head', 0.028);
+    // Cheek ruff that fans out sideways — the "lion face" of the breed.
+    const cheekL = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, x) * 0.2).translate(0.16, -0.08, -0.02);
+    const cheekR = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, -x) * 0.2).translate(-0.16, -0.08, -0.02);
+    // A spitz muzzle is a wedge, not a ball: a base and a narrower tip.
+    const muzzleGeo = paint(blob(0.12, 0.095, 0.18, 28, 20), 'muzzle', 0.012).translate(0, -0.1, 0.25);
+    const muzzleTip = paint(blob(0.085, 0.07, 0.08, 20, 14), 'muzzle', 0.008).translate(0, -0.1, 0.38);
+    head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo, muzzleTip])!, true, 'head'));
 
     const glossy = (color: number, roughness = 0.2) => new THREE.MeshStandardMaterial({ color, roughness });
-    const nose = new THREE.Mesh(blob(0.058, 0.042, 0.042, 20, 14), glossy(0x121010, 0.25));
-    nose.position.set(0, -0.045, 0.385);
+    const nose = new THREE.Mesh(blob(0.062, 0.046, 0.046, 20, 14), glossy(0x121010, 0.22));
+    nose.position.set(0, -0.06, 0.455);
     head.add(nose);
-    const mouth = new THREE.Mesh(blob(0.075, 0.03, 0.05, 16, 10), glossy(0x3a1616, 0.6));
-    mouth.position.set(0, -0.165, 0.27);
+    const mouth = new THREE.Mesh(blob(0.08, 0.03, 0.07, 16, 10), glossy(0x3a1616, 0.6));
+    mouth.position.set(0, -0.18, 0.33);
     head.add(mouth);
-    const tongue = new THREE.Mesh(blob(0.045, 0.014, 0.075, 16, 10), glossy(0xe0707c, 0.45));
-    tongue.position.set(0, -0.19, 0.31);
+    const tongue = new THREE.Mesh(blob(0.045, 0.014, 0.08, 16, 10), glossy(0xe0707c, 0.45));
+    tongue.position.set(0, -0.205, 0.38);
     tongue.rotation.x = 0.55;
     head.add(tongue);
 
-    // The eyes are where the cute lives: big, dark, wet, with a catch-light.
+    // The eyes are where the cute lives — but they are HIS eyes: almond,
+    // amber-brown, set at a slant with the outer corner raised, not the round
+    // cartoon eyes of every plush toy. Two catch-lights keep them wet.
     const eyes: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const eye = new THREE.Group();
-      eye.position.set(0.11 * side, 0.035, 0.235);
-      // Expo's eyes are amber-brown: an iris with a dark pupil in front,
-      // so they read inside the dark mask instead of vanishing into it.
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.062, 24, 16), glossy(0x7a4a1c, 0.12));
-      eye.add(ball);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 20, 14), glossy(0x0c0806, 0.08));
-      pupil.position.set(0, 0, 0.03);
-      eye.add(pupil);
-      const glint = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      glint.position.set(0.018 * side, 0.024, 0.058);
-      glint.userData.glint = true;
-      eye.add(glint);
+      eye.position.set(0.115 * side, 0.045, 0.228);
+      const almond = new THREE.Group();
+      almond.scale.set(1.3, 0.82, 1);
+      almond.rotation.z = 0.28 * side;
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.052, 24, 16), glossy(0x8c5a24, 0.12));
+      almond.add(ball);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.033, 20, 14), glossy(0x0c0806, 0.08));
+      pupil.position.set(0, 0, 0.026);
+      almond.add(pupil);
+      for (const [gx, gy, gr] of [[0.016, 0.018, 0.012], [-0.012, -0.014, 0.006]]) {
+        const glint = new THREE.Mesh(new THREE.SphereGeometry(gr, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        glint.position.set(gx * side, gy, 0.05);
+        glint.userData.glint = true;
+        almond.add(glint);
+      }
+      eye.add(almond);
       head.add(eye);
       eyes.push(eye);
     }
@@ -418,15 +438,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const ears: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const ear = new THREE.Group();
-      ear.position.set(0.16 * side, 0.2, -0.03);
-      const outer = paint(new THREE.ConeGeometry(0.12, 0.24, 24, 6).scale(1, 1, 0.55), 'ear', 0.018).translate(0, 0.12, 0);
+      ear.position.set(0.17 * side, 0.19, -0.04);
+      // Bigger and furrier than a toy's: thick, dark, with a pale tuft
+      // of fur inside, not bare pink skin.
+      const outer = paint(new THREE.ConeGeometry(0.135, 0.27, 24, 6).scale(1, 1, 0.55), 'ear', 0.03).translate(0, 0.135, 0);
       ear.add(furry(outer, true, 'head'));
-      const inner = new THREE.Mesh(
-        new THREE.ConeGeometry(0.07, 0.15, 16).scale(1, 1, 0.3),
-        new THREE.MeshStandardMaterial({ color: 0x9c7468, roughness: 0.95 })
-      );
-      inner.position.set(0, 0.095, 0.045);
-      ear.add(inner);
+      const tuft = paint(new THREE.ConeGeometry(0.08, 0.17, 16, 4).scale(1, 1, 0.35), 'muzzle', 0.035).translate(0, 0.1, 0.045);
+      ear.add(furry(tuft, true, 'head'));
       head.add(ear);
       ears.push(ear);
     }
@@ -437,8 +455,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const makeLeg = (x: number, z: number, hind: boolean) => {
       const side = Math.sign(x);
       const parts = [
-        paint(new THREE.CapsuleGeometry(0.085, 0.3, 8, 20), 'leg', 0.035, (lx, ly, lz) => [lx, ly - 0.2, lz]).translate(0, -0.2, 0),
-        paint(blob(0.1, 0.065, 0.13, 24, 14), 'leg', 0.014, (lx, ly, lz) => [lx, ly - 0.4, lz]).translate(0, -0.385, 0.035),
+        // Feathering: the fur on the back of the leg is long, the front short.
+        paint(new THREE.CapsuleGeometry(0.095, 0.3, 8, 20), 'leg', (_lx, _ly, lz) => 0.055 + Math.max(0, -lz) * 0.5, (lx, ly, lz) => [lx, ly - 0.2, lz]).translate(0, -0.2, 0),
+        paint(blob(0.105, 0.065, 0.135, 24, 14), 'leg', 0.02, (lx, ly, lz) => [lx, ly - 0.4, lz]).translate(0, -0.385, 0.035),
       ];
       if (hind) {
         parts.push(
@@ -478,9 +497,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     for (let i = 0; i < TAIL_BALLS; i++) {
       const t = i / (TAIL_BALLS - 1);
       const p = curve.getPoint(t);
-      const r = 0.06 + 0.08 * Math.sin(Math.PI * Math.min(1, t * 1.15));
+      const r = 0.07 + 0.1 * Math.sin(Math.PI * Math.min(1, t * 1.15));
       tailParts.push(
-        paint(blob(r, r, r, 22, 16), 'tail', 0.13 + t * 0.05, (lx, ly) => [lx, ly, t]).translate(p.x, p.y, p.z)
+        paint(blob(r, r, r, 22, 16), 'tail', 0.16 + t * 0.06, (lx, ly) => [lx, ly, t]).translate(p.x, p.y, p.z)
       );
     }
     tail.add(furry(mergeGeometries(tailParts)!, true, 'tail'));
@@ -681,7 +700,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const lid = asleep ? 0.08 : blink > 0 ? 0.12 : melting ? 0.1 : spot ? 0.35 : acting === 'pet' ? 0.45 : 1;
       eyes.forEach((e) => {
         e.scale.y += (lid - e.scale.y) * 0.4;
-        e.children.forEach((c) => c.userData.glint && (c.visible = e.scale.y > 0.3));
+        e.traverse((c) => c.userData.glint && (c.visible = e.scale.y > 0.3));
       });
 
       tongue.visible = !asleep;
