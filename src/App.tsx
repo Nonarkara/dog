@@ -323,7 +323,16 @@ export const App: React.FC = () => {
     }, 2000);
   };
 
-  const handleMiniGameComplete = (won: boolean) => {
+  const handleMiniGameComplete = (won: boolean, kind: 'catch'|'find-treat' = 'catch') => {
+    if(kind==='find-treat'){
+      if(petState.sick||petState.sleep?.asleep)return;
+      const now=Date.now();
+      const next:PetState={...petState,needs:{...petState.needs,energy:Math.max(0,petState.needs.energy-4)},trust:Math.min(100,petState.trust+(won?3:1)),arousal:Math.min(80,petState.arousal+6),lastCareAt:now,call:petState.call?.reason==='lonely'?undefined:petState.call,updatedAt:now};
+      setPetState(next);syncDisplay(next);
+      setDogs(prev=>prev.map(d=>d.id===activeDogId?{...d,tamagotchi:{...d.tamagotchi,lastPlayed:now}}:d));
+      say(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`);
+      return;
+    }
     if (won) {
       setPetState((prev) => ({
         ...prev,

@@ -20,7 +20,7 @@ These are rigged illustrations with authored key poses, not thirty separately ha
 
 ## Performance and verification
 
-Only the active dog's seven textures load. Old textures, pixel masks, geometry, material, renderer, pointer listeners, resize observer and frame callback are disposed on dog change. Rendering pauses in hidden tabs. Reduced motion renders at 6 fps, suppressing looping shader time, gait and hops. Canvas data attributes expose observed fps, rendered frame count, current pose and draw counts for the browser checks.
+Only the active dog's eight textures (including the play bow; see [play and personality](play-and-personality.md)) load. Old textures, pixel masks, geometry, material, renderer, pointer listeners, resize observer and frame callback are disposed on dog change. Rendering pauses in hidden tabs. Reduced motion renders at 6 fps, suppressing looping shader time, gait and hops. Canvas data attributes expose observed fps, rendered frame count, current pose and draw counts for the browser checks.
 
 Run:
 

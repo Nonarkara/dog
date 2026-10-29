@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, AlertTriangle, Send, ShieldAlert, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees } from 'lucide-react';
+import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, AlertTriangle, Send, ShieldAlert, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -144,7 +144,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       </div>
 
 <button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} title="Control labels" onClick={()=>setLabelsVisible(v=>!v)}><CircleHelp size={20} aria-hidden="true"/></button>
-      {labelsVisible&&<div className="control-legend flex flex-wrap gap-x-3 gap-y-1 basis-full" aria-label="Control legend">{BASE_ACTIONS.map(({action,label,icon:Icon})=><span key={action} className="inline-flex items-center gap-1"><Icon size={14} aria-hidden="true"/>{label}</span>)}<span className="inline-flex items-center gap-1"><Moon size={14} aria-hidden="true"/>Bed</span>{[[Utensils,'Fullness'],[Battery,'Energy'],[Sparkles,'Hygiene'],[Smile,'Happiness'],[Heart,'Trust'],[Activity,'Excitement'],[Heart,'Care'],[GraduationCap,'Coach'],[BookOpen,'Record'],[Trees,'Commons']].map(([Icon,label])=><span key={String(label)} className="inline-flex items-center gap-1">{React.createElement(Icon as typeof Heart,{size:14,'aria-hidden':true})}{String(label)}</span>)}</div>}
+      {labelsVisible&&<div className="control-legend flex flex-wrap gap-x-3 gap-y-1 basis-full" aria-label="Control legend">{BASE_ACTIONS.map(({action,label,icon:Icon})=><span key={action} className="inline-flex items-center gap-1"><Icon size={14} aria-hidden="true"/>{label}</span>)}<span className="inline-flex items-center gap-1"><Moon size={14} aria-hidden="true"/>Bed</span>{[[Utensils,'Fullness'],[Battery,'Energy'],[Sparkles,'Hygiene'],[Smile,'Happiness'],[Heart,'Trust'],[Activity,'Excitement'],[Heart,'Care'],[GraduationCap,'Coach'],[BookOpen,'Record'],[Trees,'Commons'],[Hand,'High five'],[ChevronsDown,'Play bow'],[Music2,'Happy wiggle'],[Wind,'Zoomies'],[Bone,'Find the treat']].map(([Icon,label])=><span key={String(label)} className="inline-flex items-center gap-1">{React.createElement(Icon as typeof Heart,{size:14,'aria-hidden':true})}{String(label)}</span>)}</div>}
       {/* Cue field or Tantrum Scold action */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
         {isTantrum ? (

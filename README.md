@@ -19,6 +19,8 @@ It fulfills four core objectives:
 3. **Train & Coach (Operant Conditioning)**: The Coach region teaches you how to train your dog. It **measures your marker timing** — tap when the dog performs, tap again when you mark, and the app computes the real delay in milliseconds and tells you what it means. The behaviour's strength moves up or down, and a readiness coach tells you when to move from continuous rewards to every-third to unpredictable schedules. Extinction bursts are named so you don't mistake them for stubbornness.
 4. **Meet Other Dogs**: The Canine Commons park lets your dog roam with neighbors. Import a friend's exported dog JSON and their dog appears in the park as a visitor — amber beacon, sniffs, greet, chase.
 
+The stage also has high fives, play bows, happy wiggles, little zoomies and nose boops. Tap the bone to play Find the Treat under three cups. Each dog's pace and greeting differ; [play behavior and verification](design/play-and-personality.md) records the details.
+
 ---
 
 ## The Cockpit — one screen, no scrolling

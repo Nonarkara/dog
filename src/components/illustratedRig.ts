@@ -1,6 +1,6 @@
 import type { AvatarPose } from './DogAvatar3D';
 
-export type ArtPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep' | 'feed' | 'pet';
+export type ArtPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep' | 'feed' | 'pet' | 'bow';
 export const artPoseFor = (pose: AvatarPose): ArtPose => pose;
 
 // Normalized, top-origin landmarks on the authored 768px canvases. These are
@@ -34,6 +34,7 @@ const PETTED:Record<string,Landmarks>={
  'shiba-chai':{...STANDING['shiba-chai'],eyes:[.352,.278,.275,.25],head:[.40,.40]},
 };
 export function landmarksFor(id: string, pose: ArtPose): Landmarks {
+  if(pose==='bow'){const pug=id==='paolo-pug',french=id==='oreo-frenchie';return {eyes:pug?[.448,.523,.279,.445]:french?[.374,.546,.235,.509]:[.377,.482,.283,.447],feet:[.40,.20,.80,.64],head:pug?[.48,.66]:[.44,.60],tail:[.73,.24],legStart:.72};}
   if (pose === 'stand') return STANDING[id];
   if (pose === 'pet') return PETTED[id];
   if (pose === 'sit' || pose === 'paw') return SEATED[id];
@@ -50,6 +51,6 @@ export function landmarksFor(id: string, pose: ArtPose): Landmarks {
 export function poseAnchors(id:string,pose:ArtPose){
  const r=landmarksFor(id,pose),rest=['down','sleep','feed'].includes(pose);
  const hipY=rest?.74:pose==='sit'||pose==='paw'?.69:.58;
- return [newPoint(r.eyes[0],r.eyes[1]),newPoint(r.eyes[2],r.eyes[3]),newPoint(...r.head),newPoint(r.feet[0],.9),newPoint(pose==='paw'?.21:r.feet[1],pose==='paw'?.53:.88),newPoint(r.feet[2],.89),newPoint(.7,hipY),newPoint(...r.tail)];
+ return [newPoint(r.eyes[0],r.eyes[1]),newPoint(r.eyes[2],r.eyes[3]),newPoint(...r.head),newPoint(r.feet[0],.9),newPoint(pose==='paw'?.21:r.feet[1],pose==='paw'?.53:.88),newPoint(r.feet[2],pose==='bow'?.83:.89),newPoint(.7,hipY),newPoint(...r.tail)];
 }
 const newPoint=(x:number,y:number):[number,number]=>[x,y];

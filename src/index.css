@@ -628,3 +628,30 @@
 
 .cockpit :is(.text-amber-300,.text-amber-400,.text-amber-500,.text-orange-400) {color:#87511a;}
 .cockpit .illustrated-stage>p {color:var(--text-main);}
+
+/* A small toy rail lives beside the dog, without changing the game frame. */
+.dog-toys {position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;z-index:5;}
+.cockpit .dog-toys button {width:36px;height:36px;min-height:36px;padding:4px;background:var(--bg-surface);border:1px solid var(--border-dim);color:var(--text-main);}
+.cockpit .dog-toys button[aria-pressed="true"] {background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.dog-cheer {position:absolute;top:10px;left:8px;right:48px;text-align:center;color:var(--text-main);font-size:12px;font-weight:600;pointer-events:none;z-index:6;}
+.dog-love {position:absolute;top:30px;color:var(--accent);animation:dog-love 1.4s ease-out both;}
+@keyframes dog-love {0%{transform:translateY(8px) scale(.65);opacity:0;}20%{opacity:1;}100%{transform:translateY(-23px) scale(1.05);opacity:0;}}
+.cockpit .paw-target {position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;min-height:44px;padding:6px;border-radius:50%!important;border:2px dashed var(--accent);background:var(--bg-surface);color:var(--accent);z-index:7;animation:paw-invite 1s ease-in-out infinite;}
+@keyframes paw-invite {50%{border-width:3px;}}
+.treat-game {position:absolute;inset:8px;z-index:12;pointer-events:none;color:var(--text-main);}
+.treat-heading {display:flex;align-items:center;justify-content:space-between;gap:4px;background:var(--bg-surface);border:1px solid var(--border-dim);padding:2px 4px 2px 8px;font-size:11px;pointer-events:auto;}
+.treat-heading button {min-height:32px;min-width:32px;padding:4px;}
+.treat-instruction {font-size:12px;text-align:center;margin-top:4px;color:var(--text-main);}
+.treat-cups {position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:12px;pointer-events:auto;}
+.cockpit .treat-cup {position:relative;width:64px;height:76px;padding:0;background:transparent;border:0;color:var(--text-main);}
+.cockpit .treat-cup:disabled {opacity:1;cursor:default;}
+.cup-cover {position:absolute;left:0;top:0;width:64px;height:54px;transition:transform .16s ease-out;}
+.treat-cup--open .cup-cover {transform:translateY(-12px);}
+.cup-bone {position:absolute;bottom:17px;left:21px;color:var(--accent);}
+.cup-number {position:absolute;bottom:0;left:0;width:100%;font-size:11px;}
+.cup-check {position:absolute;right:0;top:0;color:var(--accent);}
+@media(prefers-reduced-motion:reduce){.dog-love,.paw-target {animation:none!important;}.dog-love {display:none;}.cup-cover {transition:none;}}
+.treat-instruction {display:table;margin:4px auto 0;padding:2px 7px;background:var(--bg-surface);max-width:100%;}
+@layer base {.cockpit .paw-target {border-radius:50%!important;}}
+
+.treat-cups {top:calc(var(--dog-floor,90%) - 54px);bottom:auto;}
