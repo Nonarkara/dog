@@ -1,0 +1,690 @@
+[
+  {
+    "name": "sit",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "1",
+      "performancePose": "sit",
+      "performanceDone": "true",
+      "frames": "134",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "sit",
+      "action": "idle",
+      "pose": "sit",
+      "reduced": "false",
+      "completedAt": "6866"
+    },
+    "elapsedAfterRequest": 423,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "down",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "2",
+      "performancePose": "down",
+      "performanceDone": "true",
+      "frames": "253",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "down",
+      "action": "idle",
+      "pose": "down",
+      "reduced": "false",
+      "completedAt": "10978"
+    },
+    "elapsedAfterRequest": 850,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "stay",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "4",
+      "performancePose": "stay",
+      "performanceDone": "true",
+      "frames": "387",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.002",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "sit",
+      "action": "idle",
+      "pose": "stay",
+      "reduced": "false",
+      "completedAt": "15441"
+    },
+    "elapsedAfterRequest": 1430,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "come",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "5",
+      "performancePose": "come",
+      "performanceDone": "true",
+      "frames": "509",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "-0.007",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "come",
+      "reduced": "false",
+      "completedAt": "19506"
+    },
+    "elapsedAfterRequest": 1011,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "paw",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "7",
+      "performancePose": "paw",
+      "performanceDone": "true",
+      "frames": "613",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "-0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "paw",
+      "action": "idle",
+      "pose": "paw",
+      "reduced": "false",
+      "completedAt": "22976"
+    },
+    "elapsedAfterRequest": 416,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "wait",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "9",
+      "performancePose": "wait",
+      "performanceDone": "true",
+      "frames": "747",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "-0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "sit",
+      "action": "idle",
+      "pose": "wait",
+      "reduced": "false",
+      "completedAt": "27441"
+    },
+    "elapsedAfterRequest": 1430,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "leaveIt",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "10",
+      "performancePose": "leaveIt",
+      "performanceDone": "true",
+      "frames": "867",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "-0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "leaveIt",
+      "reduced": "false",
+      "completedAt": "31442"
+    },
+    "elapsedAfterRequest": 916,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "fetch",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "12",
+      "performancePose": "fetch",
+      "performanceDone": "true",
+      "frames": "1014",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "fetch",
+      "reduced": "false",
+      "completedAt": "36338"
+    },
+    "elapsedAfterRequest": 1812,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "down",
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "1",
+      "performancePose": "down",
+      "performanceDone": "true",
+      "frames": "146",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "down",
+      "action": "idle",
+      "pose": "down",
+      "reduced": "false",
+      "completedAt": "5392"
+    },
+    "elapsedAfterRequest": 864,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "fetch",
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "3",
+      "performancePose": "fetch",
+      "performanceDone": "true",
+      "frames": "293",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "fetch",
+      "reduced": "false",
+      "completedAt": "10289"
+    },
+    "elapsedAfterRequest": 1796,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "down",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "1",
+      "performancePose": "down",
+      "performanceDone": "true",
+      "frames": "123",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "down",
+      "action": "idle",
+      "pose": "down",
+      "reduced": "false",
+      "completedAt": "4561"
+    },
+    "elapsedAfterRequest": 852,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "fetch",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "3",
+      "performancePose": "fetch",
+      "performanceDone": "true",
+      "frames": "272",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "30.1",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "fetch",
+      "reduced": "false",
+      "completedAt": "9522"
+    },
+    "elapsedAfterRequest": 1814,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "down",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "1",
+      "performancePose": "down",
+      "performanceDone": "true",
+      "frames": "146",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "down",
+      "action": "idle",
+      "pose": "down",
+      "reduced": "false",
+      "completedAt": "5313"
+    },
+    "elapsedAfterRequest": 869,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "fetch",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "3",
+      "performancePose": "fetch",
+      "performanceDone": "true",
+      "frames": "292",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "29.9",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "fetch",
+      "reduced": "false",
+      "completedAt": "10176"
+    },
+    "elapsedAfterRequest": 1798,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "fetch",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "1",
+      "performancePose": "fetch",
+      "performanceDone": "true",
+      "frames": "32",
+      "triangles": "18620",
+      "drawCalls": "3",
+      "fps": "6.0",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "stand",
+      "action": "idle",
+      "pose": "fetch",
+      "reduced": "true",
+      "completedAt": "5760"
+    },
+    "elapsedAfterRequest": -3,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "name": "stay",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "rendered": {
+      "engine": "three.js r174",
+      "renderer": "illustrated-2d",
+      "dog": "expo-2021",
+      "performanceId": "3",
+      "performancePose": "stay",
+      "performanceDone": "true",
+      "frames": "58",
+      "triangles": "18480",
+      "drawCalls": "2",
+      "fps": "6.0",
+      "mood": "content",
+      "behaviour": "watching",
+      "travelX": "0.000",
+      "trick": "idle",
+      "personality": "0.85",
+      "transitionMs": "420",
+      "transition": "0",
+      "artPose": "sit",
+      "action": "idle",
+      "pose": "stay",
+      "reduced": "true",
+      "completedAt": "10096"
+    },
+    "elapsedAfterRequest": 1152,
+    "lesson": {
+      "stage": 0,
+      "skill": 0.344,
+      "streak": 1,
+      "misses": 0,
+      "sessionTrials": 1,
+      "sessionStartedAt": 1793336400000
+    }
+  },
+  {
+    "enrolled": {
+      "id": "dog-9a333b26-32c9-43cc-a3e9-c07bfa867293",
+      "name": "Luna audit",
+      "callName": "Luna audit",
+      "breed": "Mixed",
+      "birthDate": "",
+      "sex": "female",
+      "isNeutered": null,
+      "microchipId": "Not recorded",
+      "weightKg": 0,
+      "coatColor": "Solid coat",
+      "distinctiveMarks": [],
+      "personalityTraits": [],
+      "favoriteFood": "",
+      "favoriteToy": "",
+      "quirks": [],
+      "primaryVetClinic": "",
+      "emergencyPhone": "",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 70,
+        "happiness": 71,
+        "energy": 75,
+        "hygiene": 85,
+        "lastFed": 0,
+        "lastPlayed": 0,
+        "lastWalked": 0,
+        "lastGroomed": 0
+      },
+      "metaverseTribe": "The Roaming Pack",
+      "metaverseBio": "Ready to explore the canine commons.",
+      "avatarConfig": {
+        "pattern": "solid",
+        "baseColor": "#d9a441",
+        "secondaryColor": "#f5e6c8",
+        "maskColor": "#5a3a1a",
+        "pointColor": "#d9a441",
+        "furFluff": 0.6,
+        "earShape": "pricked",
+        "tailShape": "curl"
+      }
+    }
+  }
+]

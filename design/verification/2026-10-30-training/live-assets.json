@@ -1,0 +1,27 @@
+[
+  {
+    "path": "/",
+    "sha256": "9fedefd67572e8c66fd6a24cef40ea7952aa7ec209e3ce88a64ed85c62edd564",
+    "bytes": 1631
+  },
+  {
+    "path": "/assets/index-B7wh1BjB.js",
+    "sha256": "2951b7f5b5ef52f11c99da560c0669f09ac4f5a66d86e9ba3bba9bd5c31c83df",
+    "bytes": 318795
+  },
+  {
+    "path": "/assets/index-CiRQw9_a.css",
+    "sha256": "67e7c4ba1ffd5fa7b9a5988f20a0859ddbf0eedbc4f3605e33a381ccc1ab943d",
+    "bytes": 35732
+  },
+  {
+    "path": "/assets/CoachPanel-BA9-W_so.js",
+    "sha256": "ea2b7d8d93afa472ab120175ccc8216976fc71a84b2c2756e3b2feba2eeea6ef",
+    "bytes": 34228
+  },
+  {
+    "path": "/assets/IllustratedDog-BrDHbk-T.js",
+    "sha256": "0f5eaf677e8ce23569c0e49152212d67d92a651721d8e04fc9d3254810014ded",
+    "bytes": 33842
+  }
+]
