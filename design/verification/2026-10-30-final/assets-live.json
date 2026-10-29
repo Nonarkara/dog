@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/",
+    "sha256": "d976eb2739d610026a291f7e82fea1bf84330b247bac0780c49fc0060374bf67",
+    "bytes": 1631
+  },
+  {
+    "path": "/assets/index-C2Vzkxck.js",
+    "sha256": "64ab009b0ae6f06d2ac8925cb3cece54690b09605bb85a5e77091b66a36fdac5",
+    "bytes": 320187
+  },
+  {
+    "path": "/assets/index-CkgDd-FG.css",
+    "sha256": "f57e0cf7ba8b15b122abd3d9cfff502c17f62deebc80f1b3572b94afc0a845aa",
+    "bytes": 36251
+  },
+  {
+    "path": "/assets/CoachPanel-DZeidt-C.js",
+    "sha256": "5754f490b2cd5ea0aac599ce612cb17a11a18e9ae34843825079838868db9a73",
+    "bytes": 35568
+  },
+  {
+    "path": "/assets/RecordPanel-Cwsl7Htg.js",
+    "sha256": "fa55d7009c7786d898b426189f950516a04f1d12d47337c9d0e39f53c78432a4",
+    "bytes": 35652
+  },
+  {
+    "path": "/assets/IllustratedDog-pC54vWj4.js",
+    "sha256": "83b1af79d23ee445e693902239bf56009c76cd532851b48bff133b2e1f1d575d",
+    "bytes": 33888
+  }
+]

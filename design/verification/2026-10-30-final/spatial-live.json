@@ -1,0 +1,2158 @@
+{
+  "measurements": [
+    {
+      "route": "/",
+      "w": 278,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 260,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 237,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 279,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 261,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 238,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 280,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 262,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 239,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 296,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 278,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 249,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 297,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 279,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 250,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 298,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 280,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 251,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 360,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 342,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 292,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 390,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 372,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 312,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 419,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 401,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 331,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 420,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 402,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 332,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 421,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 403,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 333,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 480,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 462,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 844,
+        "top": 45,
+        "topPct": 5.3,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 372,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 499,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 481,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 385,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 500,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 482,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 385,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 501,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 483,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 386,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 519,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 501,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 398,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 520,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 502,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 399,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 521,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 503,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 399,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 599,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 581,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 451,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 600,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 582,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 452,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 601,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 583,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 453,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 617,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 599,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 463,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 618,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 600,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 619,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 601,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 639,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 621,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 640,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 622,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 641,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 623,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 767,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 749,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 768,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 750,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 769,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 751,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1023,
+      "findings": [],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "10": 143,
+          "11": 99,
+          "12": 145,
+          "16": 65,
+          "17": 12
+        }
+      },
+      "chars": 464,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 1005,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 464,
+        "sel": "button.flex-1.min-h-9"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1024,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "span.text-[10px].text-faint",
+          "metric": 33,
+          "detail": "span.text-[10px].text-faint hides 33px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "span.truncate.text-[11px]",
+          "metric": 36,
+          "detail": "span.truncate.text-[11px] hides 36px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "p.truncate.text-[11px]",
+          "metric": 38,
+          "detail": "p.truncate.text-[11px] hides 38px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 200,
+          "detail": "dd.min-w-0.truncate hides 200px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 154,
+          "detail": "li.truncate.text-[11px] hides 154px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 244,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1025,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "span.text-[10px].text-faint",
+          "metric": 33,
+          "detail": "span.text-[10px].text-faint hides 33px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "span.truncate.text-[11px]",
+          "metric": 36,
+          "detail": "span.truncate.text-[11px] hides 36px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "p.truncate.text-[11px]",
+          "metric": 37,
+          "detail": "p.truncate.text-[11px] hides 37px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 200,
+          "detail": "dd.min-w-0.truncate hides 200px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 153,
+          "detail": "li.truncate.text-[11px] hides 153px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 244.25,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 1000,
+        "top": 45,
+        "topPct": 4.5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1279,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 157,
+          "detail": "dd.min-w-0.truncate hides 157px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 111,
+          "detail": "li.truncate.text-[11px] hides 111px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 307.75,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1280,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 157,
+          "detail": "dd.min-w-0.truncate hides 157px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 111,
+          "detail": "li.truncate.text-[11px] hides 111px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 308,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1281,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 157,
+          "detail": "dd.min-w-0.truncate hides 157px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 111,
+          "detail": "li.truncate.text-[11px] hides 111px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 308.25,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1440,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 131,
+          "detail": "dd.min-w-0.truncate hides 131px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 84,
+          "detail": "li.truncate.text-[11px] hides 84px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 348,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1535,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 115,
+          "detail": "dd.min-w-0.truncate hides 115px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 68,
+          "detail": "li.truncate.text-[11px] hides 68px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 371.75,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1536,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 115,
+          "detail": "dd.min-w-0.truncate hides 115px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 68,
+          "detail": "li.truncate.text-[11px] hides 68px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 372,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1537,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 114,
+          "detail": "dd.min-w-0.truncate hides 114px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 68,
+          "detail": "li.truncate.text-[11px] hides 68px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 372.25,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    },
+    {
+      "route": "/",
+      "w": 1920,
+      "findings": [
+        {
+          "kind": "clip",
+          "sel": "li.truncate.text-[11px]",
+          "metric": 4,
+          "detail": "li.truncate.text-[11px] hides 4px of its own content"
+        },
+        {
+          "kind": "clip",
+          "sel": "dd.min-w-0.truncate",
+          "metric": 51,
+          "detail": "dd.min-w-0.truncate hides 51px of its own content"
+        }
+      ],
+      "hierarchy": {
+        "h1": 16,
+        "h1Count": 1,
+        "largest": 17,
+        "largestInfo": {
+          "tag": "span",
+          "cls": "data text-[17px] leading-none text-zinc-",
+          "size": 17,
+          "text": "70"
+        },
+        "ratio": 0.94,
+        "peers": 0,
+        "share": 0,
+        "ramp": {
+          "9": 22,
+          "10": 742,
+          "11": 1741,
+          "12": 234,
+          "14": 6,
+          "16": 69,
+          "17": 12
+        }
+      },
+      "chars": 2826,
+      "containers": [
+        {
+          "sel": "div.panel-body.care-body",
+          "w": 468,
+          "name": "dog-care"
+        }
+      ],
+      "chrome": {
+        "vh": 900,
+        "top": 45,
+        "topPct": 5,
+        "bottom": 0,
+        "bottomPct": 0,
+        "stacked": 1,
+        "topSel": "header.border-hairline-b.bg-surface",
+        "bottomSel": null
+      },
+      "firstAction": {
+        "y": 59,
+        "sel": "button.btn.min-h-0"
+      }
+    }
+  ]
+}

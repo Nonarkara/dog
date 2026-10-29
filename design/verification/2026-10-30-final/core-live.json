@@ -1,0 +1,50 @@
+[
+  {
+    "w": 390,
+    "h": 844,
+    "pageW": 390,
+    "pageH": 844,
+    "chrome": 150,
+    "stageW": 372,
+    "stageH": 248,
+    "actionBottom": 844,
+    "calls": 2,
+    "triangles": 18480
+  },
+  {
+    "w": 1024,
+    "h": 768,
+    "pageW": 1024,
+    "pageH": 768,
+    "chrome": 100,
+    "stageW": 1006,
+    "stageH": 307.1875,
+    "actionBottom": 768,
+    "calls": 2,
+    "triangles": 18480
+  },
+  {
+    "w": 1440,
+    "h": 900,
+    "pageW": 1440,
+    "pageH": 900,
+    "chrome": 100,
+    "stageW": 586.65625,
+    "stageH": 782,
+    "actionBottom": 900,
+    "calls": 2,
+    "triangles": 18480
+  },
+  {
+    "w": 1280,
+    "h": 720,
+    "pageW": 1280,
+    "pageH": 720,
+    "chrome": 100,
+    "stageW": 1262,
+    "stageH": 288,
+    "actionBottom": 720,
+    "calls": 2,
+    "triangles": 18480
+  }
+]

@@ -1,0 +1,78 @@
+[
+  {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "starterFields": [
+      "birthDate",
+      "isNeutered",
+      "microchipId",
+      "weightKg",
+      "primaryVetClinic",
+      "emergencyPhone"
+    ],
+    "starterVaccinations": 4,
+    "geometry": {
+      "w": 390,
+      "h": 844
+    }
+  },
+  {
+    "viewport": {
+      "w": 1024,
+      "h": 768
+    },
+    "starterFields": [
+      "birthDate",
+      "isNeutered",
+      "microchipId",
+      "weightKg",
+      "primaryVetClinic",
+      "emergencyPhone"
+    ],
+    "starterVaccinations": 4,
+    "geometry": {
+      "w": 1024,
+      "h": 768
+    }
+  },
+  {
+    "viewport": {
+      "w": 1440,
+      "h": 900
+    },
+    "starterFields": [
+      "birthDate",
+      "isNeutered",
+      "microchipId",
+      "weightKg",
+      "primaryVetClinic",
+      "emergencyPhone"
+    ],
+    "starterVaccinations": 4,
+    "geometry": {
+      "w": 1440,
+      "h": 900
+    }
+  },
+  {
+    "viewport": {
+      "w": 1280,
+      "h": 720
+    },
+    "starterFields": [
+      "birthDate",
+      "isNeutered",
+      "microchipId",
+      "weightKg",
+      "primaryVetClinic",
+      "emergencyPhone"
+    ],
+    "starterVaccinations": 4,
+    "geometry": {
+      "w": 1280,
+      "h": 720
+    }
+  }
+]
