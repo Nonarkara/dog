@@ -250,7 +250,7 @@ export const RiggedAvatar: React.FC<RiggedAvatarProps> = ({
   useEffect(() => {
     if (!loaded || !interactionTrigger) return;
     const intent =
-      interactionTrigger === 'feed'
+      interactionTrigger === 'feed'||interactionTrigger==='rewardCalm'
         ? 'eat'
         : interactionTrigger === 'play'
           ? 'play'

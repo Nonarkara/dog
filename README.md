@@ -21,6 +21,8 @@ It fulfills four core objectives:
 
 The stage also has high fives, play bows, happy wiggles, little zoomies and nose boops. Tap the bone to play Find the Treat under three cups. Each dog's pace and greeting differ; [play behavior and verification](design/play-and-personality.md) records the details.
 
+The leaf offers quiet time. Watch the dog rest, then use the biscuit to reward calm. Needs come first; a short visible observation timer and reward cooldown keep this from becoming a tapping contest. This is virtual practice, separate from real training logs. [Method, sources and verification](design/calm-practice.md).
+
 ---
 
 Dogs also have a day of their own: wandering and sniffing, boredom, toilet breaks and cleanable puddles, natural sleep/waking, and visibly unwell poses. Walks, company, play and cleanup resolve the matching need. [Daily-life rules and verification](design/daily-life.md).

@@ -45,6 +45,7 @@ import type {
 
 export type { Observation, ObservationTag };
 import { dailyLife, advanceDailyLife } from './dailyLife';
+import {calmInteraction,calmNeed} from './calm';
 
 /** How long after a behaviour a marker still predicts it. */
 export const MARKER_WINDOW_MS = 500;
@@ -185,6 +186,7 @@ function settleBody(
 
   const next: PetState = {
     ...state,
+    calmSince:undefined,
     sleep: {
       asleep: true,
       fellAsleepAt: now,
@@ -365,6 +367,7 @@ function decayStep(state:PetState,now:number):PetState {
   if(asleep&&!isNightHour(now)&&next.needs.energy>=65&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=60*60_000){
     next.sleep={...next.sleep,asleep:false,wokenAt:now};
   }
+  if(next.calmSince!==undefined&&(calmNeed(next)||next.arousal>55))next.calmSince=undefined;
   // A spoken cue expires if nothing follows it — classical conditioning
   // needs the cue and the outcome close together in time.
   if (state.lastCueAt && now - state.lastCueAt > 5 * 60_000) {
@@ -397,7 +400,7 @@ export function performChance(state: PetState, behaviour: Behaviour): number {
   return clamp(behaviour.strength * readiness(state));
 }
 
-export type Interaction = 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'medicine' | 'scold' | 'clean';
+export type Interaction = 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'medicine' | 'scold' | 'clean' | 'settle' | 'rewardCalm';
 
 export interface InteractionResult {
   state: PetState;
@@ -451,6 +454,9 @@ export function interact(
   // so — the reader is told they interrupted something, rather than being
   // served a cheerful response from an animal that was not there.
   let base = decay(state,now);
+  // The old scold command remains a safe alias for imported/older callers.
+  // Quiet practice never wakes a sleeping dog or rewards an unmet need.
+  if(action==='settle'||action==='rewardCalm'||action==='scold')return calmInteraction(base,action==='scold'?'settle':action,now,name);
   let wakeNote = '';
   if ((base.sleep ?? createSleepState()).asleep && action !== 'clean') {
     const woken = wake(base, now, subject);
@@ -467,6 +473,7 @@ export function interact(
     updatedAt: now,
     lastCareAt: now,
     life: dailyLife(base),
+    calmSince:undefined,
   };
 
   let note = '';
@@ -477,8 +484,8 @@ export function interact(
       next.arousal = clamp(base.arousal - 6);
       note =
         base.trust > 70
-          ? `${name} leans into the hand without being asked. Contact without a request — trust is the only thing it moves.`
-          : 'Contact without a request. Trust is the only thing it moves.';
+          ? `${name} leans into the hand. Company builds trust and eases boredom.`
+          : 'Gentle company builds trust and eases boredom.';
       break;
     }
     case 'feed': {
@@ -497,8 +504,7 @@ export function interact(
         next.personality.foodDrive = clampTrait(base.personality.foodDrive - 0.08);
         next.arousal = clamp(base.arousal + 8);
         next.weightKg = (base.weightKg ?? 24.8) + 0.15;
-        next.discipline = clamp((base.discipline ?? 60) - 5);
-        note = 'Fed while full. Overfeeding adds empty weight, lowers reward drive, and spoils discipline.';
+        note = 'Already full. Use tiny training portions from the daily food allowance.';
       }
       break;
     }
@@ -561,19 +567,6 @@ export function interact(
       }
       break;
     }
-    case 'scold': {
-      const isTantrum = base.call?.reason === 'tantrum';
-      if (isTantrum) {
-        next.discipline = clamp((base.discipline ?? 60) + 25);
-        next.arousal = clamp(base.arousal - 15);
-        note = `You gave a firm "No!". ${name} halts the tantrum, heeds the boundary, and sits respectfully. Discipline +25%.`;
-      } else {
-        next.trust = clamp(base.trust - 20);
-        next.arousal = clamp(base.arousal + 15);
-        note = `You scolded ${name} without cause. ${p.subjCap} cowers with tail tucked between ${p.poss} legs. Unjust discipline costs trust: Trust -20.`;
-      }
-      break;
-    }
     case 'walk': {
       if (base.sick) {
         note = `${name} is sick and shivering. ${p.subjCap} cannot go on a walk — rest and medicine needed.`;
@@ -626,6 +619,7 @@ export function communicate(
   const next: PetState = {
     ...state,
     updatedAt: now,
+    calmSince:undefined,
     arousal: clamp(state.arousal + 5),
     lastCue: clean,
     lastCueAt: now,

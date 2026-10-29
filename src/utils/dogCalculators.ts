@@ -256,6 +256,8 @@ function migratePetState(raw: unknown): PetState | null {
     sick: Boolean(state.sick),
     sickSince: typeof state.sickSince === 'number' ? state.sickSince : undefined,
     discipline: Math.max(0, Math.min(100, Number(state.discipline ?? 60))),
+    calmSince: typeof state.calmSince==='number'&&Number.isFinite(state.calmSince)?state.calmSince:undefined,
+    lastCalmRewardAt: typeof state.lastCalmRewardAt==='number'&&Number.isFinite(state.lastCalmRewardAt)?state.lastCalmRewardAt:undefined,
     weightKg: typeof state.weightKg === 'number' ? state.weightKg : 24.8,
   };
 }

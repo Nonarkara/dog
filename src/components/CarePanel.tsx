@@ -92,8 +92,9 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
     if(mood==='tired')return `${dog.name} is out of energy. Rest before training.`;
     if(mood==='dirty')return poops?`${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`:`${dog.name} needs a groom.`;
     if(mood==='bored')return `${dog.name} is bored. Play, a sniff walk or a little company helps.`;
-    if (petState.trust < 35) return `${dog.name} does not trust you yet. Petting without a request is the only thing that moves it.`;
-    if (disciplineVal < 40) return `${dog.name} is undisciplined and prone to tantrums. Scold bad behaviour when it happens.`;
+    if (petState.calmSince!==undefined) return `${dog.name} is resting quietly. Watch the relaxed posture, then reward calm.`;
+    if (petState.trust < 35) return `${dog.name} needs gentle company. Care and patient practice build trust.`;
+    if (disciplineVal < 40) return `${dog.name} can practise calm. Offer quiet time, then reward relaxed posture.`;
     if (petState.arousal > 80) return `${dog.name} is wound up. A walk brings the arousal down.`;
     if (petState.arousal < 20) return `${dog.name} is flat. Play wakes him up.`;
     if (ready > 0.7) return `${dog.name} is ready to work. The coach will tell you what to mark.`;
@@ -163,7 +164,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           )}
           <p className="care-summary text-[11px] text-faint mt-1">
             <span className="data">Ready {Math.round(ready * 100)}%</span>
-            <span className="data">Disc {disciplineVal}%</span>
+            <span className="data" title="Virtual calm-practice score; not a real-dog assessment">Calm {disciplineVal}%</span>
             <span>{temperament(petState)}</span>
             {isSick ? <span>Sick</span> : poops > 0 ? <span>{poops} mess</span> : null}
           </p>

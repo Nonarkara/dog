@@ -20,6 +20,8 @@ export type AvatarInteractionTrigger =
   | 'clean'
   | 'medicine'
   | 'scold'
+  | 'settle'
+  | 'rewardCalm'
   | null;
 
 interface DogAvatar3DProps {
@@ -124,6 +126,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   useEffect(() => {
     if (!interactionTrigger) return;
     interactionState.current = { type: interactionTrigger, timer: 2.2 };
+    if(interactionTrigger==='settle'||interactionTrigger==='scold'||interactionTrigger==='rewardCalm'){
+      if(gameTimer.current)clearTimeout(gameTimer.current);
+      gameBusy.current=false;gameLeap.current={dir:null,progress:0};
+      setMiniGame(current=>({...current,active:false}));
+    }
 
     if (interactionTrigger === 'play') {
       if (gameTimer.current) clearTimeout(gameTimer.current);
@@ -148,8 +155,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     } else if (interactionTrigger === 'medicine') {
       sound.medicineChime();
       spawnHeart();
-    } else if (interactionTrigger === 'scold') {
-      sound.scoldBuzzer();
+    } else if (interactionTrigger === 'rewardCalm') {
+      sound.eatCrunch();
     } else if (interactionTrigger === 'walk') {
       sound.bark();
     } else if (interactionTrigger === 'communicate') {
@@ -959,7 +966,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
       if (!beingPetted && petting.strokeTime > 0 && !petting.melt) petting.strokeTime = Math.max(0, petting.strokeTime - dt * 0.5);
       const melting = petting.melt > 0 && !asleep;
-      const target = POSES[asleep ? 'sleep' : isSick ? 'down' : melting ? 'down' : poseRef.current];
+      const target = POSES[asleep ? 'sleep' : isSick||ps.calmSince!==undefined ? 'down' : melting ? 'down' : poseRef.current];
       const ease = 1 - Math.exp(-dt * 6);
       for (const k of Object.keys(cur) as (keyof typeof cur)[]) cur[k] += (target[k] - cur[k]) * ease;
 

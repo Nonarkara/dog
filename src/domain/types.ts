@@ -254,8 +254,12 @@ export interface PetState {
   /** Sickness from neglect, dirty stage, or extreme hunger. */
   sick: boolean;
   sickSince?: number;
-  /** Tamagotchi discipline: 0..100%. Raised by firm scolding on misbehaviour; spoiled by pampering bad calls. */
+  /** Virtual calm-practice score, 0..100. Legacy key retained for existing saves. */
   discipline: number;
+  /** Start of uninterrupted virtual calm practice; unrelated care cancels it. */
+  calmSince?:number;
+  /** Bounds repeat calm rewards, independent of the care/attention timer. */
+  lastCalmRewardAt?:number;
   /** Biological weight in kg. Influenced by overfeeding vs active play. */
   weightKg?: number;
 }

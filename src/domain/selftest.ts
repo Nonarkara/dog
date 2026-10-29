@@ -367,10 +367,30 @@ const tantrumDog: PetState = {
   needs: { hunger: 90, energy: 85, hygiene: 85 },
   call: { reason: 'tantrum', since: noon },
 };
-const scoldedTantrum = interact(tantrumDog, 'scold', noon);
-ok('scolding a tantrum raises discipline', (scoldedTantrum.state.discipline ?? 0) === 65);
-const unjustScold = interact(createPetState(noon), 'scold', noon);
-ok('scolding without cause incurs heavy trust penalty', unjustScold.state.trust === 40);
+const oldScold = interact(tantrumDog, 'scold', noon);
+ok('legacy scold callers safely start quiet time without reward or punishment',oldScold.state.trust===tantrumDog.trust&&oldScold.state.discipline===40&&oldScold.state.calmSince===noon);
+const quiet=interact(tantrumDog,'settle',noon).state;
+ok('quiet time offers rest without inventing training progress',quiet.calmSince===noon&&quiet.trust===tantrumDog.trust&&JSON.stringify(quiet.behaviours)===JSON.stringify(tantrumDog.behaviours));
+const earlyCalm=interact(quiet,'rewardCalm',noon+2000).state;
+ok('a reward before relaxed observation earns nothing',near(earlyCalm.trust,decay(quiet,noon+2000).trust)&&earlyCalm.discipline===40);
+const rewardedCalm=interact(quiet,'rewardCalm',noon+3000).state;
+ok('observing then rewarding calm increases virtual calm and trust',rewardedCalm.discipline===45&&near(rewardedCalm.trust,decay(quiet,noon+3000).trust+2));
+ok('calm reward clears the legacy activity call',rewardedCalm.call===undefined);
+ok('calm practice never writes real training reps',JSON.stringify(rewardedCalm.behaviours)===JSON.stringify(tantrumDog.behaviours)&&rewardedCalm.lastRealSessionAt===undefined);
+ok('one calm observation pays only once',interact(rewardedCalm,'rewardCalm',noon+3000).state.trust===rewardedCalm.trust);
+const repeatQuiet=interact(rewardedCalm,'settle',noon+4000).state;
+ok('restarting quiet time cannot bypass the calm reward cooldown',interact(repeatQuiet,'rewardCalm',noon+7000).state.discipline===45);
+ok('a later calm observation can earn another bounded reward',interact(repeatQuiet,'rewardCalm',noon+63000).state.discipline===50);
+const distractedCalm=interact(quiet,'play',noon+1000).state;
+ok('play cancels the calm observation',distractedCalm.calmSince===undefined&&interact(distractedCalm,'rewardCalm',noon+4000).state.discipline===40);
+ok('a cue cancels calm observation',communicate(quiet,'come',noon+1000).state.calmSince===undefined);
+const needsFirst=[{...quiet,sick:true},{...quiet,sleep:{...quiet.sleep,asleep:true,fellAsleepAt:noon}},{...quiet,needs:{...quiet.needs,hunger:10}},{...quiet,needs:{...quiet.needs,energy:10}},{...quiet,poopCount:1},{...quiet,life:{...dailyLife(quiet),bladder:90}}];
+ok('unmet needs never earn a calm reward',needsFirst.every(s=>interact(s,'rewardCalm',noon+3000).state.discipline===40));
+ok('quiet practice never wakes a sleeping dog',interact(needsFirst[1],'settle',noon+3000).state.sleep.asleep);
+ok('excitement is not mistaken for relaxed posture',interact({...quiet,arousal:90},'rewardCalm',noon+3000).state.discipline===40);
+ok('a full meal does not punish the virtual calm score',interact(tantrumDog,'feed',noon).state.discipline===40);
+ok('low calm score alone does not create a misbehaviour call',tickCall({...tantrumDog,call:undefined,discipline:0},noon).call===undefined);
+ok('excitement calls can be answered with a sniff walk',answerCall(tantrumDog,'walk',noon).answered&&!answerCall(tantrumDog,'scold',noon).answered);
 
 console.log('\nA DAY OF ITS OWN');
 const minute=60_000;

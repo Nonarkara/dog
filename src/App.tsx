@@ -134,6 +134,9 @@ export const App: React.FC = () => {
   /** What the practice field asked the dog's body to do. */
   const [gameControlsHost,setGameControlsHost]=useState<HTMLDivElement|null>(null);
   const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
+  useEffect(()=>{
+    if(avatarPose!=='stand')setPetState(prev=>prev.calmSince===undefined?prev:{...prev,calmSince:undefined});
+  },[avatarPose]);
   const [interactionTrigger, setInteractionTrigger] = useState<AvatarInteractionTrigger>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const actionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -316,11 +319,13 @@ export const App: React.FC = () => {
     }
     setIsInteracting(true);
     setPendingAction(action);
-    setInteractionTrigger(action);
 
     // The domain model: decay, trust, arousal, personality, and the
     // classical-conditioning pairing of the last spoken cue with this outcome.
     const result = interact(petState, action, Date.now(), subject);
+    // Elapsed body time can reveal a need after the button was rendered.
+    // A refused calm reward must not play the eating/success animation.
+    setInteractionTrigger(action==='rewardCalm'&&result.state.lastCalmRewardAt===petState.lastCalmRewardAt?null:action);
     const answer = answerCall(petState, action);
     const next = answer.answered
       ? { ...result.state, call: undefined, trust: Math.min(100, result.state.trust + answer.trustBonus) }

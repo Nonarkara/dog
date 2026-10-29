@@ -26,7 +26,7 @@ export interface Together {
 }
 
 export type CallReason = 'hungry' | 'dirty' | 'lonely' | 'sick' | 'tantrum' | 'toilet' | 'bored';
-export type Answer = 'feed' | 'groom' | 'pet' | 'play' | 'walk' | 'medicine' | 'scold' | 'clean';
+export type Answer = import('./pet').Interaction;
 
 export interface Call {
   reason: CallReason;
@@ -70,9 +70,9 @@ export function whyCalling(state: PetState, now: number = Date.now()): CallReaso
   if(dailyLife(state).bladder>=70)return 'toilet';
   if ((state.poopCount ?? 0)+dailyLife(state).peeCount > 0) return 'dirty';
   for (const c of NEED_CALLS) if (state.needs[c.need] < c.below) return c.reason;
-  // Tamagotchi classic: misbehaviour call (calls despite having all needs fulfilled).
+  // Legacy save key: an overstimulated dog needs an outlet, not punishment.
   if (
-    (state.discipline ?? 50) < 50 &&
+    state.arousal > 75 &&
     state.needs.hunger > 70 &&
     state.needs.energy > 60 &&
     now - state.lastCareAt < 25 * 60_000
@@ -91,7 +91,7 @@ export const ANSWERS: Record<CallReason, Answer[]> = {
   dirty: ['groom', 'clean'],
   lonely: ['pet', 'play', 'walk'],
   sick: ['medicine'],
-  tantrum: ['play', 'walk', 'scold'],
+  tantrum: ['walk'],
 };
 
 export const CALL_TEXT: Record<CallReason, string> = {
@@ -101,7 +101,7 @@ export const CALL_TEXT: Record<CallReason, string> = {
   dirty: 'is in a messy area and needs cleaning',
   lonely: 'is looking for you',
   sick: 'is shivering, whimpering and needs medicine',
-  tantrum: 'is asking for something to do; try play or a sniff walk',
+  tantrum: 'is excited; offer quiet time or a sniff walk',
 };
 
 /**

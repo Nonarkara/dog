@@ -135,7 +135,7 @@ function IllustratedStage(props: Props & {url:string}) {
   const stopFun=()=>{if(funTimer.current)clearTimeout(funTimer.current);fun.current=null;setTrick(null);};
   const clearCheer=()=>{if(cheerTimer.current)clearTimeout(cheerTimer.current);setCheer(null);};
   const showCheer=(text:string)=>{if(cheerTimer.current)clearTimeout(cheerTimer.current);setCheer({id:performance.now(),text});cheerTimer.current=setTimeout(()=>setCheer(null),2000);};
-  const canPlay=()=>{const p=latest.current;return readyRef.current&&!p.petState.sick&&!p.petState.sleep?.asleep&&(!p.pose||p.pose==='stand')&&!p.interactionTrigger&&p.petState.needs.energy>15;};
+  const canPlay=()=>{const p=latest.current;return readyRef.current&&!p.petState.sick&&!p.petState.sleep?.asleep&&p.petState.calmSince===undefined&&(!p.pose||p.pose==='stand')&&!p.interactionTrigger&&p.petState.needs.energy>15;};
   const runTrick=(kind:Trick,fromGame=false)=>{
     const p=latest.current;if(!readyRef.current||p.petState.sick||p.petState.sleep?.asleep||p.pose&&p.pose!=='stand')return;
     if(!fromGame&&(!canPlay()||gameRef.current||findingRef.current))return;
@@ -160,12 +160,14 @@ function IllustratedStage(props: Props & {url:string}) {
     const action=props.interactionTrigger;
     if(!action||!ready||failed)return;
     closeFinding();
+    if(action==='settle'||action==='scold'||action==='rewardCalm')closeGame();
     if(action!=='pet'||fun.current?.kind==='highfive')stopFun();
     if(action!=='pet')clearCheer();
     if(action==='pet'||action==='groom'||action==='communicate')sound.happyYip();
     if(action==='pet'){reaction.current.pets++;if(reaction.current.pets%3===0&&fun.current?.kind!=='wiggle')runTrick('wiggle',true);else if(!fun.current)showCheer(`${dog.name} loves that!`);}
     if(action==='groom')showCheer('Fresh and fluffy!');
     if(action==='feed')sound.eatCrunch();
+    if(action==='rewardCalm')sound.eatCrunch();
     if(action==='walk')sound.bark();
     if(action==='clean')sound.sweepClean();
     if(action==='medicine')sound.medicineChime();
@@ -290,7 +292,7 @@ function IllustratedStage(props: Props & {url:string}) {
       const action=p.interactionTrigger;
       const activeFun=fun.current&&now<fun.current.until&&!asleep&&!p.petState.sick&&(!p.pose||p.pose==='stand')?fun.current:null;
       const mood=dailyMood(p.petState),toilet=now<toiletUntil.current&&!asleep&&!p.petState.sick;
-      const free=!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
+      const free=p.petState.calmSince===undefined&&!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
       // Keep the household's earlier spontaneous greetings alongside daily life.
       if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(personality.idle);}
       const phase=(t*personality.pace)%44;
@@ -308,7 +310,7 @@ function IllustratedStage(props: Props & {url:string}) {
       uniforms.motion.value.lerp(target,1-Math.exp(-dt*10));
       uniforms.more.value.lerp(new THREE.Vector4(action==='groom'?1:0,action==='communicate'||action==='medicine'||sniffing?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
       uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),.15);
-      const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'?'feed':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'?'paw':kind==='bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
+      const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'||action==='rewardCalm'?'feed':p.petState.calmSince!==undefined?'down':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'?'paw':kind==='bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
       desiredPose=requested;
       const complete=reduced.matches||now-poseChangedAt>=transitionDuration;
       let step=desiredPose;
