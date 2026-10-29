@@ -24,11 +24,13 @@ import type { PetState } from '../domain/types';
  * avoid.
  */
 
+import type { AvatarInteractionTrigger } from './DogAvatar3D';
+
 interface RiggedAvatarProps {
   dog: DogProfile;
   petState: PetState;
   url: string;
-  interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null;
+  interactionTrigger: AvatarInteractionTrigger;
   onInteractionEnd?: () => void;
 }
 

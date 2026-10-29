@@ -119,6 +119,58 @@ PROBE = """
     }
   });
 
+  /* ---- 4. HORIZONTAL: content cut off to the right --------------------- */
+  /* The shared instrument asks whether the DOCUMENT scrolls sideways. This
+     app never lets the document scroll: the cockpit is a fixed frame with a
+     clipping root. So a wide element here is not scrollable — it is
+     INVISIBLE. The honest question for a frame is whether anything is cut
+     off to the right, and that is what this asks. */
+  const hClipped = [];
+  document.querySelectorAll('*').forEach((el) => {
+    if (el === de || el === document.body || el.id === 'root') return;
+    const cs = getComputedStyle(el);
+    const clips =
+      cs.overflowX === 'hidden' || cs.overflowX === 'clip' ||
+      cs.overflowX === 'auto' || cs.overflowX === 'scroll';
+    if (!clips) return;
+    if (cs.textOverflow === 'ellipsis') return;
+    if (el.clientWidth <= 40) return;
+    const over = el.scrollWidth - el.clientWidth;
+    if (over > 1) {
+      hClipped.push({
+        tag: el.tagName.toLowerCase(),
+        cls: String(el.getAttribute('class') || '').slice(0, 70),
+        over: Math.round(over),
+      });
+    }
+  });
+
+  /* ---- the first thing you can DO --------------------------------------- */
+  /* The shared instrument looks for the first control inside <main>. In this
+     app the chrome — the header's dog disclosure and the command bar with
+     pet, play, feed and communicate — is a SIBLING of <main>, so the
+     instrument finds no action at all and the rule can never bite. The
+     question the rule asks is real, so it is asked here of the whole
+     document: is the first thing you can do on the screen, or below it? */
+  const acts = Array.from(document.querySelectorAll('a, button, input, select, textarea'));
+  let firstAction = null;
+  for (const a of acts) {
+    const cs = getComputedStyle(a);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') continue;
+    const r = a.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    const control = /^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.getAttribute('role') === 'button';
+    if (!control) continue;
+    const y = r.top + (window.scrollY || 0);
+    if (firstAction === null || y < firstAction.y) {
+      firstAction = {
+        y: Math.round(y),
+        tag: a.tagName.toLowerCase(),
+        label: (a.getAttribute('aria-label') || a.innerText || '').trim().slice(0, 40),
+      };
+    }
+  }
+
   /* ---- 3. SCROLLING: a region with more than it was given ------------- */
   const scrollers = [];
   document.querySelectorAll('*').forEach((el) => {
@@ -163,10 +215,13 @@ PROBE = """
     clientH: de.clientHeight,
     scrolls: de.scrollHeight - de.clientHeight,
     scrollsX: de.scrollWidth - de.clientWidth,
+    innerH: window.innerHeight,
     text: (document.body.innerText || '').trim().length,
     headerH: hRect ? Math.round(hRect.height) : 0,
     commandH: cRect ? Math.round(cRect.height) : 0,
+    firstAction,
     clipped,
+    hClipped,
     overlaps,
     scrollers,
     regions,
@@ -318,6 +373,37 @@ def run(url, viewports, out_path):
                 failures.append(f"{width}x{height}: the page scrolls sideways by {facts['scrollsX']}px")
             if facts["scrolls"] > 1:
                 failures.append(f"{width}x{height}: the document scrolls down by {facts['scrolls']}px")
+
+            # The first thing you can do must be ON the screen. In a fixed
+            # frame it always is, unless a control has been pushed out of
+            # the viewport — which is the failure the shared instrument
+            # cannot see here, because the chrome lives outside <main>.
+            action = facts.get("firstAction")
+            if action is None:
+                line = f"{width}x{height}: the page has no control the reader can act on"
+                failures.append(line)
+                print("  NO ACTION " + line, flush=True)
+            elif action["y"] > facts["innerH"] - 8:
+                line = (
+                    f"{width}x{height}: the first thing you can do is at {action['y']}px, "
+                    f"below the {facts['innerH']}px screen — you must scroll before you can act"
+                )
+                failures.append(line)
+                print("  FIRST ACTION OFF SCREEN " + line, flush=True)
+            else:
+                print(
+                    f"  first action at {action['y']}px: {action['tag']} "
+                    f"\"{action['label']}\"",
+                    flush=True,
+                )
+
+            for cut in facts.get("hClipped", []):
+                line = (
+                    f"{width}x{height}: {cut['tag']}.{cut['cls']} cuts off "
+                    f"{cut['over']}px of its own content to the right"
+                )
+                failures.append(line)
+                print("  CUT OFF " + line, flush=True)
 
             print(
                 f"  chrome  header {facts['headerH']}px, command {facts['commandH']}px, "

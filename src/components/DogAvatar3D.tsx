@@ -9,14 +9,30 @@ import { sound } from '../utils/proceduralAudio';
 /** What the body is doing. Training (and sleep) set it; the avatar eases into it. */
 export type AvatarPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep';
 
+export type AvatarInteractionTrigger =
+  | 'pet'
+  | 'feed'
+  | 'play'
+  | 'groom'
+  | 'walk'
+  | 'communicate'
+  | 'clean'
+  | 'medicine'
+  | 'scold'
+  | null;
+
 interface DogAvatar3DProps {
   dog: DogProfile;
   petState: PetState;
-  interactionTrigger: 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null;
+  interactionTrigger: AvatarInteractionTrigger;
   onInteractionEnd?: () => void;
   pose?: AvatarPose;
   /** He was petted by hand (a tap or a stroke on his body). */
   onPet?: () => void;
+  /** Clean up poop clicked in 3D. */
+  onClean?: () => void;
+  /** Interactive play mini-game completed. */
+  onMiniGameComplete?: (won: boolean) => void;
 }
 
 /**
@@ -35,7 +51,8 @@ const POSES: Record<AvatarPose, { rootY: number; pitch: number; front: number; f
   sit: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: 0.45, back: -1.45, headY: 0.02, headPitch: 0.3 },
   paw: { rootY: -0.26, pitch: -0.45, front: 0.45, frontR: -0.75, back: -1.45, headY: 0.02, headPitch: 0.3 },
   down: { rootY: -0.27, pitch: 0, front: -1.5, frontR: -1.5, back: -1.45, headY: -0.04, headPitch: 0 },
-  sleep: { rootY: -0.27, pitch: 0, front: -1.5, frontR: -1.5, back: -1.45, headY: -0.3, headPitch: 0.42 },
+  // Resting his chin on his beloved bolster cushion
+  sleep: { rootY: -0.27, pitch: 0, front: -1.5, frontR: -1.5, back: -1.45, headY: -0.22, headPitch: 0.36 },
 };
 
 export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
@@ -45,59 +62,80 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   onInteractionEnd,
   pose = 'stand',
   onPet,
+  onClean,
+  onMiniGameComplete,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
-  /**
-   * WHEN THE BROWSER CANNOT DRAW.
-   *
-   * A stage that cannot render used to be a black rectangle: the reader saw
-   * nothing and could not tell whether the app was broken or the machine
-   * could not. So the failure is stated, in words, in the space the scene
-   * would have occupied.
-   */
   const [webglError, setWebglError] = useState<string | null>(null);
 
   // The scene is built once per dog, but the dog's mood changes every
   // minute. The render loop reads mood through refs, never through the
-  // closure it was born in — the old build froze Expo's mood at mount.
+  // closure it was born in.
   const petStateRef = useRef(petState);
   petStateRef.current = petState;
   const poseRef = useRef(pose);
   poseRef.current = pose;
   const onPetRef = useRef(onPet);
   onPetRef.current = onPet;
+  const onCleanRef = useRef(onClean);
+  onCleanRef.current = onClean;
+  const onMiniGameCompleteRef = useRef(onMiniGameComplete);
+  onMiniGameCompleteRef.current = onMiniGameComplete;
 
   const dogParts = useRef<{
     root: THREE.Group;
     head: THREE.Group;
+    jaw: THREE.Group;
     heartsGroup: THREE.Group;
-    foodItem: THREE.Group | null;
+    sparksGroup: THREE.Group;
+    bowlGroup: THREE.Group;
+    bolsterGroup: THREE.Group;
+    poopGroup: THREE.Group;
     ballItem: THREE.Mesh | null;
   } | null>(null);
 
   const interactionState = useRef<{
-    type: 'idle' | 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate';
+    type: AvatarInteractionTrigger;
     timer: number;
   }>({ type: 'idle', timer: 0 });
 
+  // Tamagotchi Agility Catch Mini-Game state
+  const [miniGame, setMiniGame] = useState<{
+    active: boolean;
+    round: number; // 1..5
+    score: number;
+    lastResult: 'hit' | 'miss' | null;
+    leaping: 'left' | 'right' | null;
+  }>({ active: false, round: 1, score: 0, lastResult: null, leaping: null });
+
+  const gameLeap = useRef<{ dir: 'left' | 'right' | null; progress: number }>({ dir: null, progress: 0 });
+
   useEffect(() => {
     if (!interactionTrigger) return;
-    interactionState.current = { type: interactionTrigger, timer: 2 };
+    interactionState.current = { type: interactionTrigger, timer: 2.2 };
 
     if (interactionTrigger === 'pet') {
       sound.happyYip();
       spawnHeart();
     } else if (interactionTrigger === 'feed') {
       sound.eatCrunch();
-      spawnFood();
     } else if (interactionTrigger === 'play') {
       sound.ballBounce();
       sound.bark();
-      spawnBall();
+      setMiniGame({ active: true, round: 1, score: 0, lastResult: null, leaping: null });
     } else if (interactionTrigger === 'groom') {
       sound.happyYip();
+      spawnSparkAtCenter();
+    } else if (interactionTrigger === 'clean') {
+      sound.sweepClean();
+      spawnSparkAtCenter();
+    } else if (interactionTrigger === 'medicine') {
+      sound.medicineChime();
+      spawnHeart();
+    } else if (interactionTrigger === 'scold') {
+      sound.scoldBuzzer();
     } else if (interactionTrigger === 'walk') {
       sound.bark();
     } else if (interactionTrigger === 'communicate') {
@@ -106,50 +144,123 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     const t = setTimeout(() => {
       onInteractionEnd?.();
-    }, 2000);
+    }, 2200);
     return () => clearTimeout(t);
   }, [interactionTrigger]);
 
-  const spawnHeart = () => {
+  const spawnHeart = (count = 1) => {
     if (!dogParts.current) return;
     const { heartsGroup } = dogParts.current;
-    const heart = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07, 8, 8),
-      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
-    );
-    heart.position.set((Math.random() - 0.5) * 0.6, 1.55, 0.3 + (Math.random() - 0.5) * 0.4);
-    heart.userData = { vy: 0.5 + Math.random() * 0.4, life: 1 };
-    heartsGroup.add(heart);
-  };
-
-  const spawnFood = () => {
-    if (!dogParts.current) return;
-    const group = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0xf3eee4, roughness: 0.5 });
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 10), mat);
-    shaft.rotation.z = Math.PI / 2;
-    group.add(shaft);
-    const tipGeo = new THREE.SphereGeometry(0.05, 10, 8);
-    for (const [x, y] of [[-0.15, 0.04], [-0.15, -0.04], [0.15, 0.04], [0.15, -0.04]]) {
-      const tip = new THREE.Mesh(tipGeo, mat);
-      tip.position.set(x, y, 0);
-      group.add(tip);
+    for (let i = 0; i < count; i++) {
+      const heart = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+      );
+      heart.position.set((Math.random() - 0.5) * 0.6, 1.55, 0.3 + (Math.random() - 0.5) * 0.4);
+      heart.userData = { vy: 0.5 + Math.random() * 0.4, life: 1 };
+      heartsGroup.add(heart);
     }
-    group.position.set(0, 1.7, 0.95);
-    dogParts.current.root.add(group);
-    dogParts.current.foodItem = group;
   };
 
-  const spawnBall = () => {
+  const spawnSparkAtCenter = () => {
+    if (!dogParts.current) return;
+    const { sparksGroup } = dogParts.current;
+    for (let i = 0; i < 8; i++) {
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.03, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 1 })
+      );
+      spark.position.set((Math.random() - 0.5) * 0.4, 0.7 + Math.random() * 0.5, 0.1);
+      spark.userData = {
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: 0.2 + Math.random() * 0.6,
+        vz: (Math.random() - 0.5) * 0.8,
+        life: 0.8,
+      };
+      sparksGroup.add(spark);
+    }
+  };
+
+  const spawnTouchSpark = (pos: THREE.Vector3) => {
+    if (!dogParts.current) return;
+    const { sparksGroup } = dogParts.current;
+    for (let i = 0; i < 5; i++) {
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 1 })
+      );
+      spark.position.copy(pos);
+      spark.userData = {
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: 0.3 + Math.random() * 0.5,
+        vz: (Math.random() - 0.5) * 0.6,
+        life: 0.7,
+      };
+      sparksGroup.add(spark);
+    }
+  };
+
+  const spawnBall = (targetX: number) => {
     if (!dogParts.current) return;
     const ball = new THREE.Mesh(
       new THREE.SphereGeometry(0.12, 16, 16),
       new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.8 })
     );
-    ball.position.set(1.0, 1.4, 1.0);
-    ball.userData = { vx: -0.9, vy: 0 };
+    ball.position.set(0, 1.4, 1.4);
+    ball.userData = { vx: targetX * 0.8, vy: 0.5, vz: -1.2 };
     dogParts.current.root.add(ball);
     dogParts.current.ballItem = ball;
+  };
+
+  // Mini-Game Player Choice (Left or Right)
+  const handleMiniGameChoice = (choice: 'left' | 'right') => {
+    if (miniGame.leaping !== null) return;
+    // High trust gives dog slightly more intuitive cooperation
+    const trust = petStateRef.current.trust / 100;
+    const matchChance = 0.5 + trust * 0.25;
+    const dogChoice: 'left' | 'right' = Math.random() < matchChance ? choice : choice === 'left' ? 'right' : 'left';
+
+    const isHit = choice === dogChoice;
+    gameLeap.current = { dir: dogChoice, progress: 0 };
+    spawnBall(dogChoice === 'left' ? -0.7 : 0.7);
+
+    if (isHit) {
+      sound.bark();
+      sound.chimeSuccess();
+      spawnHeart(2);
+    } else {
+      sound.ballBounce();
+    }
+
+    setMiniGame((prev) => ({
+      ...prev,
+      leaping: dogChoice,
+      score: prev.score + (isHit ? 1 : 0),
+      lastResult: isHit ? 'hit' : 'miss',
+    }));
+
+    setTimeout(() => {
+      setMiniGame((prev) => {
+        if (prev.round >= 5) {
+          const won = prev.score >= 3;
+          if (won) sound.chimeSuccess();
+          onMiniGameCompleteRef.current?.(won);
+          return { ...prev, active: false, leaping: null };
+        }
+        return {
+          ...prev,
+          round: prev.round + 1,
+          leaping: null,
+          lastResult: null,
+        };
+      });
+      gameLeap.current = { dir: null, progress: 0 };
+    }, 1300);
+  };
+
+  const closeMiniGame = () => {
+    setMiniGame({ active: false, round: 1, score: 0, lastResult: null, leaping: null });
+    gameLeap.current = { dir: null, progress: 0 };
   };
 
   useEffect(() => {
@@ -163,9 +274,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     scene.background = new THREE.Color(0x0c0c0e);
 
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
-    // THE FRAMING IS A FUNCTION OF THE BOX, NOT A CONSTANT: the distance is
-    // solved so the whole dog — paw to ear tip, nose to plume — fits in both
-    // axes of whatever region the cockpit gives the stage.
     const DOG_HEIGHT = 1.92;
     const DOG_WIDTH = 1.95;
     const fitCamera = (w: number, h: number) => {
@@ -201,9 +309,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     container.appendChild(renderer.domElement);
     renderer.domElement.style.touchAction = 'none';
 
-    // Light. A white dog under a hot key light is a white blob, so the key
-    // is moderate and a sky/ground hemisphere does the soft plush modelling.
-    // The amber accent belongs to the interface, never to the fur.
     scene.add(new THREE.HemisphereLight(0xf2f4fa, 0x2a2622, 1.25));
     const key = new THREE.DirectionalLight(0xfff3e4, 1.7);
     key.position.set(3, 6, 5);
@@ -214,6 +319,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const rim = new THREE.DirectionalLight(0xa9bbd8, 0.9);
     rim.position.set(-4, 3, -4);
     scene.add(rim);
+
+    // Warm stage spotlight on center podium
+    const spot = new THREE.SpotLight(0xffeedd, 1.2, 8, Math.PI / 4, 0.5);
+    spot.position.set(0, 4.5, 2.5);
+    spot.target.position.set(0, 0.5, 0);
+    scene.add(spot);
+    scene.add(spot.target);
 
     const podium = new THREE.Mesh(
       new THREE.CylinderGeometry(1.9, 2.0, 0.1, 48),
@@ -231,30 +343,119 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     scene.add(ring);
 
     // ==========================================
+    // EXPO'S BOLSTER BED (Bolster Connoisseur Quirk)
+    // ==========================================
+    const bolsterGroup = new THREE.Group();
+    const bolsterRingGeo = new THREE.TorusGeometry(0.72, 0.16, 20, 36);
+    bolsterRingGeo.rotateX(Math.PI / 2);
+    const bolsterMat = new THREE.MeshStandardMaterial({ color: 0x24332f, roughness: 0.92 });
+    const bolsterRing = new THREE.Mesh(bolsterRingGeo, bolsterMat);
+    bolsterRing.position.set(0, 0.08, -0.05);
+    bolsterRing.castShadow = true;
+    bolsterRing.receiveShadow = true;
+    bolsterGroup.add(bolsterRing);
+
+    const padGeo = new THREE.CylinderGeometry(0.68, 0.68, 0.09, 32);
+    const padMat = new THREE.MeshStandardMaterial({ color: 0xebe6dc, roughness: 0.95 });
+    const pad = new THREE.Mesh(padGeo, padMat);
+    pad.position.set(0, 0.045, -0.05);
+    pad.receiveShadow = true;
+    bolsterGroup.add(pad);
+    bolsterGroup.scale.set(0.001, 0.001, 0.001);
+    scene.add(bolsterGroup);
+
+    // ==========================================
+    // 3D FOOD BOWL & REAL FEASTING
+    // ==========================================
+    const bowlGroup = new THREE.Group();
+    const bowlGeo = new THREE.CylinderGeometry(0.24, 0.18, 0.11, 24, 1, false);
+    const bowlMat = new THREE.MeshStandardMaterial({ color: 0xd0d4dc, metalness: 0.7, roughness: 0.25 });
+    const bowlMesh = new THREE.Mesh(bowlGeo, bowlMat);
+    bowlMesh.castShadow = true;
+    bowlMesh.receiveShadow = true;
+    bowlGroup.add(bowlMesh);
+
+    const kibbleMat = new THREE.MeshStandardMaterial({ color: 0x5a341a, roughness: 0.9 });
+    const kibbleGeo = new THREE.DodecahedronGeometry(0.032);
+    const kibbleMeshes: THREE.Mesh[] = [];
+    for (let i = 0; i < 12; i++) {
+      const km = new THREE.Mesh(kibbleGeo, kibbleMat);
+      const ang = (i / 12) * Math.PI * 2 + Math.random() * 0.2;
+      const dist = 0.04 + Math.random() * 0.1;
+      km.position.set(Math.cos(ang) * dist, 0.035 + (i % 3) * 0.015, Math.sin(ang) * dist);
+      km.rotation.set(Math.random(), Math.random(), Math.random());
+      bowlGroup.add(km);
+      kibbleMeshes.push(km);
+    }
+    bowlGroup.position.set(0, 0.055, 0.65);
+    bowlGroup.scale.set(0.001, 0.001, 0.001);
+    scene.add(bowlGroup);
+
+    // ==========================================
+    // 3D WASTE / POOP ON THE STAGE
+    // ==========================================
+    const poopGroup = new THREE.Group();
+    scene.add(poopGroup);
+
+    const POOP_SPOTS = [
+      new THREE.Vector3(0.72, 0.05, -0.22),
+      new THREE.Vector3(-0.75, 0.05, 0.18),
+      new THREE.Vector3(0.55, 0.05, 0.68),
+      new THREE.Vector3(-0.52, 0.05, -0.62),
+    ];
+    const poopMat = new THREE.MeshStandardMaterial({ color: 0x4a2a12, roughness: 0.35 });
+    const flyMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const flyGeo = new THREE.SphereGeometry(0.018, 6, 6);
+
+    const poopMeshes: THREE.Group[] = [];
+    for (let i = 0; i < 4; i++) {
+      const pGrp = new THREE.Group();
+      pGrp.position.copy(POOP_SPOTS[i]);
+      const baseTorus = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.045, 8, 16), poopMat);
+      baseTorus.rotation.x = Math.PI / 2;
+      pGrp.add(baseTorus);
+      const midTorus = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.035, 8, 16), poopMat);
+      midTorus.rotation.x = Math.PI / 2;
+      midTorus.position.y = 0.04;
+      pGrp.add(midTorus);
+      const tipSphere = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), poopMat);
+      tipSphere.position.y = 0.075;
+      pGrp.add(tipSphere);
+
+      const fly = new THREE.Mesh(flyGeo, flyMat);
+      fly.position.set(0.06, 0.12, 0);
+      pGrp.add(fly);
+
+      pGrp.userData = { isPoop: true, index: i, fly };
+      pGrp.scale.set(0.001, 0.001, 0.001);
+      poopGroup.add(pGrp);
+      poopMeshes.push(pGrp);
+    }
+
+    // ==========================================
+    // SICKNESS INDICATOR AURA
+    // ==========================================
+    const sickAura = new THREE.Group();
+    const sickMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.75 });
+    // Thermometer / cross icon
+    const crossBarH = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.06, 0.02), sickMat);
+    const crossBarV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.02), sickMat);
+    sickAura.add(crossBarH);
+    sickAura.add(crossBarV);
+    sickAura.position.set(0, 1.85, 0.35);
+    sickAura.scale.set(0.001, 0.001, 0.001);
+    scene.add(sickAura);
+
+    // ==========================================
     // THE PLUSH BANGKAEW
     // ==========================================
-    //
-    // Three earlier builds placed dozens of primitives side by side, and the
-    // eye read every primitive: the ruff became a stack of cone cups. This
-    // one is a handful of big, overlapping, soft volumes — skull, cheeks,
-    // muzzle, a lion's mane, a bean of a body, stubby legs, a curled plume —
-    // painted by one coat rule and covered in shell fur, so the seams vanish
-    // under the fluff the way they do on a plush toy.
-    //
-    // Bangkaew signatures carried on purpose: a broad wedge head with cheek
-    // ruff, small thick prick ears set high, a mane round neck and chest,
-    // feathered "pants", and a plume carried over the back.
     const { pattern, colors } = coatOf(dog.avatarConfig);
     const fluff = 0.45 + 0.75 * (dog.avatarConfig.furFluff ?? 0.6);
 
-    // Shell fur: the same surface drawn again, pushed out along its normals,
-    // each layer keeping fewer strands. Fewer layers on phones.
     const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     const SHELLS = coarse ? 7 : 11;
 
     const strandTex = (() => {
-      // Random per texel, but sampled smoothly: soft clumps of fur, not the
-      // single-pixel static a nearest-filtered noise gives.
       const size = 128;
       const data = new Uint8Array(size * size * 4);
       for (let i = 0; i < size * size; i++) {
@@ -283,7 +484,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         alphaMap: strandTex,
         alphaTest: 0.08 + 0.86 * k,
       });
-      // Inner layers sit in the shade of the outer ones.
       m.color.setScalar(0.7 + 0.3 * k);
       m.onBeforeCompile = (shader) => {
         shader.vertexShader = shader.vertexShader
@@ -299,11 +499,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       return m;
     });
 
-    /**
-     * A soft volume: a sphere-like geometry scaled (the scale is baked into
-     * the vertices, so normals and fur length stay true), painted by the
-     * coat rule in its own coordinates, then moved into place.
-     */
     const paint = (
       geo: THREE.BufferGeometry,
       part: CoatPart,
@@ -317,7 +512,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       for (let i = 0; i < pos.count; i++) {
         const [cx, cy, cz] = coords(pos.getX(i), pos.getY(i), pos.getZ(i));
         const [r, g, b] = coatColorAt(part, cx, cy, cz, pattern, colors);
-        // The coat rule speaks sRGB; the renderer works in linear light.
         tmp.setRGB(r, g, b, THREE.SRGBColorSpace);
         col[i * 3] = tmp.r;
         col[i * 3 + 1] = tmp.g;
@@ -332,7 +526,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const blob = (sx: number, sy: number, sz: number, w = 40, h = 28) =>
       new THREE.SphereGeometry(1, w, h).scale(sx, sy, sz);
 
-    /** One furry mesh: a skin plus its shells, all sharing one geometry. */
     const skins: THREE.Mesh[] = [];
     const furry = (geo: THREE.BufferGeometry, shells = true, region = 'body') => {
       const group = new THREE.Group();
@@ -350,7 +543,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const dogRoot = new THREE.Group();
     scene.add(dogRoot);
 
-    // The chassis pivots at the hips; everything but the hind legs rides on it.
     const HIP = new THREE.Vector3(0, 0.45, -0.38);
     const chassis = new THREE.Group();
     chassis.position.copy(HIP);
@@ -361,17 +553,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       return obj;
     };
 
-    // 1. Body and mane, one mesh. The mane is longer fur, longest low in front.
+    // 1. Body & lion mane
     const torsoGeo = paint(blob(0.4, 0.36, 0.6), 'torso', 0.065).translate(0, 0.6, -0.05);
-    // The Bangkaew mane is a lion's ruff: wider than the face, longest in the
-    // bib that hangs down the chest and at the sides where it flares.
     const maneGeo = paint(
       blob(0.46, 0.4, 0.3),
       'mane',
       (x, y, z) => 0.09 + Math.max(0, z) * 0.06 + Math.max(0, -y) * 0.12 + Math.max(0, Math.abs(x) - 0.3) * 0.25
     ).translate(0, 0.82, 0.26);
-    // The neck ruff joins the head to the mane: dark on top where the saddle
-    // runs up to the skull, white underneath where the bib begins.
     const neckGeo = paint(blob(0.3, 0.3, 0.3), 'mane', (_x, y) => 0.1 + Math.max(0, -y) * 0.15, (x, y, z) => [x, y + 0.08, z - 0.08])
       .translate(0, 1.02, 0.44);
     const body = furry(mergeGeometries([torsoGeo, maneGeo, neckGeo])!);
@@ -379,18 +567,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     breathing.add(body);
     onChassis(breathing, 0, 0, 0);
 
-    // 2. The head: skull, cheek ruff and muzzle as one furry mesh, eyes,
-    // nose and mouth as smooth pieces on top.
+    // 2. The Head & Articulated Jaw
     const head = new THREE.Group();
-    // The head sits ON the ruff and juts forward of it, the way his does —
-    // not sunk into it like a pom-pom.
     onChassis(head, 0, 1.3, 0.66);
     const HEAD_REST = head.position.clone();
     const skullGeo = paint(blob(0.3, 0.28, 0.27), 'head', 0.028);
-    // Cheek ruff that fans out sideways — the "lion face" of the breed.
     const cheekL = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, x) * 0.2).translate(0.16, -0.08, -0.02);
     const cheekR = paint(blob(0.13, 0.13, 0.12, 24, 16), 'cheek', (x) => 0.045 + Math.max(0, -x) * 0.2).translate(-0.16, -0.08, -0.02);
-    // A spitz muzzle is a wedge, not a ball: a base and a narrower tip.
     const muzzleGeo = paint(blob(0.12, 0.095, 0.18, 28, 20), 'muzzle', 0.012).translate(0, -0.1, 0.25);
     const muzzleTip = paint(blob(0.085, 0.07, 0.08, 20, 14), 'muzzle', 0.008).translate(0, -0.1, 0.38);
     head.add(furry(mergeGeometries([skullGeo, cheekL, cheekR, muzzleGeo, muzzleTip])!, true, 'head'));
@@ -399,17 +582,21 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const nose = new THREE.Mesh(blob(0.062, 0.046, 0.046, 20, 14), glossy(0x121010, 0.22));
     nose.position.set(0, -0.06, 0.455);
     head.add(nose);
-    const mouth = new THREE.Mesh(blob(0.08, 0.03, 0.07, 16, 10), glossy(0x3a1616, 0.6));
-    mouth.position.set(0, -0.18, 0.33);
-    head.add(mouth);
-    const tongue = new THREE.Mesh(blob(0.045, 0.014, 0.08, 16, 10), glossy(0xe0707c, 0.45));
-    tongue.position.set(0, -0.205, 0.38);
-    tongue.rotation.x = 0.55;
-    head.add(tongue);
 
-    // The eyes are where the cute lives — but they are HIS eyes: almond,
-    // amber-brown, set at a slant with the outer corner raised, not the round
-    // cartoon eyes of every plush toy. Two catch-lights keep them wet.
+    // Articulated Jaw
+    const jaw = new THREE.Group();
+    jaw.position.set(0, -0.13, 0.22);
+    head.add(jaw);
+
+    const mouth = new THREE.Mesh(blob(0.08, 0.03, 0.07, 16, 10), glossy(0x3a1616, 0.6));
+    mouth.position.set(0, -0.05, 0.11);
+    jaw.add(mouth);
+    const tongue = new THREE.Mesh(blob(0.045, 0.014, 0.08, 16, 10), glossy(0xe0707c, 0.45));
+    tongue.position.set(0, -0.075, 0.16);
+    tongue.rotation.x = 0.55;
+    jaw.add(tongue);
+
+    // Almond eyes with glints
     const eyes: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const eye = new THREE.Group();
@@ -433,14 +620,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       eyes.push(eye);
     }
 
-    // Ears: small, thick, set high, pricked. Pivot at the base so they can
-    // turn and flatten.
+    // Pricked ears
     const ears: THREE.Group[] = [];
     for (const side of [1, -1]) {
       const ear = new THREE.Group();
       ear.position.set(0.17 * side, 0.19, -0.04);
-      // Bigger and furrier than a toy's: thick, dark, with a pale tuft
-      // of fur inside, not bare pink skin.
       const outer = paint(new THREE.ConeGeometry(0.135, 0.27, 24, 6).scale(1, 1, 0.55), 'ear', 0.03).translate(0, 0.135, 0);
       ear.add(furry(outer, true, 'head'));
       const tuft = paint(new THREE.ConeGeometry(0.08, 0.17, 16, 4).scale(1, 1, 0.35), 'muzzle', 0.035).translate(0, 0.1, 0.045);
@@ -449,13 +633,11 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       ears.push(ear);
     }
 
-    // 3. Legs: stubby capsules with round paws; the hind legs carry the
-    // feathered thighs. Pivot at the shoulder / hip.
+    // 3. Legs
     const LEG_TOP = 0.45;
     const makeLeg = (x: number, z: number, hind: boolean) => {
       const side = Math.sign(x);
       const parts = [
-        // Feathering: the fur on the back of the leg is long, the front short.
         paint(new THREE.CapsuleGeometry(0.095, 0.3, 8, 20), 'leg', (_lx, _ly, lz) => 0.055 + Math.max(0, -lz) * 0.5, (lx, ly, lz) => [lx, ly - 0.2, lz]).translate(0, -0.2, 0),
         paint(blob(0.105, 0.065, 0.135, 24, 14), 'leg', 0.02, (lx, ly, lz) => [lx, ly - 0.4, lz]).translate(0, -0.385, 0.035),
       ];
@@ -481,8 +663,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const backL = makeLeg(0.19, -0.4, true);
     const backR = makeLeg(-0.19, -0.4, true);
 
-    // 4. The plume: overlapping balls along a curl over the back, merged and
-    // furred so it reads as one feathered tail.
+    // 4. Feathered plume tail
     const tail = new THREE.Group();
     onChassis(tail, 0, 0.8, -0.6);
     const curve = new THREE.CatmullRomCurve3([
@@ -506,45 +687,69 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
     const heartsGroup = new THREE.Group();
     scene.add(heartsGroup);
+    const sparksGroup = new THREE.Group();
+    scene.add(sparksGroup);
 
-    dogParts.current = { root: dogRoot, head, heartsGroup, foodItem: null, ballItem: null };
+    dogParts.current = {
+      root: dogRoot,
+      head,
+      jaw,
+      heartsGroup,
+      sparksGroup,
+      bowlGroup,
+      bolsterGroup,
+      poopGroup,
+      ballItem: null,
+    };
 
     // ==========================================
-    // ORBIT, AND PETTING BY HAND
+    // ORBIT, AND PETTING BY HAND & POOP CLICKING
     // ==========================================
-    //
-    // Press on HIM and you are petting him: stroke and he reacts to where
-    // your hand is. Press on the space around him and you turn the stage.
-    // The same gesture never means both.
-    type Spot = 'head' | 'chin' | 'chest' | 'back' | 'other';
+    type Spot = 'head' | 'chin' | 'chest' | 'back' | 'other' | 'poop';
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
     const hitLocal = new THREE.Vector3();
-    const spotAt = (clientX: number, clientY: number): Spot | null => {
+    const hitWorld = new THREE.Vector3();
+
+    const spotAt = (clientX: number, clientY: number): { spot: Spot | null; point: THREE.Vector3 } => {
       const r = domElem.getBoundingClientRect();
       ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
+
+      // Check poops first
+      const currentPoops = petStateRef.current.poopCount ?? 0;
+      if (currentPoops > 0) {
+        const visiblePoopObjects: THREE.Object3D[] = [];
+        poopMeshes.slice(0, currentPoops).forEach((grp) => grp.traverse((obj) => obj instanceof THREE.Mesh && visiblePoopObjects.push(obj)));
+        const poopHit = raycaster.intersectObjects(visiblePoopObjects, true)[0];
+        if (poopHit) {
+          return { spot: 'poop', point: poopHit.point };
+        }
+      }
+
       const hit = raycaster.intersectObjects(skins, false)[0];
-      if (!hit) return null;
+      if (!hit) return { spot: null, point: hitWorld };
+      hitWorld.copy(hit.point);
       const region = hit.object.userData.region as string;
       if (region === 'head') {
         head.worldToLocal(hitLocal.copy(hit.point));
-        return hitLocal.y < -0.08 && hitLocal.z > 0.05 ? 'chin' : 'head';
+        return { spot: hitLocal.y < -0.08 && hitLocal.z > 0.05 ? 'chin' : 'head', point: hitWorld };
       }
       if (region === 'body') {
         chassis.worldToLocal(hitLocal.copy(hit.point));
-        return hitLocal.z + HIP.z > 0.15 ? 'chest' : 'back';
+        return { spot: hitLocal.z + HIP.z > 0.15 ? 'chest' : 'back', point: hitWorld };
       }
-      return 'other';
+      return { spot: 'other', point: hitWorld };
     };
 
     const petting = { spot: null as Spot | null, until: 0, strokeTime: 0, lastReport: 0, melt: 0 };
-    const reportPet = () => {
+    const reportPet = (point?: THREE.Vector3) => {
       const now = performance.now();
       if (now - petting.lastReport < 2500) return;
       petting.lastReport = now;
       sound.happyYip();
       spawnHeart();
+      if (point) spawnTouchSpark(point);
       onPetRef.current?.();
     };
 
@@ -560,37 +765,52 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const onDown = (e: PointerEvent) => {
       downX = lastX = e.clientX;
       downY = lastY = e.clientY;
-      const spot = spotAt(e.clientX, e.clientY);
+      const { spot, point } = spotAt(e.clientX, e.clientY);
+      if (spot === 'poop') {
+        sound.sweepClean();
+        spawnTouchSpark(point);
+        onCleanRef.current?.();
+        mode = 'none';
+        return;
+      }
       mode = spot ? 'stroke' : 'orbit';
       if (spot) {
         petting.spot = spot;
         petting.until = performance.now() + 900;
+        spawnTouchSpark(point);
       }
     };
+
     const onMove = (e: PointerEvent) => {
       if (mode === 'orbit') {
         targetYaw += (e.clientX - lastX) * 0.008;
         targetTilt = Math.max(-0.15, Math.min(0.3, targetTilt + (e.clientY - lastY) * 0.004));
       } else if (mode === 'stroke') {
-        const spot = spotAt(e.clientX, e.clientY);
-        if (spot) {
+        const { spot, point } = spotAt(e.clientX, e.clientY);
+        if (spot && spot !== 'poop') {
           const moved = Math.hypot(e.clientX - lastX, e.clientY - lastY);
           petting.spot = spot;
           petting.until = performance.now() + 900;
-          petting.strokeTime += Math.min(moved, 40) / 200; // ~200px of stroking = 1 s
-          if (petting.strokeTime > 1) reportPet();
+          petting.strokeTime += Math.min(moved, 40) / 200;
+          if (moved > 8) spawnTouchSpark(point);
+          if (petting.strokeTime > 1) reportPet(point);
         }
       }
       lastX = e.clientX;
       lastY = e.clientY;
     };
+
     const onUp = (e: PointerEvent) => {
       if (mode === 'stroke' && Math.hypot(e.clientX - downX, e.clientY - downY) < 6) {
-        interactionState.current = { type: 'pet', timer: 1 };
-        reportPet();
+        const { spot, point } = spotAt(e.clientX, e.clientY);
+        if (spot && spot !== 'poop') {
+          interactionState.current = { type: 'pet', timer: 1 };
+          reportPet(point);
+        }
       }
       mode = 'none';
     };
+
     domElem.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -618,12 +838,55 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const alert = Math.min(1, arousal * 0.6 + trust * 0.4);
       const tired = 1 - energy;
       const asleep = ps.sleep?.asleep ?? false;
+      const isSick = ps.sick ?? false;
       const act = interactionState.current;
       if (act.timer > 0) act.timer -= dt;
       const acting = act.timer > 0 ? act.type : 'idle';
 
-      // Ease toward the pose. Sleep wins over anything training asked for.
-      // Stroked long enough, he melts: sinks into a down, eyes shut, head tipped.
+      // Sickness Aura
+      const targetSickAura = isSick && !asleep ? 1 : 0.001;
+      sickAura.scale.lerp(new THREE.Vector3(targetSickAura, targetSickAura, targetSickAura), 0.15);
+      sickAura.visible = sickAura.scale.x > 0.05;
+      if (sickAura.visible) {
+        sickAura.rotation.y = t * 1.5;
+        sickAura.position.y = 1.85 + Math.sin(t * 3) * 0.04;
+      }
+
+      // Bolster Bed Cushion under chin when asleep
+      const targetBolsterScale = asleep ? 1 : 0.001;
+      bolsterGroup.scale.lerp(new THREE.Vector3(targetBolsterScale, targetBolsterScale, targetBolsterScale), 0.12);
+      bolsterGroup.visible = bolsterGroup.scale.x > 0.05;
+
+      // 3D Food Bowl Feasting
+      const isFeeding = acting === 'feed';
+      const targetBowlScale = isFeeding ? 1 : 0.001;
+      bowlGroup.scale.lerp(new THREE.Vector3(targetBowlScale, targetBowlScale, targetBowlScale), 0.15);
+      bowlGroup.visible = bowlGroup.scale.x > 0.05;
+      if (isFeeding) {
+        kibbleMeshes.forEach((km, idx) => {
+          if (act.timer < 1.9 - idx * 0.12) {
+            km.scale.multiplyScalar(0.88);
+          }
+        });
+      } else {
+        kibbleMeshes.forEach((km) => km.scale.set(1, 1, 1));
+      }
+
+      // 3D Poop Waste
+      const currentPoops = ps.poopCount ?? 0;
+      poopMeshes.forEach((pGrp, idx) => {
+        const shouldShow = idx < currentPoops;
+        const targetScale = shouldShow ? 1 : 0.001;
+        pGrp.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
+        pGrp.visible = pGrp.scale.x > 0.05;
+        if (pGrp.visible) {
+          const fly = pGrp.userData.fly as THREE.Mesh;
+          const flyAngle = t * (4 + idx) + idx * 2;
+          fly.position.set(Math.cos(flyAngle) * 0.08, 0.12 + Math.sin(t * 12) * 0.02, Math.sin(flyAngle) * 0.08);
+        }
+      });
+
+      // Ease toward the target pose
       const now = performance.now();
       const beingPetted = petting.spot !== null && now < petting.until;
       if (!beingPetted) petting.spot = null;
@@ -634,15 +897,23 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
       if (!beingPetted && petting.strokeTime > 0 && !petting.melt) petting.strokeTime = Math.max(0, petting.strokeTime - dt * 0.5);
       const melting = petting.melt > 0 && !asleep;
-      const target = POSES[asleep ? 'sleep' : melting ? 'down' : poseRef.current];
+      const target = POSES[asleep ? 'sleep' : isSick ? 'down' : melting ? 'down' : poseRef.current];
       const ease = 1 - Math.exp(-dt * 6);
       for (const k of Object.keys(cur) as (keyof typeof cur)[]) cur[k] += (target[k] - cur[k]) * ease;
 
       dogRoot.rotation.y += (targetYaw - dogRoot.rotation.y) * 0.1;
       dogRoot.rotation.x += (targetTilt - dogRoot.rotation.x) * 0.1;
 
-      // Breathing: quick when excited, slow and deep asleep.
-      const breath = Math.sin(t * (asleep ? 1.0 : 2.6 + arousal * 2)) * (asleep ? 0.035 : 0.014 + energy * 0.012);
+      // Sickness tremor / shivering
+      let shiverX = 0;
+      let shiverRot = 0;
+      if (isSick && !asleep) {
+        shiverX = Math.sin(t * 36) * 0.012;
+        shiverRot = Math.sin(t * 42) * 0.008;
+      }
+
+      // Breathing: slow asleep, strained when sick
+      const breath = Math.sin(t * (asleep ? 1.0 : isSick ? 3.5 : 2.6 + arousal * 2)) * (asleep ? 0.035 : 0.014 + energy * 0.012);
       breathing.scale.set(1 + breath, 1 + breath * 0.8, 1);
 
       let bounce = 0;
@@ -655,7 +926,18 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         bounce = Math.abs(stride) * 0.04;
         walkX = Math.sin(t * 1.8) * 0.35;
       }
-      dogRoot.position.set(walkX, cur.rootY + bounce, 0);
+
+      // Mini-Game Leaping
+      if (gameLeap.current.dir !== null) {
+        gameLeap.current.progress = Math.min(1, gameLeap.current.progress + dt * 2.2);
+        const p = gameLeap.current.progress;
+        const sideMult = gameLeap.current.dir === 'left' ? -1 : 1;
+        walkX = Math.sin(p * Math.PI) * 0.65 * sideMult;
+        bounce = Math.sin(p * Math.PI) * 0.32;
+      }
+
+      dogRoot.position.set(walkX + shiverX, cur.rootY + bounce, 0);
+      dogRoot.rotation.z = shiverRot;
       chassis.rotation.x = cur.pitch;
       frontL.rotation.x = cur.front + stride * 0.5;
       frontR.rotation.x = cur.frontR - stride * 0.5;
@@ -663,89 +945,89 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       backR.rotation.x = cur.back + stride * 0.4;
       if (poseRef.current === 'paw' && !asleep) frontR.rotation.x += Math.sin(t * 6) * 0.12;
 
-      // The head: follows you with its eyes and nose, rests on the paws asleep.
+      // The head: follows you, rests on bolster cushion asleep
       camLocal.copy(camera.position);
       dogRoot.worldToLocal(camLocal);
       const gaze = asleep ? 0 : Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
       head.position.set(HEAD_REST.x, HEAD_REST.y + cur.headY + (friendly * 0.03 - tired * 0.03), HEAD_REST.z);
       head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 - head.rotation.y) * 0.08;
+
       const spot = beingPetted ? petting.spot : null;
       head.rotation.x =
         cur.headPitch - cur.pitch * 0.9 +
-        (acting === 'feed' ? Math.max(0, Math.sin(t * 12)) * 0.15 : 0) +
-        (spot === 'chin' ? -0.32 : 0); // chin scratch: nose to the sky
+        (isFeeding ? 0.48 : 0) +
+        (spot === 'chin' ? -0.32 : 0);
       head.rotation.z =
         acting === 'communicate' && trust < 0.6
           ? 0.2
           : spot === 'chest' || melting
-            ? 0.18 // leans his head into your hand
+            ? 0.18
             : Math.sin(t * 1.3) * 0.04;
 
-      // Ears flatten when unsure or sleepy; they flick when alert.
-      // Ears go soft and back under a hand on his head.
-      const flat = asleep ? 0.7 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
+      // Articulated Jaw movement (Barking & Chewing)
+      if (isFeeding) {
+        jaw.rotation.x = Math.abs(Math.sin(t * 14)) * 0.22;
+      } else if (acting === 'walk' || acting === 'play' || gameLeap.current.dir !== null) {
+        jaw.rotation.x = Math.abs(Math.sin(t * 16)) * 0.26;
+      } else {
+        jaw.rotation.x = 0;
+      }
+
+      // Ears: flatten when unsure, droop when sick, relax under petting
+      const flat = asleep ? 0.7 : isSick ? 0.95 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
       ears.forEach((ear, i) => {
         const s = i === 0 ? 1 : -1;
         ear.rotation.x = -flat * 0.8;
         ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert;
       });
 
-      // Blinks, and shut eyes asleep.
+      // Eyes & Blinking
       nextBlink -= dt;
       if (nextBlink <= 0) {
         blink = 0.14;
         nextBlink = 2.5 + Math.random() * 4;
       }
       blink = Math.max(0, blink - dt);
-      const lid = asleep ? 0.08 : blink > 0 ? 0.12 : melting ? 0.1 : spot ? 0.35 : acting === 'pet' ? 0.45 : 1;
+      const lid = asleep ? 0.08 : isSick ? 0.22 : blink > 0 ? 0.12 : melting ? 0.1 : spot ? 0.35 : acting === 'pet' ? 0.45 : 1;
       eyes.forEach((e) => {
         e.scale.y += (lid - e.scale.y) * 0.4;
-        e.traverse((c) => c.userData.glint && (c.visible = e.scale.y > 0.3));
+        e.traverse((c) => c.userData.glint && (c.visible = e.scale.y > 0.3 && !isSick));
       });
 
-      tongue.visible = !asleep;
+      tongue.visible = !asleep && !isSick;
       mouth.visible = !asleep;
-      tongue.position.y = -0.19 + Math.sin(t * 2.8) * 0.006 * (1 + arousal);
+      tongue.position.y = -0.075 + Math.sin(t * 2.8) * 0.006 * (1 + arousal);
 
-      // Tail: the plume wags from its root; asleep it lies wrapped.
+      // Tail Wagging
       let wagF = Math.max(1, 3 + friendly * 7 + alert * 3 - tired * 3);
       let wagA = Math.max(0.05, 0.18 + friendly * 0.28 + alert * 0.1 - tired * 0.15);
       if (acting === 'pet' || acting === 'feed' || spot === 'back' || spot === 'chest') {
         wagF = 13;
         wagA = 0.5;
-      } else if (acting === 'play') {
-        wagF = 16;
-        wagA = 0.6;
+      } else if (acting === 'play' || gameLeap.current.dir !== null) {
+        wagF = 20;
+        wagA = 0.65;
       }
-      if (asleep) {
+      if (asleep || isSick) {
         wagA = 0.02;
         wagF = 1;
       }
       tail.rotation.y = Math.sin(t * wagF) * wagA;
       tail.rotation.x = asleep ? 0.9 : 0;
 
-      // Food falls and is eaten; the ball bounces past.
+      // Ball item physics
       const parts = dogParts.current;
-      if (parts?.foodItem) {
-        const item = parts.foodItem;
-        if (item.position.y > 1.0) item.position.y -= dt * 1.4;
-        else item.scale.multiplyScalar(0.93);
-        item.rotation.y += dt * 3;
-        if (item.scale.x < 0.08 || acting !== 'feed') {
-          dogRoot.remove(item);
-          parts.foodItem = null;
-        }
-      }
       if (parts?.ballItem) {
         const ball = parts.ballItem;
         ball.userData.vy -= dt * 6;
         ball.position.x += ball.userData.vx * dt;
         ball.position.y += ball.userData.vy * dt;
+        ball.position.z += (ball.userData.vz || 0) * dt;
         if (ball.position.y < 0.12) {
           ball.position.y = 0.12;
           ball.userData.vy = Math.abs(ball.userData.vy) * 0.7;
         }
-        if (acting !== 'play') {
+        if (acting !== 'play' && gameLeap.current.dir === null) {
           dogRoot.remove(ball);
           parts.ballItem = null;
         }
@@ -756,6 +1038,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         h.userData.life -= dt * 0.9;
         h.scale.setScalar(Math.max(0.01, h.userData.life));
         if (h.userData.life <= 0) heartsGroup.remove(h);
+      });
+
+      sparksGroup.children.slice().forEach((s) => {
+        s.position.x += s.userData.vx * dt;
+        s.position.y += s.userData.vy * dt;
+        s.position.z += s.userData.vz * dt;
+        s.userData.life -= dt * 1.5;
+        s.scale.setScalar(Math.max(0.01, s.userData.life));
+        if (s.userData.life <= 0) sparksGroup.remove(s);
       });
 
       renderer.render(scene, camera);
@@ -770,7 +1061,6 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
-    // The cockpit resizes the stage's region, not just the window.
     const observer = new ResizeObserver(handleResize);
     observer.observe(container);
 
@@ -789,15 +1079,59 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       strandTex.dispose();
       renderer.dispose();
     };
-    // Rebuilt only when the dog or the coat changes. Care actions rewrite
-    // the dog's record every time; rebuilding the scene for each one used to
-    // throw away the animation he was in the middle of.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dog.id, JSON.stringify(dog.avatarConfig)]);
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden select-none">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+      {/* Interactive Tamagotchi Agility Catch Mini-Game HUD */}
+      {miniGame.active && (
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between bg-zinc-950/90 border-hairline px-3 py-1.5 text-[11px] z-10 backdrop-blur-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="label text-accent font-semibold whitespace-nowrap">Agility Catch</span>
+            <span className="data text-zinc-300 whitespace-nowrap">
+              Round {miniGame.round}/5 · Score {miniGame.score}
+            </span>
+            {miniGame.lastResult && (
+              <span
+                className={`label truncate ${
+                  miniGame.lastResult === 'hit' ? 'text-emerald-400' : 'text-zinc-500'
+                }`}
+              >
+                {miniGame.lastResult === 'hit' ? '✓ Caught!' : 'Missed!'}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              disabled={miniGame.leaping !== null}
+              onClick={() => handleMiniGameChoice('left')}
+              className="btn btn-quiet border-hairline text-[11px] px-2 py-0.5"
+            >
+              ◀ Left
+            </button>
+            <button
+              type="button"
+              disabled={miniGame.leaping !== null}
+              onClick={() => handleMiniGameChoice('right')}
+              className="btn btn-quiet border-hairline text-[11px] px-2 py-0.5"
+            >
+              Right ▶
+            </button>
+            <button
+              type="button"
+              onClick={closeMiniGame}
+              className="btn btn-quiet text-[11px] px-1.5 py-0.5 text-zinc-400"
+              title="Close mini-game"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {webglError && (
         <div className="absolute inset-0 flex items-center justify-center p-4 bg-zinc-950">
@@ -811,11 +1145,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         </div>
       )}
 
-      {/* What the reader can do to him. His name is already in the header,
-          so the stage says only this, once, where the scene does not cover it. */}
       {!webglError && (
         <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">
-          Stroke him to pet · drag around him to turn
+          Stroke to pet · drag to turn{petState.poopCount > 0 ? ' · tap mess to clean' : ''}
         </p>
       )}
     </div>

@@ -246,4 +246,14 @@ export interface PetState {
   together?: import('./attention').Together;
   /** He is asking for you, and why. */
   call?: import('./attention').Call;
+  /** Tamagotchi waste mechanic: uncleaned poops on the stage (0..4). */
+  poopCount: number;
+  lastPoopedAt?: number;
+  /** Sickness from neglect, dirty stage, or extreme hunger. */
+  sick: boolean;
+  sickSince?: number;
+  /** Tamagotchi discipline: 0..100%. Raised by firm scolding on misbehaviour; spoiled by pampering bad calls. */
+  discipline: number;
+  /** Biological weight in kg. Influenced by overfeeding vs active play. */
+  weightKg?: number;
 }

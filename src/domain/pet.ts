@@ -75,6 +75,12 @@ export function createPetState(now: number = Date.now()): PetState {
     lastRealSessionAt: undefined,
     lastCue: undefined,
     lastCueAt: undefined,
+    poopCount: 0,
+    lastPoopedAt: undefined,
+    sick: false,
+    sickSince: undefined,
+    discipline: 60,
+    weightKg: 24.8,
   };
 }
 
@@ -181,8 +187,16 @@ export function settleSleep(
       asleep: true,
       fellAsleepAt: now,
       wokenAt: sleep.wokenAt,
-      wakeCount: 0,
-      restlessness: 0,
+      // THE TALLY IS NOT ERASED BY PUTTING HIM DOWN.
+      //
+      // This is the difference between a night of interruptions and a
+      // checklist. If settling him cleared the count, you could keep him up
+      // all night at no cost: bed, wake, bed, wake, and every time the slate
+      // was wiped clean. He remembers the interruptions, so the bar for
+      // settling rises every time you interrupt him, and it only falls again
+      // when he has had a REAL stretch of sleep.
+      wakeCount: sleep.wakeCount,
+      restlessness: sleep.restlessness,
     },
     arousal: clamp(state.arousal - 18),
     updatedAt: now,
@@ -225,7 +239,7 @@ export function wake(
 
   const note =
     wakeCount === 1
-      ? `${name} was asleep. ${p.subj} opens one eye, puts ${p.poss} head back down, and does not get up.`
+      ? `${name} was asleep. ${p.subjCap} opens one eye, puts ${p.poss} head back down, and does not get up.`
       : `${name} was asleep — and ${p.subj} has been woken ${wakeCount} times now. ${p.subj} will not settle easily again tonight.`;
 
   return { state: next, note };
@@ -261,10 +275,15 @@ export function temperament(state: PetState): string {
  * so.
  */
 export function happiness(state: PetState): number {
+  if (state.sick) {
+    // Sickness is genuinely miserable: capped low and heavily penalized
+    return clamp(Math.min(25, (state.trust * 0.2 + state.needs.hunger * 0.1)));
+  }
   const body = (state.needs.hunger + state.needs.energy + state.needs.hygiene) / 300;
   const bond = state.trust / 100;
   const calm = clamp(1 - Math.abs(state.arousal - 55) / 100);
-  return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100);
+  const poopPenalty = (state.poopCount ?? 0) * 8;
+  return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100 - poopPenalty);
 }
 
 /** The pet drifts whether anyone is watching. */
@@ -276,6 +295,27 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
   // A dog asleep recovers faster than a dog awake, and settles more deeply.
   const asleep = sleep.asleep;
   const energyRate = asleep ? 4.5 : DECAY_PER_HOUR.energy;
+  // Poop on the stage accelerates hygiene loss
+  const poopAcc = 1 + (state.poopCount ?? 0) * 1.5;
+
+  // Digestion: time passing after feeding produces waste
+  let nextPoop = state.poopCount ?? 0;
+  let nextPoopedAt = state.lastPoopedAt;
+  if (hours >= 1.5 && nextPoop < 3 && state.needs.hunger > 30) {
+    nextPoop = Math.min(3, nextPoop + Math.floor(hours / 1.5));
+    nextPoopedAt = now;
+  }
+
+  // Sickness onset: extreme filth (poop >= 2 with low hygiene) or prolonged starvation
+  let isSick = state.sick ?? false;
+  let sickSince = state.sickSince;
+  if (!isSick && ((nextPoop >= 2 && state.needs.hygiene < 25) || (state.needs.hunger < 10 && hours >= 3))) {
+    isSick = true;
+    sickSince = now;
+  }
+
+  // Sick dogs lose trust faster due to distress and suffering
+  const trustDecayRate = isSick ? TRUST_DECAY_PER_DAY * 2.5 : TRUST_DECAY_PER_DAY;
 
   const next: PetState = {
     ...state,
@@ -283,14 +323,29 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
     needs: {
       hunger: clamp(state.needs.hunger - DECAY_PER_HOUR.hunger * factor),
       energy: clamp(
-        state.needs.energy + (asleep ? energyRate : -energyRate) * factor
+        state.needs.energy + (asleep ? energyRate : -energyRate * (isSick ? 1.4 : 1)) * factor
       ),
-      hygiene: clamp(state.needs.hygiene - DECAY_PER_HOUR.hygiene * factor),
+      hygiene: clamp(state.needs.hygiene - DECAY_PER_HOUR.hygiene * poopAcc * factor),
     },
-    trust: clamp(state.trust - (TRUST_DECAY_PER_DAY * factor) / 24),
+    trust: clamp(state.trust - (trustDecayRate * factor) / 24),
+    poopCount: nextPoop,
+    lastPoopedAt: nextPoopedAt,
+    sick: isSick,
+    sickSince,
+    discipline: clamp(state.discipline ?? 60),
+    weightKg: state.weightKg ?? 24.8,
     sleep: {
       ...sleep,
       // Time asleep calms him; time awake through the night does not.
+      //
+      // And a REAL stretch of sleep clears the night's tally. Ninety minutes
+      // of unbroken rest is what it takes to forgive a bad night — so the
+      // cost of keeping him up is real, but it is not permanent. He is hard
+      // to settle tonight, and easy again tomorrow.
+      wakeCount:
+        asleep && sleep.fellAsleepAt && now - sleep.fellAsleepAt > 90 * 60_000
+          ? 0
+          : sleep.wakeCount,
       restlessness: clamp(
         sleep.restlessness + factor * (asleep ? -0.22 : isNightHour(now) ? 0.06 : 0)
       ),
@@ -317,6 +372,7 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
  * animal — and this is the number the coach shows before a session.
  */
 export function readiness(state: PetState): number {
+  if (state.sick) return 0; // A sick dog cannot perform or focus on training
   // `hunger` is FULLNESS: 100 is a full belly. A hungry dog is a dog that will
   // not work, so a full belly adds to readiness and an empty one subtracts.
   const body = (state.needs.energy / 100) * 0.6 + (state.needs.hunger / 100) * 0.4;
@@ -330,7 +386,7 @@ export function performChance(state: PetState, behaviour: Behaviour): number {
   return clamp(behaviour.strength * readiness(state));
 }
 
-export type Interaction = 'pet' | 'feed' | 'play' | 'groom' | 'walk';
+export type Interaction = 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'medicine' | 'scold' | 'clean';
 
 export interface InteractionResult {
   state: PetState;
@@ -349,11 +405,15 @@ export interface Pronouns {
   subj: string;
   obj: string;
   poss: string;
+  /** The same pronoun, at the start of a sentence. */
+  subjCap: string;
 }
 
 export function pronouns(subject: Subject | undefined): Pronouns {
-  if (subject?.sex === 'female') return { subj: 'she', obj: 'her', poss: 'her' };
-  return { subj: 'he', obj: 'him', poss: 'his' };
+  if (subject?.sex === 'female') {
+    return { subj: 'she', obj: 'her', poss: 'her', subjCap: 'She' };
+  }
+  return { subj: 'he', obj: 'him', poss: 'his', subjCap: 'He' };
 }
 
 /**
@@ -423,16 +483,23 @@ export function interact(
         // Fed when he did not ask. The food loses its value as a reward.
         next.personality.foodDrive = clampTrait(base.personality.foodDrive - 0.08);
         next.arousal = clamp(base.arousal + 8);
-        note = 'Fed while full. The value of food as a reward drops, and asking starts.';
+        next.weightKg = (base.weightKg ?? 24.8) + 0.15;
+        next.discipline = clamp((base.discipline ?? 60) - 5);
+        note = 'Fed while full. Overfeeding adds empty weight, lowers reward drive, and spoils discipline.';
       }
       break;
     }
     case 'play': {
+      if (base.sick) {
+        note = `${name} is sick and trembling. ${p.subjCap} is too weak to play — administer medicine first.`;
+        break;
+      }
       const capacity = base.needs.energy / 100;
       next.needs.energy = clamp(base.needs.energy - 16);
       next.arousal = clamp(base.arousal + 22 * capacity + (1 - capacity) * 4);
       next.trust = clamp(base.trust + 2);
       next.personality.playDrive = clampTrait(base.personality.playDrive + 0.05);
+      next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.05);
       note =
         base.needs.energy < 35
           ? `Played on an empty tank. ${p.subj} was excited, and then ${p.subj} was done.`
@@ -445,18 +512,63 @@ export function interact(
       next.needs.hygiene = clamp(base.needs.hygiene + 30);
       next.trust = clamp(base.trust + 3);
       next.arousal = clamp(base.arousal - 4);
+      if ((base.poopCount ?? 0) > 0) {
+        next.poopCount = 0;
+      }
       note =
         base.personality.sensitivity > 0.35
           ? `Groomed. Slow, and worth doing while ${p.subj} is still learning to trust the hand — today ${p.subj} was not sure about it.`
-          : `Groomed. Slow, and worth doing while ${p.subj} is still learning to trust the hand.`;
+          : `Groomed. Clean coat, stage tidy, and trust steady.`;
+      break;
+    }
+    case 'clean': {
+      const mess = base.poopCount ?? 0;
+      if (mess > 0) {
+        next.poopCount = 0;
+        next.needs.hygiene = clamp(base.needs.hygiene + 35);
+        next.trust = clamp(base.trust + 4);
+        note = `Scooped and cleared ${mess} mess${mess > 1 ? 'es' : ''} from the stage. Spotless and fresh again. Trust +4.`;
+      } else {
+        note = 'The stage is already clean and spotless.';
+      }
+      break;
+    }
+    case 'medicine': {
+      if (base.sick) {
+        next.sick = false;
+        next.sickSince = undefined;
+        next.needs.energy = clamp(base.needs.energy + 25);
+        next.trust = clamp(base.trust + 10);
+        note = `Administered medication. ${name} ceases shivering, breathes easily, and begins to recover. Health restored!`;
+      } else {
+        note = `${name} is in good health and does not require medication.`;
+      }
+      break;
+    }
+    case 'scold': {
+      const isTantrum = base.call?.reason === 'tantrum';
+      if (isTantrum) {
+        next.discipline = clamp((base.discipline ?? 60) + 25);
+        next.arousal = clamp(base.arousal - 15);
+        note = `You gave a firm "No!". ${name} halts the tantrum, heeds the boundary, and sits respectfully. Discipline +25%.`;
+      } else {
+        next.trust = clamp(base.trust - 20);
+        next.arousal = clamp(base.arousal + 15);
+        note = `You scolded ${name} without cause. ${p.subjCap} cowers with tail tucked between ${p.poss} legs. Unjust discipline costs trust: Trust -20.`;
+      }
       break;
     }
     case 'walk': {
+      if (base.sick) {
+        note = `${name} is sick and shivering. ${p.subjCap} cannot go on a walk — rest and medicine needed.`;
+        break;
+      }
       next.needs.energy = clamp(base.needs.energy - 12);
       next.arousal = clamp(base.arousal - 18);
       next.needs.hygiene = clamp(base.needs.hygiene - 4);
       next.trust = clamp(base.trust + 2);
       next.personality.boldness = clampTrait(base.personality.boldness + 0.03);
+      next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.08);
       note = `Walked. Arousal down, legs exercised — and ${t} on a walk is a different animal.`;
       break;
     }

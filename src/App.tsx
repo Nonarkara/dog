@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
-import type { AvatarPose } from './components/DogAvatar3D';
+import type { AvatarPose, AvatarInteractionTrigger } from './components/DogAvatar3D';
 import { CALL_TEXT, addTogether, answerCall, tickCall } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
 import { DEFAULT_DOGS } from './data/defaultDogs';
@@ -128,9 +128,7 @@ export const App: React.FC = () => {
   // Interactive 3D triggers
   /** What the practice field asked the dog's body to do. */
   const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
-  const [interactionTrigger, setInteractionTrigger] = useState<
-    'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'communicate' | null
-  >(null);
+  const [interactionTrigger, setInteractionTrigger] = useState<AvatarInteractionTrigger>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const [pendingAction, setPendingAction] = useState<CareAction | null>(null);
 
@@ -306,6 +304,20 @@ export const App: React.FC = () => {
       setPendingAction(null);
       setInteractionTrigger(null);
     }, 2000);
+  };
+
+  const handleMiniGameComplete = (won: boolean) => {
+    if (won) {
+      setPetState((prev) => ({
+        ...prev,
+        arousal: Math.max(20, Math.min(80, prev.arousal + 15)),
+        trust: Math.min(100, prev.trust + 5),
+        weightKg: Math.max(15, (prev.weightKg ?? 24.8) - 0.1),
+      }));
+      say(`Agility catch victory! ${currentDog.name} caught the balls with joyful barks. Trust +5!`);
+    } else {
+      say(`Good effort! ${currentDog.name} burned energy and enjoyed the practice.`);
+    }
   };
 
   const handleCommunicate = (cue: string) => {
@@ -611,6 +623,8 @@ export const App: React.FC = () => {
                     petState={petState}
                     pose={avatarPose}
                     onPet={() => handleInteract('pet')}
+                    onClean={() => handleInteract('clean')}
+                    onMiniGameComplete={handleMiniGameComplete}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
                   />

@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Utensils, Brush, Footprints, HandMetal, Volleyball, Moon } from 'lucide-react';
+import { Utensils, Brush, Footprints, HandMetal, Volleyball, Moon, Pill, Sparkles, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 
-export type CareAction = 'pet' | 'feed' | 'play' | 'groom' | 'walk';
+export type CareAction = 'pet' | 'feed' | 'play' | 'groom' | 'walk' | 'clean' | 'medicine' | 'scold';
 
 interface CommandBarProps {
   dog: DogProfile;
@@ -27,16 +27,9 @@ interface CommandBarProps {
  * the bottom of the frame either, whatever else is on screen.
  *
  * It carries the five things a person can DO to a dog, the one thing they can
- * SAY, and the one thing they can do to STOP. Nothing else lives here: a bar
- * that carries everything is a toolbar, and a toolbar is a second navigation
- * system.
- *
- * The number keys are the Palm Pilot gesture: the whole point of a dedicated
- * button was that you did not have to aim. They are digits because letters
- * collide — "p" is both pet and play, and a shortcut that silently does the
- * wrong thing is worse than no shortcut at all.
+ * SAY, and the one thing they can do to STOP.
  */
-const ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: string }[] = [
+const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: string }[] = [
   { action: 'pet', label: 'Pet', icon: HandMetal, key: '1' },
   { action: 'feed', label: 'Feed', icon: Utensils, key: '2' },
   { action: 'play', label: 'Play', icon: Volleyball, key: '3' },
@@ -50,6 +43,9 @@ const GERUND: Record<CareAction, string> = {
   play: 'Playing',
   walk: 'Walking',
   groom: 'Grooming',
+  clean: 'Cleaning',
+  medicine: 'Dosing',
+  scold: 'Scolding',
 };
 
 export const CommandBar: React.FC<CommandBarProps> = ({
@@ -64,6 +60,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   const [cueText, setCueText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
+  const isSick = petState.sick ?? false;
+  const poops = petState.poopCount ?? 0;
+  const isTantrum = petState.call?.reason === 'tantrum';
 
   const sendCue = () => {
     const cue = cueText.trim();
@@ -73,83 +72,129 @@ export const CommandBar: React.FC<CommandBarProps> = ({
     inputRef.current?.focus();
   };
 
-  // The keyboard shortcut is the Palm Pilot gesture: the whole point of a
-  // dedicated button was that you did not have to aim.
+  // Keyboard shortcuts 1..5, plus 'M' for medicine if sick
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const hit = ACTIONS.find((a) => a.key === e.key);
+      if (isSick && (e.key === 'm' || e.key === 'M')) {
+        e.preventDefault();
+        onInteract('medicine');
+        return;
+      }
+      const hit = BASE_ACTIONS.find((a) => a.key === e.key);
       if (!hit) return;
       e.preventDefault();
-      onInteract(hit.action);
+      if (hit.action === 'groom' && poops > 0) {
+        onInteract('clean');
+      } else {
+        onInteract(hit.action);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onInteract]);
+  }, [onInteract, isSick, poops]);
 
   return (
     <div className="command-bar no-print" role="group" aria-label="Care controls">
       <div className="flex items-center gap-1 shrink-0">
-        {ACTIONS.map(({ action, label, icon: Icon, key }) => {
-          const busy = isInteracting && pendingAction === action;
+        {BASE_ACTIONS.map(({ action, label, icon: Icon, key }) => {
+          // Dynamic clean adaptation if stage has waste
+          const currentAction: CareAction = action === 'groom' && poops > 0 ? 'clean' : action;
+          const currentLabel = action === 'groom' && poops > 0 ? `Clean (${poops})` : label;
+          const CurrentIcon = action === 'groom' && poops > 0 ? Sparkles : Icon;
+          const busy = isInteracting && pendingAction === currentAction;
+
           return (
             <button
               key={action}
               type="button"
-              onClick={() => onInteract(action)}
+              onClick={() => onInteract(currentAction)}
               disabled={isInteracting}
               aria-busy={busy || undefined}
-              aria-label={busy ? `${GERUND[action]} ${dog.name}` : `${label} ${dog.name}`}
-              title={`${label} ${dog.name}  (${key})`}
+              aria-label={busy ? `${GERUND[currentAction]} ${dog.name}` : `${currentLabel} ${dog.name}`}
+              title={`${currentLabel} ${dog.name} (${key})`}
               className={[
                 'btn px-2 text-[11px] whitespace-nowrap',
                 busy ? 'btn-accent opacity-100' : 'btn-quiet border-hairline',
+                action === 'groom' && poops > 0 ? 'text-amber-400 border-amber-600/40' : '',
               ].join(' ')}
             >
-              <Icon size={12} aria-hidden="true" className="hidden sm:block" />
-              {busy ? GERUND[action] : label}
+              <CurrentIcon size={12} aria-hidden="true" className="hidden sm:block" />
+              {busy ? GERUND[currentAction] : currentLabel}
             </button>
           );
         })}
+
+        {/* Medicine Emergency Action when Sick */}
+        {isSick && (
+          <button
+            type="button"
+            onClick={() => onInteract('medicine')}
+            disabled={isInteracting}
+            aria-label={`Administer medicine to ${dog.name}`}
+            title="Administer medicine (M)"
+            className="btn bg-rose-600 text-white hover:bg-rose-500 px-2.5 text-[11px] font-semibold whitespace-nowrap animate-pulse"
+          >
+            <Pill size={12} aria-hidden="true" className="hidden sm:block" />
+            Medicine
+          </button>
+        )}
       </div>
 
-      {/* On a phone the word field takes its own row: five actions, a field
-          and Bed do not fit in 390px, and Bed was being pushed off the edge. */}
+      {/* Cue field or Tantrum Scold action */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
-        <label htmlFor="cmd-cue" className="label shrink-0 hidden sm:block">
-          Say
-        </label>
-        <input
-          id="cmd-cue"
-          ref={inputRef}
-          type="text"
-          value={cueText}
-          onChange={(e) => setCueText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              sendCue();
-            }
-          }}
-          placeholder={asleep ? `${dog.name} is asleep` : `Say to ${dog.name}`}
-          aria-label={`Say a word to ${dog.name}`}
-          className="flex-1 min-w-0 px-2 py-1 text-[12px]"
-        />
-        <button
-          type="button"
-          onClick={sendCue}
-          disabled={isInteracting || !cueText.trim()}
-          className="btn btn-accent text-[11px] px-2.5 shrink-0 disabled:opacity-40"
-        >
-          Say
-        </button>
+        {isTantrum ? (
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="label text-rose-400 truncate flex items-center gap-1">
+              <AlertTriangle size={12} />
+              Misbehaving
+            </span>
+            <button
+              type="button"
+              onClick={() => onInteract('scold')}
+              disabled={isInteracting}
+              className="btn btn-accent text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold"
+              title="Discipline: firm 'No!' to curb tantrums"
+            >
+              Scold ("No!")
+            </button>
+          </div>
+        ) : (
+          <>
+            <label htmlFor="cmd-cue" className="label shrink-0 hidden sm:block">
+              Say
+            </label>
+            <input
+              id="cmd-cue"
+              ref={inputRef}
+              type="text"
+              value={cueText}
+              onChange={(e) => setCueText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  sendCue();
+                }
+              }}
+              placeholder={asleep ? `${dog.name} is asleep` : `Say to ${dog.name}`}
+              aria-label={`Say a word to ${dog.name}`}
+              className="flex-1 min-w-0 px-2 py-1 text-[12px]"
+            />
+            <button
+              type="button"
+              onClick={sendCue}
+              disabled={isInteracting || !cueText.trim()}
+              className="btn btn-accent text-[11px] px-2.5 shrink-0 disabled:opacity-40"
+            >
+              Say
+            </button>
+          </>
+        )}
       </div>
 
-      {/* THE BED. The one control that is about STOPPING, not doing. It is
-          here because the hardest part of a Tamagotchi is knowing when to
-          leave the animal alone. */}
+      {/* Bed control */}
       <button
         type="button"
         onClick={onBed}
@@ -166,7 +211,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       </button>
 
       <span className="data text-[10px] text-faint shrink-0 hidden xl:inline">
-        {Math.round(petState.trust)} trust, {Math.round(petState.arousal)} arousal
+        {Math.round(petState.trust)} trust · {Math.round(petState.discipline ?? 60)}% disc
       </span>
     </div>
   );

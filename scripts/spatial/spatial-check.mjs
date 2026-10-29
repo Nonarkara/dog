@@ -1185,7 +1185,14 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       `--user-data-dir=${attemptProf}`,
       `http://127.0.0.1:${port}/__spatial-harness`,
     ],
-    { stdio: ["ignore", "pipe", "pipe"] },
+    // LOCAL PATCH (kuching-ioc): detached, so the browser leads its own
+    // process group and the group can be killed as a unit. Chrome's renderers,
+    // GPU and utility helpers are separate processes; SIGKILL to the browser
+    // alone leaves them running, and every failed attempt then leaks another
+    // browser's worth of helpers. The leak makes the NEXT attempt likelier to
+    // die, which is how five consecutive attempts all fail. The canonical
+    // instrument kills the parent only, so this hunk is NOT in it.
+    { stdio: ["ignore", "pipe", "pipe"], detached: true },
   );
   let out = "";
   let err = "";
@@ -1226,10 +1233,17 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     }),
   ]);
   if (watchdog) clearTimeout(watchdog);
+  // LOCAL PATCH (kuching-ioc): kill the whole process group, not just the
+  // browser process. Chrome's helpers outlive a SIGKILL to the parent, and a
+  // gate that leaks a browser per failed attempt fails itself.
   try {
-    child.kill("SIGKILL");
+    process.kill(-child.pid, "SIGKILL");
   } catch {
-    /* already gone */
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      /* already gone */
+    }
   }
   if (got !== timeout && got !== died) {
     payload = got;

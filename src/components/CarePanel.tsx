@@ -33,19 +33,12 @@ const LOW_THRESHOLD = 30;
  * because a number kept in two places drifts and the reader ends up looking
  * at two truths.
  */
-/**
- * "HOW LONG AGO", IN THE WORDS A PERSON WOULD USE.
- *
- * "3h ago" and "2d ago" are honest about what the record knows. A precise
- * clock time would be a lie: the timestamp is when the button was pressed,
- * which is not the same thing as when the thing happened.
- */
 function since(at: number | undefined): string {
   if (!at) return 'never';
-  const minutes = Math.max(0, Math.round((Date.now() - at) / 60_000));
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
+  const mins = Math.max(0, Math.round((Date.now() - at) / 60_000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   if (days < 30) return `${days}d ago`;
@@ -59,11 +52,15 @@ function clockTime(at: number | null | undefined): string {
 }
 
 export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
+  const isSick = petState.sick ?? false;
+  const poops = petState.poopCount ?? 0;
+  const disciplineVal = Math.round(petState.discipline ?? 60);
+
   const meters: Meter[] = [
     { key: 'fullness', label: 'Fullness', value: petState.needs.hunger, lowMeans: 'hungry' },
     { key: 'energy', label: 'Energy', value: petState.needs.energy, lowMeans: 'tired' },
     { key: 'hygiene', label: 'Hygiene', value: petState.needs.hygiene, lowMeans: 'dirty' },
-    { key: 'happiness', label: 'Happiness', value: happiness(petState), lowMeans: 'low' },
+    { key: 'happiness', label: 'Happiness', value: happiness(petState), lowMeans: isSick ? 'sick' : 'low' },
     { key: 'trust', label: 'Trust', value: petState.trust, lowMeans: 'distrustful' },
     { key: 'arousal', label: 'Arousal', value: petState.arousal, lowMeans: 'flat', inverted: true },
   ];
@@ -85,11 +82,14 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
    * sentence — otherwise the panel is a dashboard nobody can act on.
    */
   const nextAction = (): string => {
+    if (isSick) return `${dog.name} is sick and trembling. Administer medicine right away.`;
+    if (poops > 0) return `${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`;
     const p = petState.needs;
     if (p.energy < 25) return `${dog.name} is out of energy. Rest before training.`;
     if (p.hunger < 30) return `${dog.name} is hungry. Food first — it is worth more when it is asked for.`;
     if (p.hygiene < 30) return `${dog.name} needs a groom.`;
     if (petState.trust < 35) return `${dog.name} does not trust you yet. Petting without a request is the only thing that moves it.`;
+    if (disciplineVal < 40) return `${dog.name} is undisciplined and prone to tantrums. Scold bad behaviour when it happens.`;
     if (petState.arousal > 80) return `${dog.name} is wound up. A walk brings the arousal down.`;
     if (petState.arousal < 20) return `${dog.name} is flat. Play wakes him up.`;
     if (ready > 0.7) return `${dog.name} is ready to work. The coach will tell you what to mark.`;
@@ -106,11 +106,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
       </header>
 
       <div className="panel-body p-2.5 gap-2 @container">
-        {/* The meters take the height they need. They were given a box smaller
-            than their content, and the rows that did not fit painted over the
-            sentence below them. */}
-        {/* Columns follow the width the PANEL was given, not the window: a wide
-            Care panel puts the six meters in two rows instead of three. */}
+        {/* The meters follow the width the panel was given */}
         <div className="grid grid-cols-2 @lg:grid-cols-3 content-between gap-x-4 gap-y-2.5 @lg:gap-y-1.5">
           {meters.map((m) => {
             const isLow = m.inverted
@@ -151,9 +147,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           })}
         </div>
 
-        {/* The sentence. One of them, said once, in the reading voice. It
-            follows the meters directly: pushing it to the foot of the panel
-            left up to 149px of nothing between the numbers and what they mean. */}
+        {/* The sentence: advice, health, discipline and time together */}
         <div className="border-hairline-t pt-2">
           <p className="label">Now</p>
           {petState.call ? (
@@ -164,21 +158,16 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
             <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
           )}
           <p className="data text-[10px] text-faint mt-1">
-            Ready to work {Math.round(ready * 100)}% · {temperament(petState)}
+            Ready {Math.round(ready * 100)}% · Disc {disciplineVal}% · {temperament(petState)}
+            {isSick ? ' · ⚠️ SICK' : poops > 0 ? ` · ${poops} mess` : ''}
           </p>
-          {/* The currency: time actually spent with him. */}
           <p className="data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
             Together today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
             {minutes(petState.together?.totalSec ?? 0)} in all
           </p>
         </div>
 
-        {/* THE CARE LOG.
-            The record has carried four timestamps — when he was last fed,
-            played, walked and groomed — since before the app had a place to
-            show them, so they were written and never read. They are here now,
-            because a Tamagotchi's whole pleasure is the question "when did I
-            last do that?", and because a panel with a hole in it is a hole. */}
+        {/* THE CARE LOG */}
         <div className="border-hairline-t pt-2">
           <p className="label">Last</p>
           <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-1 mt-1">
@@ -189,12 +178,18 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
               </div>
             ))}
           </dl>
-          <p className="data text-[10px] text-faint mt-1.5">
-            {asleep
-              ? `Asleep since ${clockTime(petState.sleep?.fellAsleepAt)}`
-              : petState.sleep?.wakeCount
-                ? `Awake · woken ${petState.sleep.wakeCount}× tonight`
-                : 'Awake'}
+          <p className="data text-[10px] text-faint mt-1.5 flex items-center justify-between">
+            <span className="truncate">
+              {asleep
+                ? `Asleep since ${clockTime(petState.sleep?.fellAsleepAt)}`
+                : petState.sleep?.wakeCount
+                  ? `Awake · woken ${petState.sleep.wakeCount}× tonight`
+                  : 'Awake'}
+            </span>
+            <span className="text-zinc-400 shrink-0 ml-2">
+              {petState.weightKg ? `${petState.weightKg.toFixed(1)} kg` : `${dog.weightKg} kg`}
+              {isSick ? ' · Sick' : poops > 0 ? ` · ${poops} mess` : ' · Healthy'}
+            </span>
           </p>
         </div>
       </div>

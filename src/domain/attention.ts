@@ -24,8 +24,8 @@ export interface Together {
   streak: number;
 }
 
-export type CallReason = 'hungry' | 'dirty' | 'lonely';
-export type Answer = 'feed' | 'groom' | 'pet' | 'play' | 'walk';
+export type CallReason = 'hungry' | 'dirty' | 'lonely' | 'sick' | 'tantrum';
+export type Answer = 'feed' | 'groom' | 'pet' | 'play' | 'walk' | 'medicine' | 'scold' | 'clean';
 
 export interface Call {
   reason: CallReason;
@@ -65,21 +65,36 @@ const NEED_CALLS: { need: NeedKey; below: number; reason: CallReason }[] = [
 /** Why he would call for you right now, if he would. A sleeping dog does not call. */
 export function whyCalling(state: PetState, now: number = Date.now()): CallReason | null {
   if (state.sleep?.asleep) return null;
+  if (state.sick) return 'sick';
+  if ((state.poopCount ?? 0) > 0) return 'dirty';
   for (const c of NEED_CALLS) if (state.needs[c.need] < c.below) return c.reason;
+  // Tamagotchi classic: misbehaviour call (calls despite having all needs fulfilled).
+  if (
+    (state.discipline ?? 50) < 50 &&
+    state.needs.hunger > 70 &&
+    state.needs.energy > 60 &&
+    now - state.lastCareAt < 25 * 60_000
+  ) {
+    return 'tantrum';
+  }
   if (now - state.lastCareAt > LONELY_AFTER_MS) return 'lonely';
   return null;
 }
 
 export const ANSWERS: Record<CallReason, Answer[]> = {
   hungry: ['feed'],
-  dirty: ['groom'],
+  dirty: ['groom', 'clean'],
   lonely: ['pet', 'play', 'walk'],
+  sick: ['medicine'],
+  tantrum: ['scold'],
 };
 
 export const CALL_TEXT: Record<CallReason, string> = {
   hungry: 'is hungry and looking at the bowl',
-  dirty: 'is itchy and wants a brush',
+  dirty: 'is in a messy area and needs cleaning',
   lonely: 'is looking for you',
+  sick: 'is shivering, whimpering and needs medicine',
+  tantrum: 'is barking for treats without being hungry (misbehaving)',
 };
 
 /**

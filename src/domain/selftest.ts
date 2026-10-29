@@ -346,6 +346,29 @@ ok('petting him does not answer a hungry call', !answerCall(withCall, 'pet', noo
 ok('an ignored call fades, unpunished', tickCall(withCall, noon + CALL_FADES_MS + 1).call === undefined);
 ok('a sleeping dog does not call', !tickCall({ ...callingDog, sleep: { ...callingDog.sleep, asleep: true } }, noon).started);
 
+console.log('\nTAMAGOTCHI MVP CONSEQUENCES');
+const messyState: PetState = { ...createPetState(noon), poopCount: 2, needs: { hunger: 80, energy: 80, hygiene: 20 } };
+ok('poop reduces happiness', happiness(messyState) < happiness(createPetState(noon)));
+const cleaned = interact(messyState, 'clean', noon);
+ok('cleaning clears all mess from stage', cleaned.state.poopCount === 0 && cleaned.state.needs.hygiene > messyState.needs.hygiene);
+
+const sickState: PetState = { ...createPetState(noon), sick: true, sickSince: noon };
+ok('a sick dog has zero readiness for training', readiness(sickState) === 0);
+ok('a sick dog cannot play', interact(sickState, 'play', noon).note.includes('sick'));
+const cured = interact(sickState, 'medicine', noon);
+ok('medicine cures sickness and restores readiness', !cured.state.sick && readiness(cured.state) > 0);
+
+const tantrumDog: PetState = {
+  ...createPetState(noon),
+  discipline: 40,
+  needs: { hunger: 90, energy: 85, hygiene: 85 },
+  call: { reason: 'tantrum', since: noon },
+};
+const scoldedTantrum = interact(tantrumDog, 'scold', noon);
+ok('scolding a tantrum raises discipline', (scoldedTantrum.state.discipline ?? 0) === 65);
+const unjustScold = interact(createPetState(noon), 'scold', noon);
+ok('scolding without cause incurs heavy trust penalty', unjustScold.state.trust === 40);
+
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {
   throw new Error(`${failures} of ${checks} checks FAILED.`);
