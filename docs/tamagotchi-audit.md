@@ -40,3 +40,9 @@ Independent agent review inspected phone/tablet/desktop and the five dog capture
 - [Tokyo's official Hachikō guide](https://www.gotokyo.org/en/spot/86/): Akita identity of the Shibuya dog.
 
 Likeness remains a procedural interpretation of the photos. Mali/Oreo/Paolo/Chai have no supplied individual photo references; their geometry follows the requested description. Render-time reduction is measured; real-device cold-load time and battery consumption are unmeasured.
+
+## Live closeout
+
+The complete rendered suite passed against `https://dog.nonarkara.org` after deployment (Cloudflare version `41b9446f-1d5d-43c5-9664-25da5c533311`), with zero runtime errors. Live screenshots and actual measurements are in `/tmp/dog-tamagotchi-live/`. The viewport table above matches that live run. The original avatar was also run through the same regression suite at an isolated local baseline URL and rejected with `Triangle budget: 384264`.
+
+Code commit: `1597c44`. Independent review explicitly closed the final RecordPanel unknown-field finding. All reviewed findings are resolved. The first live automation attempt was unverified because its tab did not produce a rendered frame; explicitly foregrounding the test tab allowed the complete live suite to run and pass.
