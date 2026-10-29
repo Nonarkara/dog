@@ -73,11 +73,11 @@ const TRAITS: { key: keyof Personality; label: string }[] = [
 ];
 
 /** A chip is a chip, not a button: small, quiet, and never taller than the row. */
-const CHIP = 'min-h-0 h-[20px] px-1.5 py-0 text-[9px] leading-none';
+const CHIP = 'min-h-0 h-[24px] px-1 py-0 text-[9px] leading-none';
 /** The secondary rep buttons. The primary pair keeps the house button height. */
 const SMALL_BTN = 'min-h-0 h-[26px] px-2 py-0 text-[10px]';
 /** The tiny buttons in the head and beside the manual field. */
-const TINY_BTN = 'min-h-0 h-[20px] px-1.5 py-0 text-[9px] leading-none';
+const TINY_BTN = 'min-h-0 h-[24px] px-1 py-0 text-[9px] leading-none';
 /** Fields sit in a 22px row so the instrument stays an instrument. */
 const FIELD = 'h-[22px] min-h-0 py-0 px-1.5 text-[10px]';
 

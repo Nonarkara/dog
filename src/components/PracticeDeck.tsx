@@ -46,7 +46,7 @@ interface Props {
   busy?:boolean;
 }
 
-const CHIP = 'min-h-0 h-[22px] px-1.5 py-0 text-[10px] leading-none';
+const CHIP = 'min-h-0 h-[24px] px-1 py-0 text-[10px] leading-none';
 
 export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy }) => {
   const [name, setName] = useState<BehaviourName>('sit');

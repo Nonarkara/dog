@@ -676,7 +676,7 @@
 .cockpit .illustration-puddle,.cockpit .illustration-mess {background:transparent;border:0;}
 
 /* Care is a short fixed readout, not a scrolling record. */
-.region-care .care-body {overflow:clip;padding:8px;gap:6px;}
+.region-care .care-body {container-name:dog-care;overflow:clip;padding:8px;gap:6px;}
 .care-meter-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;flex:none;}
 .care-meter {display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:auto 4px;gap:3px 3px;align-content:start;}
 .care-meter-symbols {display:contents;}
@@ -689,8 +689,8 @@
 .care-history-times {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 10px;}
 .care-history-times>div {gap:4px;}
 .care-history-times dd {font-size:10px;}
-@container (min-width:600px){.care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));}}
-@container (max-width:279px){.care-history-times {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@container dog-care (min-width:600px){.care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));}}
+@container dog-care (max-width:279px){.care-history-times {grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 /* Action feedback owns a row below the canvas, never the dog's floor. */
 .stage-frame {display:flex;flex-direction:column;}
@@ -706,7 +706,7 @@
 @media(prefers-reduced-motion:reduce){.dog-pet-hint {transition:none;}}
 
 /* Game UI has a real dock after the stage, not a rectangle over the dog. */
-.stage-game-dock {flex:none;min-width:0;container-type:inline-size;background:var(--bg-surface);}
+.stage-game-dock {flex:none;min-width:0;container-type:inline-size;container-name:dog-games;background:var(--bg-surface);}
 .stage-game-dock:empty {display:none;}
 .cockpit-workspace--tall .region-stage>.panel-body {max-height:40vh;overflow:clip;}
 .cockpit-workspace--tall .region-stage .stage-frame {flex-shrink:1;}
@@ -725,14 +725,14 @@
 .stage-game-dock .treat-cup--open .cup-cover {transform:translateY(-3px);}
 .stage-game-dock .cup-bone {width:16px;height:16px;left:14px;bottom:13px;}
 .stage-game-dock .cup-check {width:12px;height:12px;}
-@container (min-width:520px){
+@container dog-games (min-width:520px){
  .stage-game-dock .treat-game {grid-template-columns:auto minmax(0,1fr) 140px;grid-template-rows:auto;gap:10px;align-items:center;}
  .stage-game-dock .treat-instruction {grid-column:2;grid-row:1;}
  .stage-game-dock .treat-cups {grid-column:3;grid-row:1;}
 }
 
 /* Selecting a companion uses the Care region; no menu floats over the animal. */
-.dog-chooser {container-type:inline-size;}
+.dog-chooser {container-type:inline-size;container-name:dog-choice;}
 .dog-chooser .panel-head button {min-width:28px;min-height:28px;padding:3px;}
 .dog-choices {display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:2px;padding:4px;list-style:none;margin:0;}
 .cockpit .dog-choice {display:flex;align-items:center;gap:6px;width:100%;min-height:32px;padding:4px 6px;text-align:left;border:0;font-size:13px;line-height:1.25;}
@@ -740,7 +740,7 @@
 .dog-choice-check {width:14px;flex:none;}
 .dog-choice strong {font-weight:600;}
 .dog-choice-breed {margin-left:auto;font-size:11px;color:var(--text-muted);}
-@container (min-width:500px){.dog-choices {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@container dog-choice (min-width:500px){.dog-choices {grid-template-columns:repeat(2,minmax(0,1fr));}}
 .dog-chooser .panel-head {padding:2px 6px;}
 /* ResizeObserver reports integer client sizes; clamp the visible canvas to
    its fractional flex box during the feedback-row height transition. */

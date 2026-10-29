@@ -10,12 +10,12 @@ Live production system: [dog.nonarkara.org](https://dog.nonarkara.org)
 
 ## Overview
 
-Expo is a local-first digital Tamagotchi built around real dogs — starting with Expo (a Thai Bangkaew Dog), with Mali and Bangal alongside. It is the kind of digital pet I would have built for myself if I'd had programming skills back when I queued at Loft in Siam Center for one of three Tamagotchis a day at 390 baht.
+Expo is a local-first digital Tamagotchi built around real dogs — featuring Expo and Mali (Thai Bangkaews), Oreo, Paolo and Hachiku, with the older companions retained. It is the kind of digital pet I would have built for myself if I'd had programming skills back when I queued at Loft in Siam Center for one of three Tamagotchis a day at 390 baht.
 
 It fulfills four core objectives:
 
 1. **Pet & React**: Pet, feed, play, walk, groom — and now **talk** to your dog. Each interaction moves trust, arousal, and personality on the dog's inner state. The illustrated dog reacts with head tilts, tail movement, breathing, care motions, and authored sitting/resting/sleeping poses.
-2. **Talk & Learn (Classical Conditioning)**: Say a word ("dinner", "come", "good boy") and Expo responds based on whether that word has been paired with food, petting, or play. Say it, then act within 30 seconds, and Expo learns the association — just like Pavlov.
+2. **Talk & Learn (Classical Conditioning)**: Say a word ("dinner", "come", "good boy") and Expo responds based on whether that word has been paired with food, petting, or play. The simulation pairs a word with care within an authored30-second window; this is a game model, not a measured learning deadline for a real dog.
 3. **Train & Coach (reward-based training)**: Practise eight actions with the animated dog: cue, watch the movement finish, mark, then reward. Timing starts from the rendered completion frame. Sit, stay and wait rewards keep the dog in position. The separate real-session log records your observations; its percentages and schedule experiments are game estimates, not measured real-dog abilities. New skills use rewards for each successful response. The 500ms scoring target is a game rule, not a biological learning deadline.
 4. **Meet Other Dogs**: The Canine Commons park lets your dog roam with neighbors. Import a friend's exported dog JSON and their dog appears in the park as a visitor — amber beacon, sniffs, greet, chase.
 
@@ -29,7 +29,7 @@ Dogs also have a day of their own: wandering and sniffing, boredom, toilet break
 
 ## The Cockpit — one screen, no scrolling
 
-**The document does not scroll. Ever.**
+**The page stays fixed.** Care fits without scrolling; longer real-session logs and record archives scroll inside their own region.
 
 A Tamagotchi had one screen and no scroll: the animal, the indicators and the buttons were all there, and anything that came up came up as a bar. A page that scrolls down forever is a page whose contents were never decided — the reader is shown a slice and told to come back for the rest.
 
@@ -43,7 +43,7 @@ So the app is a fixed frame with three parts and nothing else:
 
 The five regions:
 
-- **Stage** — the live 3D avatar, and the note bar under it that says what the dog just did.
+- **Stage** — the live illustrated dog (or an imported/legacy3D model), and the note bar under it that says what the dog just did.
 - **Care** — six numbers, all derived from one state, and one sentence saying what to do next.
 - **Coach** — the training deck: all eight behaviours, measured marker timing, the cue word the dog answers to, and the observation log.
 - **Commons** — the 3D park, the neighbours, and the chat.
@@ -57,9 +57,11 @@ The spatial gate enforces this: `scripts/spatial/spatial-check.mjs` now fails th
 
 ## Featured Canine: Expo (เอ็กซ์โป)
 
+The coat follows the reference photos. Dates, weight, chip ID and the persona below are retained starter examples, not independently verified health facts. Runtime labels, JSON and print carry their source qualifications.
+
 - **Breed**: Thai Bangkaew Dog (*ไทยบางแก้ว*)
-- **Date of Birth**: 17 November 2021 (5 years old)
-- **Canine Biological Age**: ~36.5 dog years (Prime Adult Guardian)
+- **Date of Birth**: 17 November 2021 (starter example)
+- **Starter game age estimate**: ~36.5 dog years
 - **Weight**: 24.8 kg
 - **Coat & Markings**: Sable Agouti & White. Dark wolf-sable mask around eyes, white blaze running down muzzle, signature Bangkaew lion mane/chest ruff (*แผงคอสิงโต*), feathered plume tail.
 - **Microchip ID**: `TH-985141002849102`

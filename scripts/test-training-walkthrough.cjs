@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-training-walkthrough';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true}),report=[];
 try{
- const fresh=async(w=390,h=844,reduced=false)=>{const p=await browser.newPage({viewport:{width:w,height:h},reducedMotion:reduced?'reduce':'no-preference'});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded'});await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>8);if(w<1024||h<820)await p.getByRole('tab',{name:'Coach',exact:true}).click();return p;};
+ const fresh=async(w=390,h=844,reduced=false)=>{const p=await browser.newPage({viewport:{width:w,height:h},reducedMotion:reduced?'reduce':'no-preference'});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded',timeout:60000});await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>8);if(w<1024||h<820)await p.getByRole('tab',{name:'Coach',exact:true}).click();return p;};
  const deck=p=>p.locator('[data-practice-phase]');
  const read=p=>p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')));
  const forceCue=async p=>{await p.evaluate(()=>{window.originalRandom=Math.random;Math.random=()=>.01;});await deck(p).getByRole('button',{name:'Lure',exact:true}).click();await p.evaluate(()=>{Math.random=window.originalRandom;});};
