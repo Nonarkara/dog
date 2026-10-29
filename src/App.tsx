@@ -19,6 +19,7 @@ import {
 import { CommandBar } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
+import {DogChooser} from './components/DogChooser';
 import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck } from 'lucide-react';
 import {
   createPetState,
@@ -131,6 +132,7 @@ export const App: React.FC = () => {
 
   // Interactive 3D triggers
   /** What the practice field asked the dog's body to do. */
+  const [gameControlsHost,setGameControlsHost]=useState<HTMLDivElement|null>(null);
   const [avatarPose, setAvatarPose] = useState<AvatarPose>('stand');
   const [interactionTrigger, setInteractionTrigger] = useState<AvatarInteractionTrigger>(null);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -143,6 +145,17 @@ export const App: React.FC = () => {
   const noteTimer = useRef<number | null>(null);
 
   const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
+  const regionBeforeChooser=useRef<RegionKey>('care');
+  const closeDogChooser=()=>{setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus());};
+  const toggleDogChooser=()=>{
+    if(isDogMenuOpen){closeDogChooser();return;}
+    regionBeforeChooser.current=activeRegion;setActiveRegion('care');setIsDogMenuOpen(true);
+  };
+  useEffect(()=>{
+    if(!isDogMenuOpen)return;
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus();}};
+    window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);
+  },[isDogMenuOpen]);
   const [isAddDogOpen, setIsAddDogOpen] = useState(false);
 
   const [newDogName, setNewDogName] = useState('');
@@ -480,7 +493,7 @@ export const App: React.FC = () => {
   const renderRegion = (key: RegionKey) => {
     switch (key) {
       case 'care':
-        return <CarePanel dog={currentDog} petState={petState} />;
+        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} />;
       case 'coach':
         return (
           <Suspense fallback={<RegionLoading label="Coach" />}>
@@ -520,17 +533,11 @@ export const App: React.FC = () => {
             Dog days
           </span>
 
-          {/* Which dog. The dog is the subject of the app, so the switcher sits
-              near the front of the band, where the eye lands first.
-
-              It is a DISCLOSURE, not a row of buttons: a row grows with the
-              number of dogs, and the header is a fixed band. A row of chips
-              that outgrows the band pushes the whole page sideways, and a
-              sideways-scrolling page is the one failure no layout can excuse.
-              The disclosure shows the dog you are with; the list is the set. */}
+          {/* The chooser uses the existing Care region instead of covering the dog. */}
           <div className="relative shrink-0">
             <button
-              onClick={() => setIsDogMenuOpen((open) => !open)}
+              onClick={toggleDogChooser}
+              onKeyDown={event=>{if(event.key==='ArrowDown'){event.preventDefault();if(!isDogMenuOpen)toggleDogChooser();requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('#dog-switcher [aria-selected="true"]')?.focus());}}}
               aria-haspopup="listbox"
               aria-expanded={isDogMenuOpen}
               aria-controls="dog-switcher"
@@ -541,54 +548,7 @@ export const App: React.FC = () => {
               <ChevronDown size={13} aria-hidden="true" />
             </button>
 
-            {isDogMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsDogMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <ul
-                  id="dog-switcher"
-                  role="listbox"
-                  aria-label="Dogs"
-                  className="absolute left-0 top-full mt-1 z-20 min-w-[200px] border-hairline bg-elevated"
-                >
-                  {dogs.map((dog) => (
-                    <li key={dog.id} role="none">
-                      <button
-                        role="option"
-                        aria-selected={dog.id === activeDogId}
-                        onClick={() => {
-                          selectDog(dog.id);
-                          setIsDogMenuOpen(false);
-                        }}
-                        className={`w-full min-h-10 px-3 text-left text-[13px] ${
-                          dog.id === activeDogId ? 'text-accent' : 'text-zinc-300 hover:text-white'
-                        }`}
-                      >
-                        {dog.name}
-                        <span className="block text-[11px] text-faint">{dog.breed}</span>
-                      </button>
-                    </li>
-                  ))}
-                  <li role="none" className="border-hairline-t">
-                    <button
-                      role="option"
-                      aria-selected={false}
-                      onClick={() => {
-                        setIsDogMenuOpen(false);
-                        setIsAddDogOpen(true);
-                      }}
-                      className="w-full min-h-10 px-3 text-left text-[13px] text-zinc-300 hover:text-white"
-                    >
-                      <Plus size={13} className="inline mr-1 -mt-0.5" aria-hidden="true" />
-                      Enroll another dog
-                    </button>
-                  </li>
-                </ul>
-              </>
-            )}
+
           </div>
 
           {/* The facts about the dog you are with. */}
@@ -653,6 +613,7 @@ export const App: React.FC = () => {
                     pose={avatarPose}
                     onPet={() => handleInteract('pet')}
                     onClean={() => handleInteract('clean')}
+                    controlsHost={gameControlsHost}
                     onCare={handleInteract}
                     onBed={handleBed}
                     onMiniGameComplete={handleMiniGameComplete}
@@ -665,6 +626,7 @@ export const App: React.FC = () => {
                         pose={avatarPose}
                         onPet={() => handleInteract('pet')}
                         onClean={() => handleInteract('clean')}
+                        controlsHost={gameControlsHost}
                         onMiniGameComplete={handleMiniGameComplete}
                         interactionTrigger={interactionTrigger}
                         onInteractionEnd={() => setInteractionTrigger(null)}
@@ -694,6 +656,7 @@ export const App: React.FC = () => {
             )}
             </div>
             </div>
+            <div className="stage-game-dock" hidden={isDogMenuOpen} ref={setGameControlsHost} aria-label="Dog game controls"/>
           </div>
         </section>
 
@@ -719,7 +682,7 @@ export const App: React.FC = () => {
                     title={r.label}
                     aria-selected={active}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => setActiveRegion(r.key)}
+                    onClick={() => {setIsDogMenuOpen(false);setActiveRegion(r.key);}}
                     className={`flex-1 min-h-9 px-1 text-[11px] border-hairline-r last:border-hairline-r-0 ${
                       active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
                     }`}

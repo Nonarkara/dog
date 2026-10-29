@@ -78,6 +78,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
+      if(document.querySelector('.dog-chooser'))return;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isSick && (e.key === 'm' || e.key === 'M')) {

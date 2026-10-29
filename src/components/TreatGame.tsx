@@ -29,6 +29,7 @@ export function TreatGame({name,onClose,onComplete,onReact}:Props){
  useEffect(()=>{
   const keys=(event:KeyboardEvent)=>{
    const target=event.target as HTMLElement|null;
+   if(document.querySelector('.dog-chooser'))return;
    if(target?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}
    else if(event.key===' '&&!target?.closest('button,a,[role="button"],[role="tab"],[role="option"]')){event.preventDefault();event.stopPropagation();}
@@ -38,7 +39,7 @@ export function TreatGame({name,onClose,onComplete,onReact}:Props){
   return()=>window.removeEventListener('keydown',keys,true);
  },[round.phase,onClose]);
  return <div className="treat-game" onKeyDown={event=>event.stopPropagation()} aria-label="Find the treat game">
-  <div className="treat-heading"><span className="inline-flex items-center gap-1"><Bone size={16} aria-hidden="true"/><strong>Find the treat</strong><span className="data">{round.number}/3 · {round.score} found</span></span><button type="button" className="btn-quiet" aria-label="Close treat game" onClick={close}><X size={16}/></button></div>
+  <div className="treat-heading"><span className="inline-flex items-center gap-1"><Bone size={16} aria-hidden="true"/><strong className="sr-only">Find the treat</strong><span className="data">{round.number}/3 · {round.score} found</span></span><button type="button" className="btn-quiet" aria-label="Close treat game" onClick={close}><X size={16}/></button></div>
   <p className="treat-instruction" role="status" aria-live="polite">{round.phase==='reveal'?`Watch cup ${round.target+1}…`:round.phase==='guess'?`Which cup, ${name}?`:round.picked===round.target?'Good nose!':'There it was! Try the next one.'}</p>
   <div className="treat-cups">{[0,1,2].map(cup=>{
    const show=round.phase==='reveal'||round.phase==='result';const found=round.phase==='result'&&cup===round.target;

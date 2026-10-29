@@ -1,3 +1,4 @@
+import {createPortal} from 'react-dom';
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -22,6 +23,7 @@ export type AvatarInteractionTrigger =
   | null;
 
 interface DogAvatar3DProps {
+  controlsHost?:HTMLElement|null;
   dog: DogProfile;
   petState: PetState;
   interactionTrigger: AvatarInteractionTrigger;
@@ -64,7 +66,9 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
   onPet,
   onClean,
   onMiniGameComplete,
+  controlsHost,
 }) => {
+  const dock=(node:React.ReactNode)=>controlsHost?createPortal(node,controlsHost):node;
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
@@ -1154,12 +1158,12 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* Interactive Tamagotchi Agility Catch Mini-Game HUD */}
-      {miniGame.active && (
+      {miniGame.active && dock(
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between catch-hud bg-zinc-950 border-hairline px-2 py-1.5 text-[11px] z-10">
           <div className="flex items-center gap-2 min-w-0">
             <span className="label text-accent font-semibold whitespace-nowrap">Catch · ball {miniGame.target === 'left' ? '◀ left' : 'right ▶'}</span>
             <span className="data text-zinc-300 whitespace-nowrap">
-              Round {miniGame.round}/5 · Score {miniGame.score}
+              <span className="sr-only">Round </span>{miniGame.round}/5 · <span className="sr-only">Score </span>{miniGame.score}
             </span>
             {miniGame.lastResult && (
               <span
@@ -1178,7 +1182,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
               onClick={() => handleMiniGameChoice('left')}
               className="btn btn-quiet border-hairline text-[11px] px-2 py-0.5"
             >
-              ◀ Left
+              <span aria-hidden="true">◀</span><span className="sr-only">◀ Left</span>
             </button>
             <button
               type="button"
@@ -1186,7 +1190,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
               onClick={() => handleMiniGameChoice('right')}
               className="btn btn-quiet border-hairline text-[11px] px-2 py-0.5"
             >
-              Right ▶
+              <span aria-hidden="true">▶</span><span className="sr-only">Right ▶</span>
             </button>
             <button
               type="button"

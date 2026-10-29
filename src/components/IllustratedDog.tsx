@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {createPortal} from 'react-dom';
 import * as THREE from 'three';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -13,6 +14,7 @@ import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
 
 interface Props {
+  controlsHost?: HTMLElement|null;
   dog: DogProfile; petState: PetState; pose?: AvatarPose;
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
   onCare?: (action: Interaction) => void;
@@ -98,6 +100,7 @@ export function IllustratedDog(props: Props) {
 
 function IllustratedStage(props: Props & {url:string}) {
   const { dog, fallback, url } = props;
+  const dock=(node:React.ReactNode)=>props.controlsHost?createPortal(node,props.controlsHost):node;
   const mount = useRef<HTMLDivElement>(null);
   const pawTarget=useRef<HTMLButtonElement>(null);
   const latest = useRef(props); latest.current = props;
@@ -335,13 +338,13 @@ function IllustratedStage(props: Props & {url:string}) {
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
       const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*personality.pace:0;
-      const size=1-zoom*.12,room=Math.max(.08,camera.right-.83*size-(camera.right-camera.left)*.09);
+      const size=1-zoom*.12,room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
       skin.scale.set((zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1)*size,size,1);
       const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
-      skin.position.x=leap.current.direction*Math.sin(jump*Math.PI)*.24+runX+driftX;
-      skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*.2:0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
+      skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX,-room,room);
+      skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
       outgoing.position.copy(skin.position);outgoing.scale.copy(skin.scale);
       floor.position.x=skin.position.x;floor.scale.x=.63*size;floorMaterial.opacity=.08*(1-Math.sin(jump*Math.PI)*.55);
       if(pawTarget.current){const x=.5+(.21-.5)*2/(camera.right-camera.left),y=.5+(.53-.5)*2/(camera.top-camera.bottom);pawTarget.current.style.left=`${x*100}%`;pawTarget.current.style.top=`${y*100}%`;}
@@ -372,12 +375,12 @@ function IllustratedStage(props: Props & {url:string}) {
   return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
     <div ref={mount} className="w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
     {!ready&&<p className="absolute inset-0 flex items-center justify-center label">Loading {dog.name}’s illustration</p>}
-    {game&&<div className="catch-hud absolute top-2 left-2 right-2 flex items-center justify-between bg-zinc-950 border-hairline px-2 py-1.5 text-[11px] z-10">
-      <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2">Round {game.round}/5 · Score {game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
-      <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} onClick={()=>choose('left')}>◀ Left</button><button className="btn btn-quiet px-2" disabled={game.busy} onClick={()=>choose('right')}>Right ▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
-    </div>}
+    {game&&dock(<div className="catch-hud flex items-center justify-between text-[11px]">
+      <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
+      <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
+    </div>)}
     {game?.busy&&<span key={game.round} className={`illustration-ball illustration-ball--${game.target}`} role="img" aria-label={`Ball toward ${game.target}`}/> }
-    {finding&&<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>}
+    {finding&&dock(<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>)}
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
@@ -388,6 +391,6 @@ function IllustratedStage(props: Props & {url:string}) {
 
     {Array.from({length:Math.min(3,props.petState.poopCount||0)},(_,i)=><button key={i} className="illustration-mess" style={{left:`${65+i*9}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean mess"><svg viewBox="0 0 40 36" width="30" height="28"><path d="M6 32Q-2 23 12 21Q3 12 19 11Q13 5 23 2Q22 11 27 14Q36 16 29 22Q44 26 34 32Z" fill="#786049" stroke="#33291f" strokeWidth="2"/></svg></button>)}
     {Array.from({length:life.peeCount},(_,i)=><button key={`pee-${i}`} type="button" className="illustration-puddle" style={{left:`${58-i*14}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean puddle" title="Clean puddle"><svg viewBox="0 0 64 32" width="48" height="28" aria-hidden="true"><path d="M5 20C1 13 12 11 19 12C14 2 37 2 41 11C62 6 67 20 55 25C38 31 12 30 5 20Z" fill="#dfc577" stroke="#9b7a36" strokeWidth="1.5"/><path d="M12 20Q25 24 42 19M35 13l5-1" fill="none" stroke="#fff4c3" strokeWidth="2"/></svg></button>)}
-    <p className="dog-pet-hint absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">Stroke to pet</p>
+    {!game&&!finding&&<p className="dog-pet-hint absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">Stroke to pet</p>}
   </div>;
 }
