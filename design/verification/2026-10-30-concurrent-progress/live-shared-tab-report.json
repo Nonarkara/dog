@@ -1,0 +1,705 @@
+{
+  "version": 3,
+  "revision": 21,
+  "dogs": [
+    {
+      "id": "expo-2021",
+      "name": "Expo",
+      "callName": "Expo",
+      "thaiName": "เอ็กซ์โป",
+      "breed": "Thai Bangkaew Dog",
+      "thaiBreed": "ไทยบางแก้ว",
+      "birthDate": "2021-11-17",
+      "sex": "male",
+      "isNeutered": true,
+      "microchipId": "TH-985141002849102",
+      "weightKg": 24.8,
+      "coatColor": "White with black-tan saddle and mask (ขาว-ดำ)",
+      "distinctiveMarks": [
+        "Mostly white; black brown-tipped saddle; dark mask with tan cheeks",
+        "Crisp white vertical blaze running up the muzzle to the forehead",
+        "Enormous white lion mane / chest ruff (แผงคอสิงโต)",
+        "White plumed tail, grey on top, carried curled over the back",
+        "Warm amber-brown watchful eyes"
+      ],
+      "personalityTraits": [
+        "Observant & Calm Sovereign",
+        "Fiercely Loyal Family Guardian",
+        "Bolster Connoisseur (ชอบนอนหนุนหมอนข้าง)",
+        "Alert to Doorway Sounds",
+        "Selective Socializer (Dignified)"
+      ],
+      "favoriteFood": "Boiled tender chicken breast with mashed pumpkin & beef sinew chews",
+      "favoriteToy": "Grey cylindrical bolster pillow & chew knot",
+      "quirks": [
+        "Refuses to sleep without resting his chin on a pillow or bolster",
+        "Tips tongue out slightly when intensely relaxed",
+        "Monitors the perimeter from high ground (bed/sofa)"
+      ],
+      "primaryVetClinic": "Thonglor Pet Hospital (Sukhumvit 55)",
+      "emergencyPhone": "+66 2 712 6301",
+      "primaryPhotoUrl": "/expo/expo-closeup.jpg",
+      "photos": [
+        {
+          "id": "p1",
+          "url": "/expo/expo-closeup.jpg",
+          "angle": "closeup",
+          "dateTaken": "2026-10-25",
+          "notes": "Expo resting head on grey bolster, soulful gaze"
+        },
+        {
+          "id": "p2",
+          "url": "/expo/expo-front.jpg",
+          "angle": "front",
+          "dateTaken": "2026-10-24",
+          "notes": "Front portrait with regal ruff and tongue peeking"
+        },
+        {
+          "id": "p3",
+          "url": "/expo/expo-side.jpg",
+          "angle": "side",
+          "dateTaken": "2026-10-22",
+          "notes": "Side profile showing dark saddle and white ruff"
+        }
+      ],
+      "vaccinations": [
+        {
+          "id": "vac-1793336410000-dwetl7",
+          "name": "Concurrency test dose",
+          "type": "core",
+          "dateAdministered": "2026-10-30",
+          "nextDueDate": "2027-10-30",
+          "batchNumber": "",
+          "clinic": "Thonglor Pet Hospital (Sukhumvit 55)",
+          "veterinarian": ""
+        },
+        {
+          "id": "vac-1",
+          "name": "Rabies (Rabisin)",
+          "type": "core",
+          "dateAdministered": "2026-04-12",
+          "nextDueDate": "2027-04-12",
+          "batchNumber": "RB-88914-A",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Chayanin DVM",
+          "notes": "Annual mandatory rabies booster. No adverse reactions."
+        },
+        {
+          "id": "vac-2",
+          "name": "DHPP 5-in-1 (Distemper, Parvo, Hepatitis, Adeno, Parainfluenza)",
+          "type": "core",
+          "dateAdministered": "2026-04-12",
+          "nextDueDate": "2027-04-12",
+          "batchNumber": "VANG-67210",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Chayanin DVM"
+        },
+        {
+          "id": "vac-3",
+          "name": "Leptospirosis (L4 Quadrivalent)",
+          "type": "non-core",
+          "dateAdministered": "2026-04-12",
+          "nextDueDate": "2027-04-12",
+          "batchNumber": "LEPTO-4091",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Chayanin DVM",
+          "notes": "Essential protection for tropical humid climate & rain puddles."
+        },
+        {
+          "id": "vac-4",
+          "name": "Bordetella Bronchiseptica (Intranasal Kennel Cough)",
+          "type": "non-core",
+          "dateAdministered": "2026-08-10",
+          "nextDueDate": "2027-02-10",
+          "batchNumber": "KC-99021",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Kanyarat DVM",
+          "notes": "6-month coverage for social parks & boarding."
+        }
+      ],
+      "parasiteControl": [
+        {
+          "id": "pc-1",
+          "brand": "NexGard Spectra (15-30kg Chewable)",
+          "target": "all-in-one",
+          "dateAdministered": "2026-10-01",
+          "nextDueDate": "2026-11-01",
+          "administeredBy": "Dr. Non (At Home)"
+        },
+        {
+          "id": "pc-2",
+          "brand": "NexGard Spectra (15-30kg Chewable)",
+          "target": "all-in-one",
+          "dateAdministered": "2026-09-01",
+          "nextDueDate": "2026-10-01",
+          "administeredBy": "Dr. Non (At Home)"
+        }
+      ],
+      "medicalHistory": [
+        {
+          "id": "med-1",
+          "date": "2026-04-12",
+          "category": "checkup",
+          "summary": "Annual comprehensive wellness exam & blood panel",
+          "clinic": "Thonglor Pet Hospital",
+          "vetNotes": "CBC & biochemistry normal. Heart sounds clear. Joint mobility excellent. Dental tartar grade 1 (clean). BCS 5/9 ideal.",
+          "weightAtTimeKg": 24.8
+        },
+        {
+          "id": "med-2",
+          "date": "2025-11-20",
+          "category": "dental",
+          "summary": "Routine ultrasonic dental polish & scaling",
+          "clinic": "Thonglor Pet Hospital",
+          "vetNotes": "Mild plaque removed, gum tissue healthy.",
+          "weightAtTimeKg": 24.5
+        }
+      ],
+      "tamagotchi": {
+        "hunger": 69.99555555555555,
+        "happiness": 79,
+        "energy": 74.99694444444444,
+        "hygiene": 84.99805555555555,
+        "lastFed": 1793329200000,
+        "lastPlayed": 1793322000000,
+        "lastWalked": 1793307600000,
+        "lastGroomed": 1793250000000
+      },
+      "metaverseTribe": "Phitsanulok Bangkaew Order",
+      "metaverseBio": "Sovereign Bangkaew guardian. Calm, watchful, proud bearer of the white mane and sable mask.",
+      "avatarConfig": {
+        "pattern": "bangkaew",
+        "baseColor": "#ece7de",
+        "secondaryColor": "#f8f6f1",
+        "maskColor": "#211c18",
+        "pointColor": "#9a6c43",
+        "furFluff": 0.9,
+        "earShape": "pricked",
+        "tailShape": "plume"
+      }
+    },
+    {
+      "id": "mali-2022",
+      "name": "Mali",
+      "callName": "Mali",
+      "thaiName": "มาลี",
+      "breed": "Thai Bangkaew Dog",
+      "thaiBreed": "ไทยบางแก้ว",
+      "birthDate": "2022-03-10",
+      "sex": "female",
+      "isNeutered": true,
+      "microchipId": "TH-985141003344112",
+      "weightKg": 18.5,
+      "coatColor": "Sable and white",
+      "distinctiveMarks": [
+        "Expo’s sister",
+        "Shorter legs and a broad, round body",
+        "Dark mask and white chest ruff"
+      ],
+      "personalityTraits": [
+        "Food-motivated & eager to please",
+        "Energetic, always ready to play",
+        "Affectionate, leans into your hand",
+        "Quick to learn new cues"
+      ],
+      "favoriteFood": "Boiled chicken with rice and carrot",
+      "favoriteToy": "Tennis ball",
+      "quirks": [
+        "Sits automatically when she smells food",
+        "Spins in circles when excited",
+        "Brings her toy to visitors"
+      ],
+      "primaryVetClinic": "Thonglor Pet Hospital (Sukhumvit 55)",
+      "emergencyPhone": "+66 2 712 6301",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 70,
+        "happiness": 71,
+        "energy": 75,
+        "hygiene": 85,
+        "lastFed": 1793325600000,
+        "lastPlayed": 1793329200000,
+        "lastWalked": 1793314800000,
+        "lastGroomed": 1793228400000
+      },
+      "metaverseTribe": "Bangkok Street Pack",
+      "metaverseBio": "Expo’s sister. A low, round Bangkaew who leans into a good scratch.",
+      "avatarConfig": {
+        "pattern": "bangkaew",
+        "baseColor": "#ece7de",
+        "secondaryColor": "#f8f6f1",
+        "maskColor": "#211c18",
+        "pointColor": "#9a6c43",
+        "furFluff": 0.9,
+        "earShape": "pricked",
+        "tailShape": "plume"
+      }
+    },
+    {
+      "id": "oreo-frenchie",
+      "name": "Oreo",
+      "callName": "Oreo",
+      "thaiName": "",
+      "breed": "French Bulldog",
+      "thaiBreed": "",
+      "birthDate": "",
+      "sex": "male",
+      "isNeutered": false,
+      "microchipId": "Not recorded",
+      "weightKg": 0,
+      "coatColor": "Black and white pied",
+      "distinctiveMarks": [
+        "Tall bat ears",
+        "Short, broad muzzle",
+        "Pied black and white coat"
+      ],
+      "personalityTraits": [
+        "Tall bat ears",
+        "Short, broad muzzle",
+        "Pied black and white coat"
+      ],
+      "favoriteFood": "Small training treats",
+      "favoriteToy": "Soft ball",
+      "quirks": [
+        "Tall bat ears",
+        "Short, broad muzzle",
+        "Pied black and white coat"
+      ],
+      "primaryVetClinic": "",
+      "emergencyPhone": "",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 85,
+        "happiness": 92,
+        "energy": 78,
+        "hygiene": 88,
+        "lastFed": 1793329200000,
+        "lastPlayed": 1793322000000,
+        "lastWalked": 1793307600000,
+        "lastGroomed": 1793250000000
+      },
+      "metaverseTribe": "The home pack",
+      "metaverseBio": "Oreo, a virtual french bulldog companion.",
+      "avatarConfig": {
+        "pattern": "spotted",
+        "baseColor": "#f5efe3",
+        "secondaryColor": "#fff8eb",
+        "maskColor": "#302c2b",
+        "furFluff": 0,
+        "earShape": "pricked",
+        "tailShape": "bob"
+      }
+    },
+    {
+      "id": "paolo-pug",
+      "name": "Paolo",
+      "callName": "Paolo",
+      "thaiName": "",
+      "breed": "Pug",
+      "thaiBreed": "",
+      "birthDate": "",
+      "sex": "male",
+      "isNeutered": false,
+      "microchipId": "Not recorded",
+      "weightKg": 0,
+      "coatColor": "Fawn and cream",
+      "distinctiveMarks": [
+        "Cream coat and broad, low body",
+        "Folded black ears and heavy forehead wrinkles",
+        "Flat dark jowls and a little tongue peeking out"
+      ],
+      "personalityTraits": [
+        "Cream coat and broad, low body",
+        "Folded black ears and heavy forehead wrinkles",
+        "Flat dark jowls and a little tongue peeking out"
+      ],
+      "favoriteFood": "Small training treats",
+      "favoriteToy": "Soft ball",
+      "quirks": [
+        "Cream coat and broad, low body",
+        "Folded black ears and heavy forehead wrinkles",
+        "Flat dark jowls and a little tongue peeking out"
+      ],
+      "primaryVetClinic": "",
+      "emergencyPhone": "",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 85,
+        "happiness": 92,
+        "energy": 78,
+        "hygiene": 88,
+        "lastFed": 1793329200000,
+        "lastPlayed": 1793322000000,
+        "lastWalked": 1793307600000,
+        "lastGroomed": 1793250000000
+      },
+      "metaverseTribe": "The home pack",
+      "metaverseBio": "Paolo, a virtual pug companion.",
+      "avatarConfig": {
+        "pattern": "mask",
+        "baseColor": "#d8c5a3",
+        "secondaryColor": "#e9dfc9",
+        "maskColor": "#302c29",
+        "furFluff": 0,
+        "earShape": "floppy",
+        "tailShape": "curl"
+      }
+    },
+    {
+      "id": "shiba-chai",
+      "name": "Hachiku",
+      "callName": "Hachiku",
+      "thaiName": "",
+      "breed": "Akita Inu",
+      "thaiBreed": "",
+      "birthDate": "",
+      "sex": "male",
+      "isNeutered": false,
+      "microchipId": "Not recorded",
+      "weightKg": 0,
+      "coatColor": "Cream",
+      "distinctiveMarks": [
+        "Hachikō-inspired cream Akita coat",
+        "Broad head, sturdy body and thick curled tail",
+        "One softly folded ear"
+      ],
+      "personalityTraits": [
+        "Hachikō-inspired cream Akita coat",
+        "Broad head, sturdy body and thick curled tail",
+        "One softly folded ear"
+      ],
+      "favoriteFood": "Small training treats",
+      "favoriteToy": "Soft ball",
+      "quirks": [
+        "Hachikō-inspired cream Akita coat",
+        "Broad head, sturdy body and thick curled tail",
+        "One softly folded ear"
+      ],
+      "primaryVetClinic": "",
+      "emergencyPhone": "",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 85,
+        "happiness": 92,
+        "energy": 78,
+        "hygiene": 88,
+        "lastFed": 1793329200000,
+        "lastPlayed": 1793322000000,
+        "lastWalked": 1793307600000,
+        "lastGroomed": 1793250000000
+      },
+      "metaverseTribe": "The home pack",
+      "metaverseBio": "Hachiku, a virtual akita inu companion.",
+      "avatarConfig": {
+        "pattern": "solid",
+        "baseColor": "#e2d6bb",
+        "secondaryColor": "#f5efdf",
+        "maskColor": "#51483b",
+        "furFluff": 0.4,
+        "earShape": "pricked",
+        "tailShape": "curl"
+      }
+    },
+    {
+      "id": "bangal-2023",
+      "name": "Bangal",
+      "callName": "Bangal",
+      "thaiName": "บังอร",
+      "breed": "Thai Ridgeback",
+      "thaiBreed": "หลังอานไทย",
+      "birthDate": "2023-07-22",
+      "sex": "male",
+      "isNeutered": false,
+      "microchipId": "TH-985141004455221",
+      "weightKg": 26,
+      "coatColor": "Red & Black",
+      "distinctiveMarks": [
+        "Ridge of hair along the back growing the opposite way",
+        "Sleek short coat",
+        "Almond-shaped amber eyes"
+      ],
+      "personalityTraits": [
+        "Bold & confident guardian",
+        "Independent thinker",
+        "Athletic, loves to run",
+        "Reserved with strangers, loyal to family"
+      ],
+      "favoriteFood": "Beef with sweet potato",
+      "favoriteToy": "Chew rope",
+      "quirks": [
+        "Patrols the perimeter of the yard",
+        "Chooses high spots to watch from",
+        "Talks with a low grumble, not a bark"
+      ],
+      "primaryVetClinic": "Thonglor Pet Hospital (Sukhumvit 55)",
+      "emergencyPhone": "+66 2 712 6301",
+      "primaryPhotoUrl": "",
+      "photos": [],
+      "vaccinations": [],
+      "parasiteControl": [],
+      "medicalHistory": [],
+      "tamagotchi": {
+        "hunger": 70,
+        "happiness": 75,
+        "energy": 90,
+        "hygiene": 85,
+        "lastFed": 1793322000000,
+        "lastPlayed": 1793332800000,
+        "lastWalked": 1793325600000,
+        "lastGroomed": 1793163600000
+      },
+      "metaverseTribe": "Phitsanulok Ridge Line",
+      "metaverseBio": "Athletic guardian with an independent streak. Runs first, asks later.",
+      "avatarConfig": {
+        "pattern": "saddle",
+        "baseColor": "#6b3a1a",
+        "secondaryColor": "#f4ede6",
+        "maskColor": "#2b1a0e",
+        "furFluff": 0.3,
+        "earShape": "pricked",
+        "tailShape": "plume"
+      }
+    },
+    {
+      "id": "companion-dog-2",
+      "name": "Kofi",
+      "callName": "Kofi",
+      "thaiName": "โคฟี่",
+      "breed": "Golden Retriever",
+      "thaiBreed": "โกลเด้น รีทรีฟเวอร์",
+      "birthDate": "2023-05-14",
+      "sex": "male",
+      "isNeutered": true,
+      "microchipId": "TH-985141009182334",
+      "weightKg": 31.2,
+      "coatColor": "Warm Honey Gold",
+      "distinctiveMarks": [
+        "Silky golden feathering on chest and tail",
+        "Gentle brown expressive eyes",
+        "Perpetual cheerful tail wag"
+      ],
+      "personalityTraits": [
+        "Friendly Enthusiast",
+        "Tennis Ball Obsessed",
+        "Gentle Giant",
+        "Water Splasher"
+      ],
+      "favoriteFood": "Salmon kibble with freeze-dried liver sprinkles",
+      "favoriteToy": "Felt tennis ball & duck plushie",
+      "quirks": [
+        "Greets every visitor with a shoe or toy in mouth",
+        "Loves sleeping upside down with paws in the air"
+      ],
+      "primaryVetClinic": "Thonglor Pet Hospital",
+      "emergencyPhone": "+66 2 712 6301",
+      "primaryPhotoUrl": "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
+      "photos": [
+        {
+          "id": "p-kofi-1",
+          "url": "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
+          "angle": "front",
+          "dateTaken": "2026-08-10",
+          "notes": "Golden sunny portrait"
+        }
+      ],
+      "vaccinations": [
+        {
+          "id": "vac-k1",
+          "name": "Rabies (Rabisin)",
+          "type": "core",
+          "dateAdministered": "2026-05-20",
+          "nextDueDate": "2027-05-20",
+          "batchNumber": "RB-90214-B",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Chayanin DVM"
+        },
+        {
+          "id": "vac-k2",
+          "name": "DHPP 5-in-1",
+          "type": "core",
+          "dateAdministered": "2026-05-20",
+          "nextDueDate": "2027-05-20",
+          "batchNumber": "VANG-88102",
+          "clinic": "Thonglor Pet Hospital",
+          "veterinarian": "Dr. Chayanin DVM"
+        }
+      ],
+      "parasiteControl": [
+        {
+          "id": "pc-k1",
+          "brand": "NexGard Spectra (30-60kg)",
+          "target": "all-in-one",
+          "dateAdministered": "2026-10-01",
+          "nextDueDate": "2026-11-01",
+          "administeredBy": "Dr. Non"
+        }
+      ],
+      "medicalHistory": [
+        {
+          "id": "med-k1",
+          "date": "2026-05-20",
+          "category": "checkup",
+          "summary": "Annual checkup & weight management consultation",
+          "clinic": "Thonglor Pet Hospital",
+          "vetNotes": "Excellent health. Keep weight stable around 31 kg.",
+          "weightAtTimeKg": 31.2
+        }
+      ],
+      "tamagotchi": {
+        "hunger": 90,
+        "happiness": 98,
+        "energy": 85,
+        "hygiene": 80,
+        "lastFed": 1793325600000,
+        "lastPlayed": 1793332800000,
+        "lastWalked": 1793318400000,
+        "lastGroomed": 1793163600000
+      },
+      "metaverseTribe": "Golden Valley Pack",
+      "metaverseBio": "Unstoppable tail-wagger. Always searching for the next tennis ball.",
+      "avatarConfig": {
+        "pattern": "solid",
+        "baseColor": "#e09838",
+        "secondaryColor": "#f7d399",
+        "maskColor": "#c47d20",
+        "furFluff": 0.8,
+        "earShape": "floppy",
+        "tailShape": "plume"
+      }
+    }
+  ],
+  "pets": {
+    "expo-2021": {
+      "updatedAt": 1793336410000,
+      "needs": {
+        "hunger": 69.99555555555555,
+        "energy": 74.99694444444444,
+        "hygiene": 84.99805555555555
+      },
+      "trust": 97.49953703703704,
+      "arousal": 0,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.2,
+        "playDrive": 0.3,
+        "sensitivity": 0.2
+      },
+      "behaviours": {
+        "sit": {
+          "name": "sit",
+          "strength": 0.06411993675451387,
+          "reps": 1,
+          "performedReps": 1,
+          "rehearsals": 1,
+          "repsSinceReinforcement": 0,
+          "markerDelayMs": 100,
+          "schedule": "continuous",
+          "cues": [],
+          "history": [
+            {
+              "at": "2026-10-30T05:00:10.000Z",
+              "real": true,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            },
+            {
+              "at": "2026-10-30T05:00:10.000Z",
+              "real": false,
+              "performed": true,
+              "marked": true,
+              "delayMs": 100
+            }
+          ],
+          "decayedAt": 1793336410000,
+          "lastReinforcedAt": "2026-10-30T05:00:10.000Z"
+        }
+      },
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336410000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0.4761904761904762,
+        "boredom": 0,
+        "digestionMinutes": 0.16666666666666669,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.8,
+      "together": {
+        "day": "2026-10-30",
+        "todaySec": 15,
+        "totalSec": 15,
+        "streak": 1
+      },
+      "lastTogetherAt": 1793336410000,
+      "lastRealSessionAt": 1793336410000
+    },
+    "mali-2022": {
+      "updatedAt": 1793336410000,
+      "needs": {
+        "hunger": 70,
+        "energy": 75,
+        "hygiene": 85
+      },
+      "trust": 64,
+      "arousal": 24,
+      "personality": {
+        "boldness": 0,
+        "sociability": 0,
+        "foodDrive": 0.2,
+        "playDrive": 0.3,
+        "sensitivity": 0.2
+      },
+      "behaviours": {},
+      "associations": {},
+      "observations": [],
+      "sleep": {
+        "asleep": false,
+        "fellAsleepAt": null,
+        "wokenAt": null,
+        "wakeCount": 0,
+        "restlessness": 0
+      },
+      "lastCareAt": 1793336410000,
+      "poopCount": 0,
+      "life": {
+        "bladder": 0,
+        "boredom": 0,
+        "digestionMinutes": 0,
+        "lowFullnessMinutes": 0,
+        "peeCount": 0
+      },
+      "sick": false,
+      "discipline": 60,
+      "weightKg": 24.8
+    }
+  }
+}
