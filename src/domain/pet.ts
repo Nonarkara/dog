@@ -44,6 +44,7 @@ import type {
 } from './types';
 
 export type { Observation, ObservationTag };
+import { dailyLife, advanceDailyLife } from './dailyLife';
 
 /** How long after a behaviour a marker still predicts it. */
 export const MARKER_WINDOW_MS = 500;
@@ -76,6 +77,7 @@ export function createPetState(now: number = Date.now()): PetState {
     lastCue: undefined,
     lastCueAt: undefined,
     poopCount: 0,
+    life: dailyLife({}),
     lastPoopedAt: undefined,
     sick: false,
     sickSince: undefined,
@@ -154,7 +156,11 @@ export function willSettle(state: PetState, now: number = Date.now()): boolean {
  * If he will not settle, this says so — and says why. "He is too wound up to
  * settle" is an answer; a silent failure is not.
  */
-export function settleSleep(
+export function settleSleep(state:PetState,now:number=Date.now(),subject?:Subject):{state:PetState;note:string}{
+  return settleBody(decay(state,now),now,subject);
+}
+
+function settleBody(
   state: PetState,
   now: number = Date.now(),
   subject?: Subject
@@ -203,7 +209,7 @@ export function settleSleep(
   };
   return {
     state: next,
-    note: `${name} circles twice and lies down, nose on his paws. Out like a light.`,
+    note: `${name} circles twice and lies down, nose on ${p.poss} paws. Out like a light.`,
   };
 }
 
@@ -282,12 +288,28 @@ export function happiness(state: PetState): number {
   const body = (state.needs.hunger + state.needs.energy + state.needs.hygiene) / 300;
   const bond = state.trust / 100;
   const calm = clamp(1 - Math.abs(state.arousal - 55) / 100);
-  const poopPenalty = (state.poopCount ?? 0) * 8;
+  const poopPenalty = ((state.poopCount ?? 0) + dailyLife(state).peeCount) * 8 + dailyLife(state).boredom * .12;
   return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100 - poopPenalty);
 }
 
 /** The pet drifts whether anyone is watching. */
 export function decay(state: PetState, now: number = Date.now()): PetState {
+  if(now<=state.updatedAt)return {...state,life:dailyLife(state),behaviours:Object.fromEntries(Object.entries(state.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]))};
+  // The same bounded steps run on load and while open. Sleep, digestion and
+  // filth must change rates during a long absence, not only at its end.
+  let cursor=now-Math.min(now-state.updatedAt,72*3_600_000);
+  let next={...state,updatedAt:cursor,sleep:{...(state.sleep??createSleepState())}};
+  if(next.sleep.asleep&&next.sleep.fellAsleepAt===null)next.sleep.fellAsleepAt=cursor;
+  while(cursor<now){
+    cursor=Math.min(now,cursor+10_000);
+    next=decayStep(next,cursor);
+    if(willSettle(next,cursor))next=settleBody(next,cursor).state;
+  }
+  next.behaviours=Object.fromEntries(Object.entries(next.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]));
+  return next;
+}
+
+function decayStep(state:PetState,now:number):PetState {
   const hours = Math.max(0, (now - state.updatedAt) / 3_600_000);
   const factor = Math.min(hours, 72); // nobody is away for a month
   const sleep = state.sleep ?? createSleepState();
@@ -295,23 +317,13 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
   // A dog asleep recovers faster than a dog awake, and settles more deeply.
   const asleep = sleep.asleep;
   const energyRate = asleep ? 4.5 : DECAY_PER_HOUR.energy;
-  // Poop on the stage accelerates hygiene loss
-  const poopAcc = 1 + (state.poopCount ?? 0) * 1.5;
-
-  // Digestion: time passing after feeding produces waste
-  let nextPoop = state.poopCount ?? 0;
-  let nextPoopedAt = state.lastPoopedAt;
-  if (hours >= 1.5 && nextPoop < 3 && state.needs.hunger > 30) {
-    nextPoop = Math.min(3, nextPoop + Math.floor(hours / 1.5));
-    nextPoopedAt = now;
-  }
-
-  // Sickness onset: extreme filth (poop >= 2 with low hygiene) or prolonged starvation
-  let isSick = state.sick ?? false;
-  let sickSince = state.sickSince;
-  if (!isSick && ((nextPoop >= 2 && state.needs.hygiene < 25) || (state.needs.hunger < 10 && hours >= 3))) {
-    isSick = true;
-    sickSince = now;
+  const daily=advanceDailyLife(state,factor*60,now);
+  const mess=(state.poopCount??0)+dailyLife(state).peeCount;
+  const poopAcc=1+mess*1.5;
+  const nextHygiene=clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor);
+  let isSick=state.sick??false,sickSince=state.sickSince;
+  if(!isSick&&((daily.poopCount+daily.life.peeCount>=2&&nextHygiene<25)||daily.life.lowFullnessMinutes>=180)){
+    isSick=true;sickSince=now;
   }
 
   // Sick dogs lose trust faster due to distress and suffering
@@ -325,11 +337,10 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
       energy: clamp(
         state.needs.energy + (asleep ? energyRate : -energyRate * (isSick ? 1.4 : 1)) * factor
       ),
-      hygiene: clamp(state.needs.hygiene - DECAY_PER_HOUR.hygiene * poopAcc * factor),
+      hygiene: nextHygiene,
     },
     trust: clamp(state.trust - (trustDecayRate * factor) / 24),
-    poopCount: nextPoop,
-    lastPoopedAt: nextPoopedAt,
+    ...daily,
     sick: isSick,
     sickSince,
     discipline: clamp(state.discipline ?? 60),
@@ -351,15 +362,16 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
       ),
     },
   };
+  // Morning waking and a restored daytime nap are natural, without manual-wake penalties.
+  if(asleep&&!isNightHour(now)&&next.needs.energy>=65&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=60*60_000){
+    next.sleep={...next.sleep,asleep:false,wokenAt:now};
+  }
   // A spoken cue expires if nothing follows it — classical conditioning
   // needs the cue and the outcome close together in time.
   if (state.lastCueAt && now - state.lastCueAt > 5 * 60_000) {
     next.lastCue = undefined;
     next.lastCueAt = undefined;
   }
-  next.behaviours = Object.fromEntries(
-    Object.entries(state.behaviours).map(([name, b]) => [name, decayBehaviour(b, now)])
-  );
   return next;
 }
 
@@ -439,10 +451,10 @@ export function interact(
   // costs him. So the interaction goes THROUGH the waking, and the note says
   // so — the reader is told they interrupted something, rather than being
   // served a cheerful response from an animal that was not there.
-  let base = state;
+  let base = decay(state,now);
   let wakeNote = '';
-  if ((state.sleep ?? createSleepState()).asleep) {
-    const woken = wake(state, now, subject);
+  if ((base.sleep ?? createSleepState()).asleep && action !== 'clean') {
+    const woken = wake(base, now, subject);
     base = woken.state;
     wakeNote = woken.note;
   }
@@ -455,11 +467,13 @@ export function interact(
     personality: { ...base.personality },
     updatedAt: now,
     lastCareAt: now,
+    life: dailyLife(base),
   };
 
   let note = '';
   switch (action) {
     case 'pet': {
+      next.life={...dailyLife(next),boredom:Math.max(0,dailyLife(base).boredom-25)};
       next.trust = clamp(base.trust + 4);
       next.arousal = clamp(base.arousal - 6);
       note =
@@ -494,6 +508,7 @@ export function interact(
         note = `${name} is sick and trembling. ${p.subjCap} is too weak to play — administer medicine first.`;
         break;
       }
+      next.life={...dailyLife(next),boredom:Math.max(0,dailyLife(base).boredom-65)};
       const capacity = base.needs.energy / 100;
       next.needs.energy = clamp(base.needs.energy - 16);
       next.arousal = clamp(base.arousal + 22 * capacity + (1 - capacity) * 4);
@@ -509,6 +524,7 @@ export function interact(
       break;
     }
     case 'groom': {
+      next.life={...dailyLife(next),peeCount:0};
       next.needs.hygiene = clamp(base.needs.hygiene + 30);
       next.trust = clamp(base.trust + 3);
       next.arousal = clamp(base.arousal - 4);
@@ -522,7 +538,8 @@ export function interact(
       break;
     }
     case 'clean': {
-      const mess = base.poopCount ?? 0;
+      const mess = (base.poopCount ?? 0)+dailyLife(base).peeCount;
+      next.life={...dailyLife(next),peeCount:0};
       if (mess > 0) {
         next.poopCount = 0;
         next.needs.hygiene = clamp(base.needs.hygiene + 35);
@@ -563,13 +580,14 @@ export function interact(
         note = `${name} is sick and shivering. ${p.subjCap} cannot go on a walk — rest and medicine needed.`;
         break;
       }
+      next.life={...dailyLife(next),bladder:0,boredom:Math.max(0,dailyLife(base).boredom-45)};
       next.needs.energy = clamp(base.needs.energy - 12);
       next.arousal = clamp(base.arousal - 18);
       next.needs.hygiene = clamp(base.needs.hygiene - 4);
       next.trust = clamp(base.trust + 2);
       next.personality.boldness = clampTrait(base.personality.boldness + 0.03);
       next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.08);
-      note = `Walked. Arousal down, legs exercised — and ${t} on a walk is a different animal.`;
+      note = `A sniff walk and a toilet break. ${name} comes back relieved. Arousal down, legs exercised — and ${t} on a walk is a different animal.`;
       break;
     }
   }
@@ -601,6 +619,7 @@ export function communicate(
   now: number = Date.now(),
   subject?: Subject
 ): InteractionResult {
+  state=decay(state,now);
   const clean = cue.trim().toLowerCase();
   const strength = associationStrength(state, clean);
   const name = subject?.name?.trim() || 'The dog';
@@ -659,6 +678,7 @@ const OBSERVATION_EFFECTS: Record<ObservationTag, Partial<PetState['personality'
 const OBSERVATION_LOG_LIMIT = 60;
 
 export function observe(state: PetState, observation: Observation): PetState {
+  state=decay(state,Date.now());
   const effect = OBSERVATION_EFFECTS[observation.tag] ?? {};
   const personality = { ...state.personality };
   for (const [key, delta] of Object.entries(effect)) {

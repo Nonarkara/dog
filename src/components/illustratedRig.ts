@@ -1,6 +1,6 @@
 import type { AvatarPose } from './DogAvatar3D';
 
-export type ArtPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep' | 'feed' | 'pet' | 'bow';
+export type ArtPose = 'stand' | 'sit' | 'down' | 'paw' | 'sleep' | 'feed' | 'pet' | 'bow' | 'sick';
 export const artPoseFor = (pose: AvatarPose): ArtPose => pose;
 
 // Normalized, top-origin landmarks on the authored 768px canvases. These are
@@ -40,6 +40,7 @@ export function landmarksFor(id: string, pose: ArtPose): Landmarks {
   if (pose === 'sit' || pose === 'paw') return SEATED[id];
   // Resting art has its own head/forepaw positions. Sleep has already-painted
   // closed eyes; its shader does not try to turn open eyes into a sleeping face.
+  if(pose==='sick')return {eyes:[.33,.70,.21,.67],feet:[.33,.16,.78,.68],head:[.39,.76],tail:[.79,.61],legStart:.84};
   if(pose==='feed')return {eyes:id==='paolo-pug'?[.33,.72,.22,.7]:[.35,.71,.23,.7],feet:[.34,.15,.78,.68],head:[.4,.76],tail:[.79,.56],legStart:.84};
   const pug=id==='paolo-pug', french=id==='oreo-frenchie';
   return {eyes:pose==='sleep'?[.29,.76,.18,.73]:pug?[.345,.59,.225,.54]:french?[.35,.57,.22,.54]:[.33,.54,.245,.51],
@@ -49,7 +50,7 @@ export function landmarksFor(id: string, pose: ArtPose): Landmarks {
 // Registration anchors keep face, shoulders, hips and feet together while
 // moving between authored poses. Every point has a semantic body-part role.
 export function poseAnchors(id:string,pose:ArtPose){
- const r=landmarksFor(id,pose),rest=['down','sleep','feed'].includes(pose);
+ const r=landmarksFor(id,pose),rest=['down','sleep','feed','sick'].includes(pose);
  const hipY=rest?.74:pose==='sit'||pose==='paw'?.69:.58;
  return [newPoint(r.eyes[0],r.eyes[1]),newPoint(r.eyes[2],r.eyes[3]),newPoint(...r.head),newPoint(r.feet[0],.9),newPoint(pose==='paw'?.21:r.feet[1],pose==='paw'?.53:.88),newPoint(r.feet[2],pose==='bow'?.83:.89),newPoint(.7,hipY),newPoint(...r.tail)];
 }

@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
+import { dailyLife, dailyMood } from '../domain/dailyLife';
+import type { Interaction } from '../domain/pet';
 import type { AvatarPose, AvatarInteractionTrigger } from './DogAvatar3D';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { artPoseFor, landmarksFor, poseAnchors, type ArtPose } from './illustratedRig';
-import {Hand,Heart,Music2,Wind,Bone,ChevronsDown} from 'lucide-react';
+import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles} from 'lucide-react';
 import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
@@ -13,6 +15,8 @@ import { sound } from '../utils/proceduralAudio';
 interface Props {
   dog: DogProfile; petState: PetState; pose?: AvatarPose;
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
+  onCare?: (action: Interaction) => void;
+  onBed?: () => void;
   onPet?: () => void; onClean?: () => void; onMiniGameComplete?: (won: boolean,kind?:'catch'|'find-treat') => void;
   fallback: React.ReactNode;
 }
@@ -52,6 +56,7 @@ const VERTEX = `
     float bodyBreath=sin(time*(1.4+temperament.y)*(1.-temperament.z*.35))*(.004-temperament.z*.002)*(1.-reduced);
     p.x+=fun.x*sin(time*11.*fun.w)*.009*torso*(1.-head)*(1.-reduced);
     p.y+=(bodyBreath+walk*abs(sin(phase))*.008)*torso*(1.-legs);
+    p.x+=more.z*sin(time*27.)*.0025*(torso+head)*(1.-reduced);
     p.x=.47+(p.x-.47)*profile.x;
     p.y+=profile.y*mix((.91-p.y)*.16,.08,head);
     // Sitting and resting anatomy comes from authored poses, not a flattened standing skin.
@@ -111,6 +116,18 @@ function IllustratedStage(props: Props & {url:string}) {
   const funTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const cheerTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [cheer,setCheer]=useState<{id:number;text:string}|null>(null);
+  const [ambient,setAmbient]=useState('watching');
+  const [toileting,setToileting]=useState(false);
+  const toiletUntil=useRef(0),lastPee=useRef(dailyLife(props.petState).lastPeedAt);
+  const mood=dailyMood(props.petState),life=dailyLife(props.petState);
+  useEffect(()=>{
+    const at=life.lastPeedAt;
+    if(at&&at!==lastPee.current&&Date.now()-at<20000&&!props.petState.sleep?.asleep&&!props.petState.sick){
+      toiletUntil.current=performance.now()+3200;setToileting(true);stopFun();closeGame();closeFinding();clearCheer();
+      const timer=setTimeout(()=>setToileting(false),3200);lastPee.current=at;return()=>clearTimeout(timer);
+    }
+    lastPee.current=at;
+  },[life.lastPeedAt]);
   const [finding,setFinding]=useState(false);const findingRef=useRef(false);
   const stopFun=()=>{if(funTimer.current)clearTimeout(funTimer.current);fun.current=null;setTrick(null);};
   const clearCheer=()=>{if(cheerTimer.current)clearTimeout(cheerTimer.current);setCheer(null);};
@@ -228,7 +245,7 @@ function IllustratedStage(props: Props & {url:string}) {
     let pixels:Uint8ClampedArray|null=null,imageW=0,imageH=0;
     const masks=new Map<ArtPose,{pixels:Uint8ClampedArray,w:number,h:number}>();
     const loader=new THREE.TextureLoader();
-    for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow'] as const){
+    for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow','sick'] as const){
       const source=key==='stand'?url:url.replace('.webp',`-${key}.webp`);
       loader.load(source,t=>{
         if(disposed){t.dispose();return;}t.colorSpace=THREE.SRGBColorSpace;renderer.initTexture(t);textures.set(key,t);
@@ -242,21 +259,21 @@ function IllustratedStage(props: Props & {url:string}) {
     const observer=new ResizeObserver(resize);observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
     const hit=(event:PointerEvent)=>{
-      const q=point(event),x=((q.x-.5)*(camera.right-camera.left)+1)/2,y=((q.y-.5)*(camera.top-camera.bottom)+1)/2;
+      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
       if(x<0||x>1||y<0||y>1||!pixels)return false;
       return pixels[(Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW)))*4+3]>24;
     };
     let stroking=false;
     const down=(event:PointerEvent)=>{if(hit(event)){
       stroking=true;canvas.setPointerCapture(event.pointerId);pet();
-      const q=point(event),x=((q.x-.5)*(camera.right-camera.left)+1)/2,y=((q.y-.5)*(camera.top-camera.bottom)+1)/2;
+      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
       if(x<uniforms.headPivot.value.x+.05&&y<uniforms.headPivot.value.y){runTrick('tilt',true);showCheer('Boop!');}
     }};
     const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))pet();};
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let nextGreeting=performance.now()+18000;
+    const times:number[]=[];let ambientLabel='watching';let driftX=0;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       const interval=reduced.matches?1000/6:1000/30;
@@ -269,22 +286,29 @@ function IllustratedStage(props: Props & {url:string}) {
       // The parent owns the care action lifecycle; avoid a second competing clock.
       const action=p.interactionTrigger;
       const activeFun=fun.current&&now<fun.current.until&&!asleep&&!p.petState.sick&&(!p.pose||p.pose==='stand')?fun.current:null;
-      if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(!reduced.matches&&canPlay()&&!gameRef.current&&!findingRef.current&&!activeFun&&p.petState.needs.energy>35&&p.petState.needs.hunger>35)runTrick(personality.idle);}
+      const mood=dailyMood(p.petState),toilet=now<toiletUntil.current&&!asleep&&!p.petState.sick;
+      const free=!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
+      const phase=(t*personality.pace)%44;
+      let idle=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':mood==='tired'?'tired':mood==='bored'?(phase<22?'bored':'sighing'):phase<5?'watching':phase<8?'sniffing':phase<14?'wandering':phase<19?'sitting':phase<22?'stretching':phase<27?'watching':phase<33?'wandering':phase<36?'sniffing':phase<41?'resting':p.petState.needs.energy>55?'trotting':'watching'):'watching';
+      if(reduced.matches&&['wandering','trotting','stretching','sniffing'].includes(idle))idle='watching';
+      if(ambientLabel!==idle){ambientLabel=idle;setAmbient(idle);}
+      const strolling=free&&!reduced.matches&&(idle==='wandering'||idle==='trotting'||idle==='toilet');
+      const sniffing=free&&(idle==='sniffing'||idle==='toilet');
       const kind=activeFun?.kind,zoomies=kind==='zoomies',wiggling=kind==='wiggle';
       const petting=now<reaction.current.petUntil||action==='pet'||wiggling;
       uniforms.fun.value.lerp(new THREE.Vector4(wiggling?personality.wag:0,zoomies?1:0,kind==='tilt'?1:0,personality.pace),1-Math.exp(-dt*9));
       const play=!!gameRef.current||action==='play';
-      const target=new THREE.Vector4(petting?1:0,action==='walk'||zoomies?1:0,action==='feed'?1:0,play?1:0);
+      const target=new THREE.Vector4(petting?1:0,(action==='walk'&&!p.petState.sick)||zoomies||strolling?(idle==='trotting'?1.6:1):0,action==='feed'?1:0,play||idle==='stretching'?1:0);
       uniforms.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*3));
       uniforms.motion.value.lerp(target,1-Math.exp(-dt*10));
-      uniforms.more.value.lerp(new THREE.Vector4(action==='groom'?1:0,action==='communicate'||action==='medicine'||action==='clean'?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
+      uniforms.more.value.lerp(new THREE.Vector4(action==='groom'?1:0,action==='communicate'||action==='medicine'||sniffing?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
       uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),.15);
-      const requested:ArtPose=asleep?'sleep':action==='feed'?'feed':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'?'paw':kind==='bow'?'bow':petting?'pet':'stand';
+      const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'?'feed':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'?'paw':kind==='bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
       desiredPose=requested;
       const complete=reduced.matches||now-poseChangedAt>=transitionDuration;
       let step=desiredPose;
       const path:ArtPose[]=['stand','sit','down','sleep'];
-      const category=(v:ArtPose)=>v==='pet'?'stand':v==='paw'?'sit':v==='feed'?'down':v==='bow'?'stand':v;
+      const category=(v:ArtPose)=>v==='pet'?'stand':v==='paw'?'sit':v==='feed'?'down':v==='bow'?'stand':v==='sick'?'down':v;
       const a=path.indexOf(category(shownPose)),b=path.indexOf(category(desiredPose));
       if(!reduced.matches&&a>=0&&b>=0&&Math.abs(b-a)>1)step=path[a+Math.sign(b-a)];
       if(complete&&step!==shownPose&&textures.has(step)){
@@ -312,7 +336,9 @@ function IllustratedStage(props: Props & {url:string}) {
       const size=1-zoom*.12,room=Math.max(.08,camera.right-.83*size-(camera.right-camera.left)*.09);
       const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
       skin.scale.set((zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1)*size,size,1);
-      skin.position.x=leap.current.direction*Math.sin(jump*Math.PI)*.24+runX;
+      const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
+      driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
+      skin.position.x=leap.current.direction*Math.sin(jump*Math.PI)*.24+runX+driftX;
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*.2:0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
       outgoing.position.copy(skin.position);outgoing.scale.copy(skin.scale);
       floor.position.x=skin.position.x;floor.scale.x=.63*size;floorMaterial.opacity=.08*(1-Math.sin(jump*Math.PI)*.55);
@@ -321,7 +347,7 @@ function IllustratedStage(props: Props & {url:string}) {
       times.push(now);while(times.length&&now-times[0]>3000)times.shift();
       canvas.dataset.frames=String(++renders);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.drawCalls=String(renderer.info.render.calls);
       canvas.dataset.fps=times.length>2?((times.length-1)*1000/(now-times[0])).toFixed(1):'0';
-      canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);
+      canvas.dataset.mood=mood;canvas.dataset.behaviour=toilet?'toileting':idle;canvas.dataset.travelX=driftX.toFixed(3);canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
@@ -330,7 +356,18 @@ function IllustratedStage(props: Props & {url:string}) {
 
   if(failed||!url)return <>{fallback}</>;
   const asleep=!!props.petState.sleep?.asleep;
-  return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage">
+  const needs={
+    sleeping:{Icon:Moon,text:'Dreaming…',action:undefined},
+    sick:{Icon:Thermometer,text:'Feeling poorly · medicine',action:'medicine' as const},
+    toilet:{Icon:Footprints,text:'Need to go! · walk',action:'walk' as const},
+    bored:{Icon:Bone,text:'Bored… play with me?',action:'play' as const},
+    hungry:{Icon:Utensils,text:'A little hungry · feed',action:'feed' as const},
+    tired:{Icon:Battery,text:'Sleepy paws · bed time',action:undefined},
+    dirty:{Icon:Sparkles,text:'A little cleanup?',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as 'clean'|'groom'},
+    content:{Icon:Heart,text:'',action:undefined},
+  }[mood];
+  const ambientText:Record<string,string>={watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
+  return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
     <div ref={mount} className="w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
     {!ready&&<p className="absolute inset-0 flex items-center justify-center label">Loading {dog.name}’s illustration</p>}
     {game&&<div className="catch-hud absolute top-2 left-2 right-2 flex items-center justify-between bg-zinc-950 border-hairline px-2 py-1.5 text-[11px] z-10">
@@ -342,9 +379,13 @@ function IllustratedStage(props: Props & {url:string}) {
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
+    {!game&&!finding&&!cheer&&mood!=='content'&&<div className={`dog-daily-status dog-daily-status--${mood}`} role="status">{needs.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(needs.action!)}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:<span><needs.Icon size={16} aria-hidden="true"/>{needs.text}</span>}</div>}
+    {!game&&!finding&&!cheer&&!trick&&<span className="dog-ambient-caption" aria-live="off">{toileting?'Oops…':ambientText[ambient]}</span>}
+    {toileting&&!asleep&&!props.petState.sick&&<span className="dog-pee-drops" aria-label="Having a wee"><Droplets size={20}/></span>}
     {asleep&&<span className="absolute top-[22%] left-[30%] data text-zinc-400" aria-label="Sleeping">z z</span>}
-    {props.petState.sick&&<span className="absolute top-[25%] right-[30%] label text-accent">Needs rest</span>}
+
     {Array.from({length:Math.min(3,props.petState.poopCount||0)},(_,i)=><button key={i} className="illustration-mess" style={{left:`${65+i*9}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean mess"><svg viewBox="0 0 40 36" width="30" height="28"><path d="M6 32Q-2 23 12 21Q3 12 19 11Q13 5 23 2Q22 11 27 14Q36 16 29 22Q44 26 34 32Z" fill="#786049" stroke="#33291f" strokeWidth="2"/></svg></button>)}
+    {Array.from({length:life.peeCount},(_,i)=><button key={`pee-${i}`} type="button" className="illustration-puddle" style={{left:`${58-i*14}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean puddle" title="Clean puddle"><svg viewBox="0 0 64 32" width="48" height="28" aria-hidden="true"><path d="M5 20C1 13 12 11 19 12C14 2 37 2 41 11C62 6 67 20 55 25C38 31 12 30 5 20Z" fill="#dfc577" stroke="#9b7a36" strokeWidth="1.5"/><path d="M12 20Q25 24 42 19M35 13l5-1" fill="none" stroke="#fff4c3" strokeWidth="2"/></svg></button>)}
     <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">Stroke to pet</p>
   </div>;
 }

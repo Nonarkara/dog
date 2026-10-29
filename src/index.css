@@ -655,3 +655,16 @@
 @layer base {.cockpit .paw-target {border-radius:50%!important;}}
 
 .treat-cups {top:calc(var(--dog-floor,90%) - 54px);bottom:auto;}
+
+/* Daily life stays on the animal's stage; no new band competes with care. */
+.dog-daily-status {position:absolute;top:8px;left:8px;right:48px;display:flex;justify-content:center;z-index:6;pointer-events:none;font-size:12px;color:var(--text-main);}
+.dog-daily-status>span,.dog-daily-status>button {display:inline-flex;align-items:center;gap:5px;padding:4px 7px;background:var(--bg-surface);max-width:100%;}
+.dog-daily-status>button {pointer-events:auto;min-height:36px;border:1px solid var(--border-dim);}
+.dog-daily-status--sick {color:#9b3347;}
+.dog-ambient-caption {position:absolute;bottom:8px;left:8px;right:95px;font-size:11px;line-height:1.2;pointer-events:none;color:var(--text-muted);}
+.illustration-puddle {position:absolute;top:calc(var(--dog-floor,90%) - 12px);padding:2px;min-width:48px;min-height:36px;z-index:4;}
+.illustration-mess {top:calc(var(--dog-floor,90%) - 18px);bottom:auto;z-index:4;}
+.dog-pee-drops {position:absolute;left:62%;top:calc(var(--dog-floor,90%) - 38px);color:#9b7a36;pointer-events:none;animation:wee-drops .65s ease-out infinite;}
+@keyframes wee-drops {from{transform:translateY(-7px);opacity:0;}40%{opacity:1;}to{transform:translateY(8px);opacity:0;}}
+@media(prefers-reduced-motion:reduce){.dog-pee-drops{animation:none;}}
+.cockpit .illustration-puddle,.cockpit .illustration-mess {background:transparent;border:0;}

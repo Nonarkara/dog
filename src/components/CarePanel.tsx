@@ -1,3 +1,4 @@
+import { dailyLife, dailyMood } from '../domain/dailyLife';
 import React from 'react';
 import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock, Moon, Sun, Flame} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
@@ -54,7 +55,7 @@ function clockTime(at: number | null | undefined): string {
 
 export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
   const isSick = petState.sick ?? false;
-  const poops = petState.poopCount ?? 0;
+  const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
 
   const meters: Meter[] = [
@@ -83,12 +84,14 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
    * sentence — otherwise the panel is a dashboard nobody can act on.
    */
   const nextAction = (): string => {
-    if (isSick) return `${dog.name} is sick and trembling. Administer medicine right away.`;
-    if (poops > 0) return `${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`;
-    const p = petState.needs;
-    if (p.energy < 25) return `${dog.name} is out of energy. Rest before training.`;
-    if (p.hunger < 30) return `${dog.name} is hungry. Food first — it is worth more when it is asked for.`;
-    if (p.hygiene < 30) return `${dog.name} needs a groom.`;
+    const mood=dailyMood(petState);
+    if(mood==='sick')return `${dog.name} is sick and trembling. Give the game medicine and let them rest.`;
+    if(mood==='sleeping')return `${dog.name} is sleeping. Quiet time while energy returns.`;
+    if(mood==='toilet')return `${dog.name} needs a toilet break. Take a walk before an accident.`;
+    if(mood==='hungry')return `${dog.name} is hungry. Food first.`;
+    if(mood==='tired')return `${dog.name} is out of energy. Rest before training.`;
+    if(mood==='dirty')return poops?`${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`:`${dog.name} needs a groom.`;
+    if(mood==='bored')return `${dog.name} is bored. Play, a sniff walk or a little company helps.`;
     if (petState.trust < 35) return `${dog.name} does not trust you yet. Petting without a request is the only thing that moves it.`;
     if (disciplineVal < 40) return `${dog.name} is undisciplined and prone to tantrums. Scold bad behaviour when it happens.`;
     if (petState.arousal > 80) return `${dog.name} is wound up. A walk brings the arousal down.`;

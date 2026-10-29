@@ -1,3 +1,4 @@
+import { dailyLife } from '../domain/dailyLife';
 import React, { useEffect, useRef, useState } from 'react';
 import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, AlertTriangle, Send, ShieldAlert, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -62,7 +63,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
-  const poops = petState.poopCount ?? 0;
+  const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const isTantrum = petState.call?.reason === 'tantrum';
 
   const sendCue = () => {

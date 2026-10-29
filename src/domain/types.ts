@@ -248,6 +248,8 @@ export interface PetState {
   call?: import('./attention').Call;
   /** Tamagotchi waste mechanic: uncleaned poops on the stage (0..4). */
   poopCount: number;
+  /** Persisted daily timers: toilet, digestion and boredom. Old saves default safely. */
+  life?: import('./dailyLife').DailyLife;
   lastPoopedAt?: number;
   /** Sickness from neglect, dirty stage, or extreme hunger. */
   sick: boolean;

@@ -1,0 +1,180 @@
+
+> dog-os@1.0.0 test:domain
+> esbuild src/domain/selftest.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/selftest.mjs --log-level=error && node node_modules/.cache/selftest.mjs
+
+
+THE TIMING OF THE MARKER
+  ✓ a marker on time is worth the most
+  ✓ a marker half a second late still teaches, weakly
+  ✓ a marker a second late teaches nothing
+  ✓ no marker at all teaches nothing
+  ✓ the verdict names the problem
+  ✓ a marker past the window teaches NOTHING
+  ✓ a marker just inside the window teaches a little
+  ✓ the quality never rises as the marker gets later
+
+THE SCHEDULE DECIDES WHO GETS PAID
+  ✓ every rep is paid for on a continuous schedule
+  ✓ only every third rep is paid for on a fixed ratio of three
+  ✓ the third rep of a fixed ratio is paid for
+  ✓ an unpredictable schedule sometimes pays
+  ✓ an unpredictable schedule sometimes does not
+  ✓ a fixed interval pays only once the interval has passed
+  ✓ a fixed interval pays after thirty seconds
+  ✓ a variable interval gets likelier the longer you wait
+
+ONE REP, APPLIED
+  ✓ a real, well-timed, rewarded rep raises the strength
+  ✓ a real rewarded rep counts as a rep
+  ✓ the strength never passes one
+  ✓ a late marker raises it less than an on-time one
+  ✓ a rehearsal does NOT raise the strength
+  ✓ a rehearsal does NOT count as a rep
+  ✓ a rehearsal is still recorded as a rehearsal
+  ✓ a performed but unmarked rep erodes it
+  ✓ a performed but unmarked rep is not a rep
+  ✓ a failure erodes it more than an unmarked success
+  ✓ nothing erodes below zero
+
+DIMINISHING RETURNS
+  ✓ the strength converges below one
+  ✓ the strength converged high
+
+THE COUNTER DOES NOT FREEZE WHEN THE HISTORY FILLS
+  ✓ the fixed ratio still pays after the history window fills
+  ✓ a fixed ratio pays about a third of the reps
+
+THE EXTINCTION CLOCK
+  ✓ the strength stays a probability
+  ✓ decaying twice in the same moment gives the same number
+  ✓ five hundred decays do not inflate the strength
+  ✓ five hundred decays do not erase it either
+
+A REHEARSAL IS NOT A REAL REP
+  ✓ a rehearsal does not move trust
+  ✓ a rehearsal does not move the strength
+  ✓ a real rep DOES move trust
+
+THE BODY GATES THE LEARNING
+  ✓ a hungry, exhausted dog learns less from the same rep
+  ✓ a hungry dog is less ready than a fed one
+
+THE BODY GATES THE LEARNING
+  ✓ a tired dog is less ready than a rested one
+  ✓ a behaviour that does not exist yet has no chance
+  ✓ a trained behaviour has a real chance of happening
+
+EXTINCTION
+  ✓ a behaviour nobody rewards fades
+  ✓ a behaviour nobody rewards fades slowly at first
+  ✓ a behaviour nobody rewards for a week is mostly gone
+
+THE CARE LOOP HAS CONSEQUENCES
+  ✓ feeding a hungry dog fills him
+  ✓ feeding a full dog lowers the value of food as a reward
+  ✓ petting without a request raises trust
+
+THE OBSERVATION LOG MOVES THE PERSONALITY
+  ✓ a dog seen as nervous becomes more sensitive
+  ✓ a dog seen as nervous becomes less sociable
+
+THE STAGE OF THE CURRICULUM
+  ✓ an unreliable behaviour does not advance
+  ✓ a reliable behaviour moves off the continuous schedule
+  ✓ a behaviour on every third rep stays there until there are a dozen
+
+THE DOG IS NAMED, NOT ASSUMED
+  ✓ the note names the dog it is about
+  ✓ the note does not name some other dog
+  ✓ a male dog is described as he
+  ✓ a female dog is described as she
+  ✓ the note does not describe a female dog as he
+  ✓ the coach speaks about the dog by name
+
+HAPPINESS IS COMPUTED, NOT STORED
+  ✓ happiness rises when trust rises
+  ✓ happiness is not a fourth bar
+  ✓ happiness stays a percentage
+
+THE CUE WORD IS STORED
+  ✓ the cue is stored on the behaviour
+  ✓ the cue survives the state
+  ✓ a second cue does not duplicate the first
+
+THE OBSERVATION LOG IS KEPT
+  ✓ each observation is kept
+  ✓ the log records what was seen
+  ✓ the log is in order
+
+TIME PASSES
+  ✓ an hour of drift makes a dog hungrier
+  ✓ drift does not touch the body it did not drift
+  ✓ drift keeps the observation log
+
+THE COAT
+  ✓ Expo is white at the chest
+  ✓ Expo is dark on the saddle
+  ✓ the blaze is white between the eyes
+  ✓ a solid dog has no saddle
+  ✓ a spotted coat has spots, and is mostly not spots
+
+THE PRACTICE FIELD
+  ✓ cue once, mark on time, treat on time: full marks
+  ✓ a marker before he finishes pays for "almost"
+  ✓ saying the cue twice costs you
+  ✓ a marker with no treat breaks the promise
+  ✓ a marker far too late teaches nothing
+  ✓ two misses in a row step back a stage
+  ✓ five clean reps at 80% move up a stage
+  ✓ a lure works far more often than a new word
+
+ATTENTION
+  ✓ time adds up within a day
+  ✓ the next day continues the streak and resets today
+  ✓ a missed day breaks the streak
+  ✓ a hungry dog calls you
+  ✓ feeding him answers the call, with a bonus for coming quickly
+  ✓ petting him does not answer a hungry call
+  ✓ an ignored call fades, unpunished
+  ✓ a sleeping dog does not call
+
+TAMAGOTCHI MVP CONSEQUENCES
+  ✓ poop reduces happiness
+  ✓ cleaning clears all mess from stage
+  ✓ a sick dog has zero readiness for training
+  ✓ a sick dog cannot play
+  ✓ medicine cures sickness and restores readiness
+  ✓ scolding a tantrum raises discipline
+  ✓ scolding without cause incurs heavy trust penalty
+
+A DAY OF ITS OWN
+  ✓ small ticks produce droppings while the app stays open
+  ✓ small ticks produce two puddles in 90 awake minutes
+  ✓ offline and minute ticks agree on bladder
+  ✓ offline and minute ticks agree on digestion
+  ✓ repeating a tick cannot create another mess
+  ✓ toilet pressure is visible before an accident
+  ✓ a walk relieves bladder without spawning an indoor puddle
+  ✓ boredom becomes a call and visible mood
+  ✓ company reduces boredom
+  ✓ play resolves boredom
+  ✓ puddles can be cleaned even without poop
+  ✓ cleaning does not wake a sleeping dog
+  ✓ sleep slows bladder filling
+  ✓ a restored daytime nap ends naturally
+  ✓ automatic waking has no manual-wake penalty
+  ✓ a tired dog will settle on its own
+  ✓ prolonged low fullness gets sick across small ticks
+  ✓ sickness is more visible than boredom
+  ✓ older saves gain safe daily defaults
+  ✓ care never mutates a different dog state
+  ✓ a new urgent sickness replaces an old boredom call
+  ✓ mess created during offline time affects hygiene at the right time
+  ✓ frequent care cannot stop the bladder clock
+  ✓ frequent care cannot erase energy decay
+  ✓ offline night sleep and morning waking agree with live ticks
+  ✓ the morning has awake boredom and bladder progression offline
+  ✓ sub-tick updates cannot postpone natural night sleep
+  ✓ short and long night updates give comparable bladder progression
+
+128/128 checks passed.

@@ -9,6 +9,7 @@ fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ channel: 'chrome', args: process.env.DOG_NATIVE_GL ? [] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.clock.setFixedTime(new Date(2026,9,30,12));
   page.setDefaultTimeout(60000);
   page.on('pageerror', e => { errors.push(e.message); console.error('Browser error:',e.message); });
   console.log('Opening',url);
@@ -93,6 +94,7 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(await page.locator('.catch-hud').count(),0);
   await page.waitForTimeout(1100);
   // Dog state never crosses identities, including during an active game.
+  await page.evaluate(()=>{const states=JSON.parse(localStorage.getItem('canine_os_pet_states_v1'));states['expo-2021'].needs.hunger=40;localStorage.setItem('canine_os_pet_states_v1',JSON.stringify(states));});
   await choose('Expo');
   await page.getByRole('button',{name:/^Feed/}).click();
   await page.waitForTimeout(2200);

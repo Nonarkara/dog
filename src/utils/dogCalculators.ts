@@ -1,6 +1,7 @@
 import { DogProfile, TamagotchiStats } from '../types/dog';
 import type { PetState, Behaviour, BehaviourName, Schedule } from '../domain/types';
 import { createPetState, decay } from '../domain/pet';
+import { dailyLife } from '../domain/dailyLife';
 
 export interface AgeCalculation {
   years: number;
@@ -249,6 +250,7 @@ function migratePetState(raw: unknown): PetState | null {
       restlessness: Number(state.sleep?.restlessness ?? 0),
     },
     lastCareAt: Number(state.lastCareAt ?? Date.now()),
+    life: dailyLife(state),
     poopCount: Math.max(0, Math.min(4, Number(state.poopCount ?? 0))),
     lastPoopedAt: typeof state.lastPoopedAt === 'number' ? state.lastPoopedAt : undefined,
     sick: Boolean(state.sick),

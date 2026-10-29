@@ -14,6 +14,7 @@
  */
 
 import type { NeedKey, PetState } from './types';
+import { dailyLife } from './dailyLife';
 
 export interface Together {
   /** Local calendar day, YYYY-MM-DD, that `todaySec` belongs to. */
@@ -24,7 +25,7 @@ export interface Together {
   streak: number;
 }
 
-export type CallReason = 'hungry' | 'dirty' | 'lonely' | 'sick' | 'tantrum';
+export type CallReason = 'hungry' | 'dirty' | 'lonely' | 'sick' | 'tantrum' | 'toilet' | 'bored';
 export type Answer = 'feed' | 'groom' | 'pet' | 'play' | 'walk' | 'medicine' | 'scold' | 'clean';
 
 export interface Call {
@@ -66,7 +67,8 @@ const NEED_CALLS: { need: NeedKey; below: number; reason: CallReason }[] = [
 export function whyCalling(state: PetState, now: number = Date.now()): CallReason | null {
   if (state.sleep?.asleep) return null;
   if (state.sick) return 'sick';
-  if ((state.poopCount ?? 0) > 0) return 'dirty';
+  if(dailyLife(state).bladder>=70)return 'toilet';
+  if ((state.poopCount ?? 0)+dailyLife(state).peeCount > 0) return 'dirty';
   for (const c of NEED_CALLS) if (state.needs[c.need] < c.below) return c.reason;
   // Tamagotchi classic: misbehaviour call (calls despite having all needs fulfilled).
   if (
@@ -77,11 +79,14 @@ export function whyCalling(state: PetState, now: number = Date.now()): CallReaso
   ) {
     return 'tantrum';
   }
+  if(dailyLife(state).boredom>=55)return 'bored';
   if (now - state.lastCareAt > LONELY_AFTER_MS) return 'lonely';
   return null;
 }
 
 export const ANSWERS: Record<CallReason, Answer[]> = {
+  toilet: ['walk'],
+  bored: ['pet','play','walk'],
   hungry: ['feed'],
   dirty: ['groom', 'clean'],
   lonely: ['pet', 'play', 'walk'],
@@ -90,6 +95,8 @@ export const ANSWERS: Record<CallReason, Answer[]> = {
 };
 
 export const CALL_TEXT: Record<CallReason, string> = {
+  toilet: 'is sniffing for a toilet spot; time to go outside',
+  bored: 'is bored and looking for something to do',
   hungry: 'is hungry and looking at the bowl',
   dirty: 'is in a messy area and needs cleaning',
   lonely: 'is looking for you',
@@ -104,6 +111,8 @@ export function tickCall(state: PetState, now: number = Date.now()): { call: Cal
   const current = state.call;
   if (current) {
     if (now - current.since > CALL_FADES_MS || state.sleep?.asleep) return { call: undefined, started: false };
+    const reason=whyCalling(state,now);
+    if(reason!==current.reason)return {call:reason?{reason,since:now}:undefined,started:!!reason};
     return { call: current, started: false };
   }
   const reason = whyCalling(state, now);

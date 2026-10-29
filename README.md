@@ -23,6 +23,8 @@ The stage also has high fives, play bows, happy wiggles, little zoomies and nose
 
 ---
 
+Dogs also have a day of their own: wandering and sniffing, boredom, toilet breaks and cleanable puddles, natural sleep/waking, and visibly unwell poses. Walks, company, play and cleanup resolve the matching need. [Daily-life rules and verification](design/daily-life.md).
+
 ## The Cockpit — one screen, no scrolling
 
 **The document does not scroll. Ever.**

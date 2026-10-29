@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
+import { dailyLife } from './domain/dailyLife';
 import type { AvatarPose, AvatarInteractionTrigger } from './components/DogAvatar3D';
-import { CALL_TEXT, addTogether, answerCall, tickCall } from './domain/attention';
+import { addTogether, answerCall, tickCall } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
 import { dogTheme, DOG_THEMES } from './data/dogThemes';
 import { DEFAULT_DOGS } from './data/defaultDogs';
@@ -168,8 +169,6 @@ export const App: React.FC = () => {
       customModelUrl: undefined,
     },
   };
-  const currentDogRef = useRef(currentDog);
-  currentDogRef.current = currentDog;
   const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
   const subject = { name: currentDog.name, sex: currentDog.sex } as const;
 
@@ -222,11 +221,12 @@ export const App: React.FC = () => {
         }
         // HE CALLS YOU. A need runs low, or nobody has been near him for a
         // while, and he asks. Ignored, the call fades on its own.
-        const { call, started } = tickCall(drifted);
-        if (started && call) say(`${currentDogRef.current.name} ${CALL_TEXT[call.reason]}.`);
+        // The Care sentence and on-stage need own automatic calls. A second
+        // bottom overlay would hide the floor precisely when a puddle appears.
+        const { call } = tickCall(drifted);
         return { ...drifted, call };
       });
-    }, 60_000);
+    }, 10_000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -326,8 +326,9 @@ export const App: React.FC = () => {
   const handleMiniGameComplete = (won: boolean, kind: 'catch'|'find-treat' = 'catch') => {
     if(kind==='find-treat'){
       if(petState.sick||petState.sleep?.asleep)return;
-      const now=Date.now();
-      const next:PetState={...petState,needs:{...petState.needs,energy:Math.max(0,petState.needs.energy-4)},trust:Math.min(100,petState.trust+(won?3:1)),arousal:Math.min(80,petState.arousal+6),lastCareAt:now,call:petState.call?.reason==='lonely'?undefined:petState.call,updatedAt:now};
+      const now=Date.now(),base=decay(petState,now);
+      if(base.sick||base.sleep?.asleep){setPetState(base);syncDisplay(base);say(`${currentDog.name} needs rest. We can play again later.`);return;}
+      const next:PetState={...base,needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:now,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call,updatedAt:now};
       setPetState(next);syncDisplay(next);
       setDogs(prev=>prev.map(d=>d.id===activeDogId?{...d,tamagotchi:{...d.tamagotchi,lastPlayed:now}}:d));
       say(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`);
@@ -651,6 +652,8 @@ export const App: React.FC = () => {
                     pose={avatarPose}
                     onPet={() => handleInteract('pet')}
                     onClean={() => handleInteract('clean')}
+                    onCare={handleInteract}
+                    onBed={handleBed}
                     onMiniGameComplete={handleMiniGameComplete}
                     interactionTrigger={interactionTrigger}
                     fallback={

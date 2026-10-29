@@ -11,6 +11,8 @@
 import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate } from './pet';
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
+import { dailyLife, dailyMood } from './dailyLife';
+import { settleSleep, willSettle } from './pet';
 import { coatColorAt } from './coat';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
 import { dogResponds, newLesson, scoreTrial, type Lesson } from './lesson';
@@ -288,8 +290,9 @@ ok('the log records what was seen', logged.observations[0].tag === 'nervousWithS
 ok('the log is in order', logged.observations[1].tag === 'soughtOutCompany');
 
 console.log('\nTIME PASSES');
-const before = createPetState();
-const later = decay(before, Date.now() + 3_600_000);
+const driftNoon=new Date(2026,9,29,12).getTime();
+const before = createPetState(driftNoon);
+const later = decay(before, driftNoon + 3_600_000);
 ok('an hour of drift makes a dog hungrier', later.needs.hunger < before.needs.hunger, `${later.needs.hunger} vs ${before.needs.hunger}`);
 ok('drift does not touch the body it did not drift', later.needs.energy <= before.needs.energy);
 ok('drift keeps the observation log', later.observations.length === before.observations.length);
@@ -368,6 +371,57 @@ const scoldedTantrum = interact(tantrumDog, 'scold', noon);
 ok('scolding a tantrum raises discipline', (scoldedTantrum.state.discipline ?? 0) === 65);
 const unjustScold = interact(createPetState(noon), 'scold', noon);
 ok('scolding without cause incurs heavy trust penalty', unjustScold.state.trust === 40);
+
+console.log('\nA DAY OF ITS OWN');
+const minute=60_000;
+const lifeStart=createPetState(noon);
+const stepLife=(base:PetState,n:number)=>{let s=base;for(let i=1;i<=n;i++)s=decay(s,base.updatedAt+i*minute);return s;};
+const liveDay=stepLife(lifeStart,90),offlineDay=decay(lifeStart,noon+90*minute);
+ok('small ticks produce droppings while the app stays open',liveDay.poopCount===1);
+ok('small ticks produce two puddles in 90 awake minutes',dailyLife(liveDay).peeCount===2);
+ok('offline and minute ticks agree on bladder',near(dailyLife(liveDay).bladder,dailyLife(offlineDay).bladder,1e-5));
+ok('offline and minute ticks agree on digestion',near(dailyLife(liveDay).digestionMinutes,dailyLife(offlineDay).digestionMinutes,1e-5));
+ok('repeating a tick cannot create another mess',decay(liveDay,liveDay.updatedAt).poopCount===liveDay.poopCount&&dailyLife(decay(liveDay,liveDay.updatedAt)).peeCount===2);
+const needsToilet={...lifeStart,life:{...dailyLife(lifeStart),bladder:85}};
+ok('toilet pressure is visible before an accident',dailyMood(needsToilet)==='toilet'&&tickCall(needsToilet,noon).call?.reason==='toilet');
+const relieved=interact(needsToilet,'walk',noon).state;
+ok('a walk relieves bladder without spawning an indoor puddle',dailyLife(relieved).bladder===0&&dailyLife(relieved).peeCount===0);
+const dull={...lifeStart,life:{...dailyLife(lifeStart),boredom:80}};
+ok('boredom becomes a call and visible mood',dailyMood(dull)==='bored'&&tickCall(dull,noon).call?.reason==='bored');
+ok('company reduces boredom',dailyLife(interact(dull,'pet',noon).state).boredom===55);
+ok('play resolves boredom',dailyLife(interact(dull,'play',noon).state).boredom===15);
+const peeOnly={...lifeStart,life:{...dailyLife(lifeStart),peeCount:2}};
+ok('puddles can be cleaned even without poop',dailyLife(interact(peeOnly,'clean',noon).state).peeCount===0);
+const sleepingMess={...peeOnly,sleep:{...lifeStart.sleep,asleep:true,fellAsleepAt:noon}};
+ok('cleaning does not wake a sleeping dog',interact(sleepingMess,'clean',noon).state.sleep.asleep);
+ok('sleep slows bladder filling',dailyLife(decay(sleepingMess,noon+20*minute)).bladder<dailyLife(decay(lifeStart,noon+20*minute)).bladder);
+const bedtime=settleSleep(lifeStart,noon).state;
+ok('a restored daytime nap ends naturally',!decay(bedtime,noon+61*minute).sleep.asleep);
+ok('automatic waking has no manual-wake penalty',decay(bedtime,noon+61*minute).sleep.wakeCount===0);
+ok('a tired dog will settle on its own',willSettle({...lifeStart,needs:{...lifeStart.needs,energy:10}},noon));
+const prolongedHunger={...lifeStart,needs:{...lifeStart.needs,hunger:5},life:{...dailyLife(lifeStart),lowFullnessMinutes:179}};
+ok('prolonged low fullness gets sick across small ticks',stepLife(prolongedHunger,2).sick);
+ok('sickness is more visible than boredom',dailyMood({...dull,sick:true})==='sick');
+const oldSave={...lifeStart,life:undefined};
+ok('older saves gain safe daily defaults',dailyLife(oldSave).bladder===0&&dailyLife(oldSave).peeCount===0);
+ok('care never mutates a different dog state',dailyLife(needsToilet).bladder===85&&dailyLife(peeOnly).peeCount===2);
+ok('a new urgent sickness replaces an old boredom call',tickCall({...dull,sick:true,call:{reason:'bored',since:noon}},noon).call?.reason==='sick');
+
+const filthyStart={...lifeStart,needs:{...lifeStart.needs,hygiene:35}};
+const filthyOffline=decay(filthyStart,noon+180*minute),filthyTicks=stepLife(filthyStart,180);
+ok('mess created during offline time affects hygiene at the right time',near(filthyOffline.needs.hygiene,filthyTicks.needs.hygiene,.001));
+let frequentPets=lifeStart;for(let i=1;i<=20;i++)frequentPets=interact(frequentPets,'pet',noon+i*9000).state;
+ok('frequent care cannot stop the bladder clock',near(dailyLife(frequentPets).bladder,dailyLife(decay(lifeStart,noon+3*minute)).bladder,.001));
+ok('frequent care cannot erase energy decay',near(frequentPets.needs.energy,decay(lifeStart,noon+3*minute).needs.energy,.001));
+const nightStart=new Date(2026,9,29,22).getTime();
+const overnight={...createPetState(nightStart),needs:{...lifeStart.needs,energy:30},sleep:{...lifeStart.sleep,asleep:true,fellAsleepAt:nightStart}};
+const overnightOffline=decay(overnight,nightStart+12*60*minute),overnightTicks=stepLife(overnight,12*60);
+ok('offline night sleep and morning waking agree with live ticks',overnightOffline.sleep.asleep===overnightTicks.sleep.asleep&&near(overnightOffline.needs.energy,overnightTicks.needs.energy,.001));
+ok('the morning has awake boredom and bladder progression offline',near(dailyLife(overnightOffline).boredom,dailyLife(overnightTicks).boredom,.001)&&near(dailyLife(overnightOffline).bladder,dailyLife(overnightTicks).bladder,.001));
+
+let shortNight=createPetState(nightStart);for(let i=1;i<=20;i++)shortNight=decay(shortNight,nightStart+i*9000);
+ok('sub-tick updates cannot postpone natural night sleep',shortNight.sleep.asleep);
+ok('short and long night updates give comparable bladder progression',near(dailyLife(shortNight).bladder,dailyLife(decay(createPetState(nightStart),nightStart+180000)).bladder,.1));
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {
