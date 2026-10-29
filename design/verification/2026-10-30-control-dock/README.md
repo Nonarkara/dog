@@ -16,3 +16,11 @@ Live deployment closeout follows below.
 A separate Bangal legacy 3D check also passed: Catch uses the external dock, a direction choice works and closing removes the HUD. The final native-hidden mode passed the combined chooser/game test without resetting its guess phase or round.
 
 A first live chooser check also caught a 0.484375px raw canvas overhang during the animated feedback resize (integer renderer clientHeight versus fractional flex height). The stage already clipped it visually; the canvas CSS is now clamped to its container as well. The strict zero-intersection threshold was kept. Five chooser cases passed again on the clamped build before publication.
+
+## Live closeout
+
+Implementation `8494e19`, final canvas clamp `aae6246`, both pushed to main. Final Cloudflare version `8382dded-c7c8-4c16-bbd9-461377338b1f` at https://dog.nonarkara.org/.
+
+The public-site suites passed all 20 game cases and five chooser cases with strict zero intersections after the clamp. The combined chooser/game suite passed live, preserving guess phase/round and suppressing background keys. Measurements are in `game-live.json` and `chooser-live.json`; full live captures are in `/tmp/dog-dock-live-clamped` and `/tmp/dog-chooser-live-clamped`. Live HTML, entry JavaScript and CSS SHA-256 hashes match the local production build.
+
+The user's selected existing in-app browser tab (id5) was still running the older interface. It was reloaded to the final build, then the chooser was opened and verified through its current accessibility tree and actual screenshot, without selecting a different dog or pressing care actions. `live-user-tab.png` shows Paolo fully visible and all seven dogs plus Enroll in the separate Care-area chooser. No duplicate browser tab was created.
