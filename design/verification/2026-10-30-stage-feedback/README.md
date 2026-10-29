@@ -7,3 +7,5 @@ TypeScript/build and `scripts/test-stage-feedback.cjs` pass. The script checks m
 Independent source review found no blocker; final pixels and deployment closeout follow below.
 
 Final independent source/pixel gate cleared all four viewport captures. The phone helper initially intersected the bottom toy after the canvas became shorter; this was fixed by letting that hint yield during feedback and return after the 200ms close transition (immediately with reduced motion). All five toys stay present. The regression suite verifies that temporary hiding and restoration; refreshed phone pixels show paws and controls clear. No remaining blocker.
+
+Live closeout: implementation `c017823` pushed to main; Cloudflare version `fda739ee-5add-4e81-88b8-62f600fbfecb` at https://dog.nonarkara.org/. The same four-viewport repeated-wake suite passed on the public site, including zero canvas intersection, unchanged stage/Care bounds, complete toy rail, helper restoration and dismissal. Measurements: `live.json`; captures: `/tmp/dog-note-live`. Live HTML, entry JavaScript and CSS SHA-256 hashes match the local production build.
