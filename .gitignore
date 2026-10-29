@@ -3,3 +3,7 @@ dist
 .wrangler
 .DS_Store
 *.log
+
+# Audit screenshots: evidence for a pass, not part of the product. They are
+# written and thrown away; the report that cites them is what matters.
+.audit/

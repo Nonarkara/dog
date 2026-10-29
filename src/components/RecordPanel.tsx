@@ -1050,8 +1050,12 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
               aria-labelledby={`record-tab-${tab.key}`}
               tabIndex={0}
               className={
+                // The record is a document, so its tab body SCROLLS when a
+                // dog has more history than the region holds. It used to
+                // clip: up to 465px of photos and doses were simply not
+                // there, with nothing to say so. A scrollbar says so.
                 activeTab === tab.key
-                  ? `min-h-0 flex-1 overflow-hidden ${PRINT_AUTO}`
+                  ? `min-h-0 flex-1 overflow-y-auto ${PRINT_AUTO}`
                   : 'print-only'
               }
             >

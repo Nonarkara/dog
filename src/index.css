@@ -278,28 +278,35 @@
 
   /* The regions are placed by hand, not by auto-flow: auto-flow would put a
      region wherever it happened to fit, which is how a dashboard turns into a
-     queue. */
-  @media (min-width: 1024px) {
-    .region-stage {
-      grid-column: 1 / 6;
-      grid-row: 1 / 3;
-    }
-    .region-care {
-      grid-column: 6 / 9;
-      grid-row: 1;
-    }
-    .region-coach {
-      grid-column: 9 / 13;
-      grid-row: 1;
-    }
-    .region-commons {
-      grid-column: 6 / 9;
-      grid-row: 2;
-    }
-    .region-record {
-      grid-column: 9 / 13;
-      grid-row: 2;
-    }
+     queue.
+
+     THE PLACEMENT BELONGS TO THE WIDE FRAME, AND THE APP DECIDES WHAT THE
+     WIDE FRAME IS. It used to be a width-only media query, while the app
+     switched to the five-region cockpit on width AND height (1024x820). The
+     two disagreed at 1024x768: the stylesheet placed the animal in a
+     two-column grid and the app rendered a one-column frame, so the stage
+     was given eight pixels and the dog vanished. A layout rule that lives
+     somewhere other than the decision it mirrors will eventually disagree
+     with it. These rules now hang off the class the app sets. */
+  .cockpit-workspace--wide .region-stage {
+    grid-column: 1 / 6;
+    grid-row: 1 / 3;
+  }
+  .cockpit-workspace--wide .region-care {
+    grid-column: 6 / 9;
+    grid-row: 1;
+  }
+  .cockpit-workspace--wide .region-coach {
+    grid-column: 9 / 13;
+    grid-row: 1;
+  }
+  .cockpit-workspace--wide .region-commons {
+    grid-column: 6 / 9;
+    grid-row: 2;
+  }
+  .cockpit-workspace--wide .region-record {
+    grid-column: 9 / 13;
+    grid-row: 2;
   }
 
   .panel {
@@ -380,12 +387,17 @@
     overflow: hidden;
   }
 
-  @media (max-width: 1023px) {
-    .stage-frame {
-      flex: 0 0 auto;
-      width: 100%;
-      aspect-ratio: 3 / 2;
-    }
+  /* On a one-column frame the scene is a row of its own, so the box carries
+     its own aspect ratio and the row is sized by it — the animal keeps its
+     proportions on every screen. The cap matters on a short desktop window:
+     a 3:2 scene at 1024px wide is 672px tall, which would leave the region
+     below it nothing to show. The canvas fills whatever box it is given and
+     the camera's aspect follows it, so the cap costs the scene nothing. */
+  .cockpit-workspace--tall .stage-frame {
+    flex: 0 0 auto;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    max-height: 40vh;
   }
 
   /* ---- the command bar ----------------------------------------------------

@@ -105,8 +105,13 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
         </span>
       </header>
 
-      <div className="panel-body p-2.5 gap-2">
-        <div className="grid flex-1 min-h-0 grid-cols-2 content-between gap-x-4 gap-y-2.5">
+      <div className="panel-body p-2.5 gap-2 @container">
+        {/* The meters take the height they need. They were given a box smaller
+            than their content, and the rows that did not fit painted over the
+            sentence below them. */}
+        {/* Columns follow the width the PANEL was given, not the window: a wide
+            Care panel puts the six meters in two rows instead of three. */}
+        <div className="grid grid-cols-2 @lg:grid-cols-3 content-between gap-x-4 gap-y-2.5 @lg:gap-y-1.5">
           {meters.map((m) => {
             const isLow = m.inverted
               ? m.value > 75 || m.value < 20
@@ -146,7 +151,9 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           })}
         </div>
 
-        {/* The sentence. One of them, said once, in the reading voice. */}
+        {/* The sentence. One of them, said once, in the reading voice. It
+            follows the meters directly: pushing it to the foot of the panel
+            left up to 149px of nothing between the numbers and what they mean. */}
         <div className="border-hairline-t pt-2">
           <p className="label">Now</p>
           {petState.call ? (
@@ -174,7 +181,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
             last do that?", and because a panel with a hole in it is a hole. */}
         <div className="border-hairline-t pt-2">
           <p className="label">Last</p>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
+          <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-1 mt-1">
             {CARE_LOG.map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-1 min-w-0">
                 <dt className="label truncate">{row.label}</dt>
