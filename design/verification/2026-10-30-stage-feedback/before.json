@@ -1,0 +1,174 @@
+[
+  {
+    "w": 390,
+    "h": 844,
+    "note": {
+      "x": 17,
+      "y": 246,
+      "w": 356,
+      "h": 48,
+      "bottom": 294,
+      "right": 373
+    },
+    "canvas": {
+      "x": 9,
+      "y": 54,
+      "w": 372,
+      "h": 248,
+      "bottom": 302,
+      "right": 381
+    },
+    "frame": {
+      "x": 9,
+      "y": 54,
+      "w": 372,
+      "h": 248,
+      "bottom": 302,
+      "right": 381
+    },
+    "care": {
+      "x": 8,
+      "y": 365,
+      "w": 374,
+      "h": 366,
+      "bottom": 731,
+      "right": 382
+    },
+    "overlap": 17088,
+    "careOverflow": 0,
+    "pageW": 390,
+    "pageH": 844,
+    "text": "Paolo was asleep — and he has been woken 2 times now. he will not settle easily again tonight. Contact without a request. Trust is the only thing it moves.",
+    "title": "",
+    "position": "absolute"
+  },
+  {
+    "w": 1024,
+    "h": 768,
+    "note": {
+      "x": 17,
+      "y": 305.1875,
+      "w": 990,
+      "h": 48,
+      "bottom": 353.1875,
+      "right": 1007
+    },
+    "canvas": {
+      "x": 9,
+      "y": 54,
+      "w": 1006,
+      "h": 307,
+      "bottom": 361,
+      "right": 1015
+    },
+    "frame": {
+      "x": 9,
+      "y": 54,
+      "w": 1006,
+      "h": 307.1875,
+      "bottom": 361.1875,
+      "right": 1015
+    },
+    "care": {
+      "x": 8,
+      "y": 424.1875,
+      "w": 1008,
+      "h": 280.8125,
+      "bottom": 705,
+      "right": 1016
+    },
+    "overlap": 47520,
+    "careOverflow": 0,
+    "pageW": 1024,
+    "pageH": 768,
+    "text": "Paolo was asleep — and he has been woken 2 times now. he will not settle easily again tonight. Contact without a request. Trust is the only thing it moves.",
+    "title": "",
+    "position": "absolute"
+  },
+  {
+    "w": 1440,
+    "h": 900,
+    "note": {
+      "x": 17,
+      "y": 780,
+      "w": 570.65625,
+      "h": 48,
+      "bottom": 828,
+      "right": 587.65625
+    },
+    "canvas": {
+      "x": 9,
+      "y": 54,
+      "w": 587,
+      "h": 782,
+      "bottom": 836,
+      "right": 596
+    },
+    "frame": {
+      "x": 9,
+      "y": 54,
+      "w": 586.65625,
+      "h": 782,
+      "bottom": 836,
+      "right": 595.65625
+    },
+    "care": {
+      "x": 604.65625,
+      "y": 53,
+      "w": 350,
+      "h": 388,
+      "bottom": 441,
+      "right": 954.65625
+    },
+    "overlap": 27391.5,
+    "careOverflow": 0,
+    "pageW": 1440,
+    "pageH": 900,
+    "text": "Paolo was asleep — and he has been woken 2 times now. he will not settle easily again tonight. Contact without a request. Trust is the only thing it moves.",
+    "title": "",
+    "position": "absolute"
+  },
+  {
+    "w": 1280,
+    "h": 720,
+    "note": {
+      "x": 17,
+      "y": 286,
+      "w": 1246,
+      "h": 48,
+      "bottom": 334,
+      "right": 1263
+    },
+    "canvas": {
+      "x": 9,
+      "y": 54,
+      "w": 1262,
+      "h": 288,
+      "bottom": 342,
+      "right": 1271
+    },
+    "frame": {
+      "x": 9,
+      "y": 54,
+      "w": 1262,
+      "h": 288,
+      "bottom": 342,
+      "right": 1271
+    },
+    "care": {
+      "x": 8,
+      "y": 405,
+      "w": 1264,
+      "h": 252,
+      "bottom": 657,
+      "right": 1272
+    },
+    "overlap": 59808,
+    "careOverflow": 0,
+    "pageW": 1280,
+    "pageH": 720,
+    "text": "Paolo was asleep — and he has been woken 2 times now. he will not settle easily again tonight. Contact without a request. Trust is the only thing it moves.",
+    "title": "",
+    "position": "absolute"
+  }
+]

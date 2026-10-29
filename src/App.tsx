@@ -634,7 +634,8 @@ export const App: React.FC = () => {
             {currentDog.name}, {currentDog.breed}
           </h1>
           <div className="panel-body">
-            <div className="stage-frame">
+            <div className="stage-frame" data-feedback={!!note}>
+              <div className="stage-canvas">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>
                 {!isAddDogOpen && currentDog.avatarConfig.customModelUrl ? (
                   <RiggedAvatar
@@ -675,12 +676,11 @@ export const App: React.FC = () => {
               </Suspense>
             </div>
 
-            {/* The note. It belongs to the animal, so it sits under the animal,
-                and it is a bar rather than a panel: it arrives, it is read,
-                and it goes. */}
+            {/* Feedback has its own row: never place text over the dog. */}
+            <div className="stage-note-slot" data-open={!!note}>
             {note && (
               <div className="bar bar--note" role="status" key={note.id}>
-                <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate">
+                <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={note.text}>
                   {note.text}
                 </p>
                 <button
@@ -692,6 +692,8 @@ export const App: React.FC = () => {
                 </button>
               </div>
             )}
+            </div>
+            </div>
           </div>
         </section>
 

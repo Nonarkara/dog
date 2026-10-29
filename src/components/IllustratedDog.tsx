@@ -388,6 +388,6 @@ function IllustratedStage(props: Props & {url:string}) {
 
     {Array.from({length:Math.min(3,props.petState.poopCount||0)},(_,i)=><button key={i} className="illustration-mess" style={{left:`${65+i*9}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean mess"><svg viewBox="0 0 40 36" width="30" height="28"><path d="M6 32Q-2 23 12 21Q3 12 19 11Q13 5 23 2Q22 11 27 14Q36 16 29 22Q44 26 34 32Z" fill="#786049" stroke="#33291f" strokeWidth="2"/></svg></button>)}
     {Array.from({length:life.peeCount},(_,i)=><button key={`pee-${i}`} type="button" className="illustration-puddle" style={{left:`${58-i*14}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean puddle" title="Clean puddle"><svg viewBox="0 0 64 32" width="48" height="28" aria-hidden="true"><path d="M5 20C1 13 12 11 19 12C14 2 37 2 41 11C62 6 67 20 55 25C38 31 12 30 5 20Z" fill="#dfc577" stroke="#9b7a36" strokeWidth="1.5"/><path d="M12 20Q25 24 42 19M35 13l5-1" fill="none" stroke="#fff4c3" strokeWidth="2"/></svg></button>)}
-    <p className="absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">Stroke to pet</p>
+    <p className="dog-pet-hint absolute bottom-2 right-2 text-[11px] text-zinc-400 pointer-events-none">Stroke to pet</p>
   </div>;
 }
