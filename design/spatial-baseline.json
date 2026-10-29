@@ -69,11 +69,12 @@
     "clip|span.truncate.text-[11px]": "The Record header repeats the active dog/breed already present in the page header and identity section; ellipsis keeps its four working tools on one row. Complete text remains in the DOM and full identity record.",
     "clip|p.truncate.text-[11px]": "Breed/name summaries stay on one line in the compact record column; the breed is repeated in the page header. Full DOM text, tooltip and print record preserve the information.",
     "clip|dd.min-w-0.truncate": "Read-only identity cells keep compact comparison rows. Full values remain in their titles and DOM text, and actual PDF/JSON preservation tests prove complete data is available. No action label or source qualification is truncated.",
-    "clip|li.truncate.text-[11px]": "Long descriptive marks/habits are single-line summaries in the fixed record. Each full sentence remains in its title and complete print/export; no working control is hidden."
+    "clip|li.truncate.text-[11px]": "Long descriptive marks/habits are single-line summaries in the fixed record. Each full sentence remains in its title and complete print/export; no working control is hidden.",
+    "clip|span.text-[10px].text-faint": "The narrow Commons list keeps neighbor name, breed and action in a single comparison row. Only the long breed summary is ellipsized; its full value is in the title and button DOM/accessible text, while name and current action remain readable."
   },
   "exempt": [],
   "provenance": {
-    "measuredAt": "2026-10-29T23:38:28.693Z",
+    "measuredAt": "2026-10-29T23:49:44.014Z",
     "measurements": 41,
     "routes": 1,
     "widths": 41,
@@ -830,6 +831,12 @@
         "findings": [
           {
             "kind": "clip",
+            "sel": "span.text-[10px].text-faint",
+            "metric": 33,
+            "detail": "span.text-[10px].text-faint hides 33px of its own content"
+          },
+          {
+            "kind": "clip",
             "sel": "span.truncate.text-[11px]",
             "metric": 36,
             "detail": "span.truncate.text-[11px] hides 36px of its own content"
@@ -877,6 +884,12 @@
       },
       "1025": {
         "findings": [
+          {
+            "kind": "clip",
+            "sel": "span.text-[10px].text-faint",
+            "metric": 33,
+            "detail": "span.text-[10px].text-faint hides 33px of its own content"
+          },
           {
             "kind": "clip",
             "sel": "span.truncate.text-[11px]",

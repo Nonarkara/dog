@@ -937,7 +937,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
                     >
                       {row.name}
                     </span>
-                    <span className="text-[10px] text-faint truncate min-w-0 flex-1">
+                    <span title={row.breed} className="text-[10px] text-faint truncate min-w-0 flex-1">
                       {row.breed}
                     </span>
                     <span className="label shrink-0">{row.action}</span>

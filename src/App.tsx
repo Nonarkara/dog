@@ -120,6 +120,14 @@ function useWide(): boolean {
 }
 
 export const App: React.FC = () => {
+  const workspaceRef=useRef<HTMLElement|null>(null);
+  const [workspaceReady,setWorkspaceReady]=useState(false);
+  useEffect(()=>{
+    const el=workspaceRef.current;if(!el)return;
+    const update=()=>setWorkspaceReady(!el.querySelector('[data-workspace-loading]'));
+    const observer=new MutationObserver(update);observer.observe(el,{childList:true,subtree:true});update();
+    return()=>observer.disconnect();
+  },[]);
   const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(DEFAULT_DOGS[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>('care');
@@ -603,6 +611,9 @@ export const App: React.FC = () => {
 
       {/* ---- the regions ----------------------------------------------------- */}
       <main
+        ref={workspaceRef}
+        aria-busy={!workspaceReady}
+        data-study-ready={workspaceReady}
         className={`cockpit-workspace ${
           isWide ? 'cockpit-workspace--wide' : 'cockpit-workspace--tall'
         }`}
@@ -843,14 +854,14 @@ export const App: React.FC = () => {
 
 /** A region that has not arrived yet. A quiet plate, not a hole. */
 const RegionLoading: React.FC<{ label: string }> = ({ label }) => (
-  <div className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
+  <div data-workspace-loading="true" role="status" className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
     <span className="label">{label} — loading</span>
   </div>
 );
 
 /** The scene has not arrived yet. */
 const StageLoading: React.FC<{ name: string }> = ({ name }) => (
-  <div className="absolute inset-0 flex items-center justify-center bg-black">
+  <div data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center bg-black">
     <span className="label">{name} — loading</span>
   </div>
 );
