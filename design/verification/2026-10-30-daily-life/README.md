@@ -17,3 +17,11 @@ Regression falsifiers: the isolated old domain creates zero droppings after 180 
 Independent review closed all findings: elapsed-time erasure by frequent care, offline mess/hygiene progression, within-absence sleep/waking, sub-10-second settling, settled-state game reward guards, sick/training priority, consistent Care advice, game cancellation before toilet poses, cheerful sickness art and puddle obstruction. Reviewer inspected five sick dogs, four viewports and the borderless puddle; no remaining blocker. Still images do not certify natural gait.
 
 Deployment and live verification follow below.
+
+## Live closeout
+
+Implementation `a7772a6`, greeting preservation `224c7b6`, both pushed to main. Final Cloudflare version: `1703bf11-02ec-4d26-acab-9ee6c94eaec2`, https://dog.nonarkara.org/.
+
+The complete daily-life suite passed on the public site, including automatic nap/wake, live accident cancellation of a pending game, visible puddle cleanup, quiet cleaning, reduced motion and per-dog persistence, with zero browser errors. The existing toy suite also passed live: high-five exactly once, boop, third-pet surprise, Find the Treat rewards/costs/cancellation and all five play bows. A separate live check confirmed Hachiku spontaneously offers a paw after idle time; the earlier household greetings remain alongside daily routines.
+
+Live HTML, entry JS/CSS, illustrated-renderer chunk and all five unwell WebPs matched local production SHA-256 hashes. Live captures: `/tmp/dog-daily-live` and `/tmp/dog-daily-live-toys`. The independent reviewer also cleared the final greeting guards. No physical-phone or fully natural gait certification is claimed.
