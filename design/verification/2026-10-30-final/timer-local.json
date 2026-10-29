@@ -1,0 +1,28 @@
+[
+  {
+    "case": "mode change cancels timer",
+    "stale": false
+  },
+  {
+    "case": "measured rep",
+    "attempt": {
+      "at": "2026-10-30T05:00:00.000Z",
+      "real": true,
+      "performed": true,
+      "marked": true,
+      "delayMs": 234
+    }
+  },
+  {
+    "case": "hidden/behavior interruptions, invalid delay, schedules and reload",
+    "history": [
+      {
+        "at": "2026-10-30T05:00:00.000Z",
+        "real": true,
+        "performed": true,
+        "marked": true,
+        "delayMs": 234
+      }
+    ]
+  }
+]

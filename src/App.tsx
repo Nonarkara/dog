@@ -1,3 +1,4 @@
+import {recordSources} from './utils/recordProvenance';
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
 import type { PetState } from './domain/types';
@@ -240,6 +241,7 @@ export const App: React.FC = () => {
       customModelUrl: undefined,
     },
   };
+  const starterAge=recordSources(currentDog).fields.includes('birthDate');
   const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
   const subject = { name: currentDog.name, sex: currentDog.sex } as const;
 
@@ -579,9 +581,9 @@ export const App: React.FC = () => {
           <p className="min-w-0 flex-1 truncate text-[12px] text-zinc-400">
             <span className="text-zinc-300">{currentDog.breed}</span>
             <span className="text-zinc-600"> / </span>
-            <span className="data">{age.formattedCalendarAge}</span>
+            <span className="data">{starterAge?'Age unverified':age.formattedCalendarAge}</span>
             <span className="text-zinc-600"> / </span>
-            <span className="data">{currentDog.birthDate ? `${age.dogYears} dog years` : 'Virtual companion'}</span>
+            <span className="data">{currentDog.birthDate&&!starterAge ? `${age.dogYears} dog years` : 'Virtual companion'}</span>
           </p>
 
           <span title="Saved on this device" className="hidden lg:inline text-[11px] text-faint shrink-0">

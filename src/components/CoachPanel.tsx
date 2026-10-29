@@ -137,6 +137,14 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
     return () => window.clearInterval(id);
   }, [phase]);
 
+  useEffect(()=>{
+    if(armedAtRef.current!==null){armedAtRef.current=null;setPhase('idle');setElapsedMs(0);}
+  },[mode,real]);
+  useEffect(()=>{
+    const hidden=()=>{if(document.hidden&&armedAtRef.current!==null){armedAtRef.current=null;setPhase('idle');setElapsedMs(0);}};
+    document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);
+  },[]);
+
   /* ---- switching behaviour ------------------------------------------------
    * The cue travels with the behaviour, so the field is reloaded from the
    * behaviour that was just selected — not from the behaviour that was

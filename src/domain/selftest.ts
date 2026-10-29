@@ -1,3 +1,5 @@
+import {recordSources,recordExport} from '../utils/recordProvenance';
+import {DEFAULT_DOGS} from '../data/defaultDogs';
 /**
  * THE ENGINE'S OWN PROOF.
  *
@@ -318,6 +320,14 @@ ok('session advice counts practice across behaviors',practiceSession(sessionDog.
 ok('a practice break clears all session clocks and trial counts',practiceSession(ended.lessons).sessionTrials===0&&practiceSession(ended.lessons).sessionStartedAt===undefined);
 ok('a break preserves stages, learned skill and real logs',ended.lessons?.sit?.skill===.87&&ended.lessons?.sit?.stage===2&&ended.behaviours===sessionDog.behaviours&&ended.observations===sessionDog.observations);
 ok('a break clears consecutive misses and streaks',ended.lessons?.sit?.streak===0&&ended.lessons?.sit?.misses===0);
+const sourceExpo=structuredClone(DEFAULT_DOGS[0]),sourceBefore=JSON.stringify(sourceExpo),starterSource=recordSources(sourceExpo);
+ok('unchanged starter clinical fields and entries are identified',starterSource.fields.includes('microchipId')&&starterSource.fields.includes('weightKg')&&starterSource.vaccinations.length===sourceExpo.vaccinations.length);
+const ownerSource={...sourceExpo,weightKg:19.5,microchipId:'owner-chip',birthDate:'2022-03-02',vaccinations:sourceExpo.vaccinations.map((v,i)=>i? v:{...v,clinic:'Owner clinic'})};
+ok('owner edits remain distinct from exact starter examples',!recordSources(ownerSource).fields.includes('weightKg')&&!recordSources(ownerSource).fields.includes('birthDate')&&!recordSources(ownerSource).vaccinations.includes(ownerSource.vaccinations[0].id));
+ok('Mali sterilisation is a supplied fact, not a starter assumption',!recordSources(DEFAULT_DOGS.find(d=>d.id==='mali-2022')!).fields.includes('isNeutered'));
+const sourceExport=recordExport(sourceExpo);
+ok('source detection and export preserve every original value',JSON.stringify(sourceExpo)===sourceBefore&&sourceExport.vaccinations===sourceExpo.vaccinations&&sourceExport.medicalHistory===sourceExpo.medicalHistory&&sourceExport.microchipId===sourceExpo.microchipId);
+ok('record export carries unverified-source qualification',sourceExport.recordSources.notice.includes('unverified')&&sourceExport.recordSources.starterExamples.fields.includes('microchipId'));
 console.log('\nTHE PRACTICE FIELD');
 const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
 const clean = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100, treatDelayMs: 800 });

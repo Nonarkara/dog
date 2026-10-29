@@ -1,3 +1,4 @@
+import {recordSources,recordExport,type ClinicalField} from '../utils/recordProvenance';
 import type {CommitDog} from '../utils/progressStore';
 import React, { useEffect, useRef, useState } from 'react';
 import { DogProfile, Vaccination } from '../types/dog';
@@ -237,10 +238,10 @@ const statusTone = (status: 'valid' | 'expiring-soon' | 'expired'): string =>
 
 const statusWord = (status: 'valid' | 'expiring-soon' | 'expired', days: number): string =>
   status === 'expired'
-    ? `Expired ${Math.abs(days)}d ago`
+    ? `Date passed ${Math.abs(days)}d`
     : status === 'expiring-soon'
-      ? `Due in ${days}d`
-      : `${days}d left`;
+      ? `Date in ${days}d`
+      : `Date in ${days}d`;
 
 interface HeadButtonProps {
   label: string;
@@ -319,6 +320,8 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
   const [vacClinic, setVacClinic] = useState('');
   const [vacVet, setVacVet] = useState('');
 
+  const sources=recordSources(dog);
+  const example=(key:ClinicalField)=>sources.fields.includes(key);
   const age = calculateDogAge(dog.birthDate, dog.weightKg);
   const printedOn = formatDate(todayIso());
 
@@ -363,7 +366,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     setVacDate(todayIso());
     setVacNextDue('');
     setVacBatch('');
-    setVacClinic(dog.primaryVetClinic ?? '');
+    setVacClinic(example('primaryVetClinic')?'':dog.primaryVetClinic ?? '');
     setVacVet('');
     setActiveBar('vaccine');
     setExpandedStage(null);
@@ -393,7 +396,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
   /* ---- export and print -------------------------------------------------- */
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(dog, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(recordExport(dog), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -491,6 +494,10 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
 
   /* ---- identity ------------------------------------------------------------ */
 
+  const exampleField=(label:string)=>{
+    const key:Record<string,ClinicalField>={'Microchip':'microchipId','Date of birth':'birthDate','Calendar age':'birthDate','Dog years':'birthDate','Next birthday':'birthDate','Sex':'isNeutered','Weight':'weightKg','Primary clinic':'primaryVetClinic','Emergency 24/7':'emergencyPhone'};
+    return key[label]?example(key[label]):false;
+  };
   const identityFacts: { label: string; mono: boolean; value: React.ReactNode }[] = [
     { label: 'Microchip', mono: true, value: dog.microchipId || 'Not recorded' },
     { label: 'Date of birth', mono: true, value: formatDate(dog.birthDate) },
@@ -545,7 +552,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
               key={fact.label}
               className="flex items-baseline justify-between gap-2 border-hairline-b py-1 last:border-hairline-b-0"
             >
-              <dt className="label shrink-0">{fact.label}</dt>
+              <dt className="label shrink-0" title={exampleField(fact.label)?'Starter example, unverified':undefined}>{fact.label}{exampleField(fact.label)?' †':''}</dt>
               <dd
                 className={`min-w-0 truncate text-right text-[11px] text-zinc-200 ${
                   fact.mono ? 'data' : ''
@@ -609,7 +616,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
         <div className="min-w-0">
           <h3 className="font-display text-xs text-zinc-100">Vaccination passport</h3>
           <p className={`truncate text-[10px] text-zinc-500 ${PRINT_FULL}`}>
-            Mandatory and preventative doses, with the date each one falls due.
+            Stored doses and the next dates entered with each record.
           </p>
         </div>
         <button
@@ -630,7 +637,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
         ) : (
           <div className="mt-1">
             {dog.vaccinations.map((vac) => {
-              const status = getVaccineStatus(vac.nextDueDate);
+              const status = getVaccineStatus(vac.nextDueDate),sample=sources.vaccinations.includes(vac.id);
               const meta = [
                 vac.type === 'core' ? 'Core vaccine' : 'Non-core vaccine',
                 vac.clinic,
@@ -651,9 +658,9 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                       {vac.name}
                     </h4>
                     <span
-                      className={`shrink-0 text-[10px] font-semibold ${statusTone(status.status)}`}
+                      className={`shrink-0 text-[10px] font-semibold ${sample ? 'text-faint' : statusTone(status.status)}`}
                     >
-                      {statusWord(status.status, status.daysRemaining)}
+                      {sample?'Starter example':statusWord(status.status, status.daysRemaining)}
                     </span>
                   </div>
                   <p className={`truncate text-[10px] text-zinc-500 ${PRINT_FULL}`} title={meta}>
@@ -666,9 +673,9 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                   {vac.notes && (
                     <p
                       className={`truncate text-[10px] text-zinc-400 ${PRINT_FULL}`}
-                      title={vac.notes}
+                      title={sample?`Example note (unverified): ${vac.notes}`:vac.notes}
                     >
-                      {vac.notes}
+                      {sample?`Example note (unverified): “${vac.notes}”`:vac.notes}
                     </p>
                   )}
                 </article>
@@ -698,7 +705,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
         ) : (
           <div className="mt-1">
             {dog.parasiteControl.map((pc) => {
-              const status = getVaccineStatus(pc.nextDueDate);
+              const status = getVaccineStatus(pc.nextDueDate),sample=sources.parasiteControl.includes(pc.id);
               const target = TARGET_LABEL[pc.target] ?? pc.target;
               return (
                 <article
@@ -713,9 +720,9 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                       {pc.brand}
                     </h4>
                     <span
-                      className={`shrink-0 text-[10px] font-semibold ${statusTone(status.status)}`}
+                      className={`shrink-0 text-[10px] font-semibold ${sample ? 'text-faint' : statusTone(status.status)}`}
                     >
-                      {statusWord(status.status, status.daysRemaining)}
+                      {sample?'Starter example':statusWord(status.status, status.daysRemaining)}
                     </span>
                   </div>
                   <p className={`truncate text-[10px] text-zinc-500 ${PRINT_FULL}`} title={target}>
@@ -768,15 +775,15 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                   </span>
                 </div>
                 <p className={`truncate text-[10px] text-zinc-500 ${PRINT_FULL}`}>
-                  {CATEGORY_LABEL[rec.category] ?? rec.category}, {rec.clinic || 'Clinic not recorded'}{' '}
+                  {sources.medicalHistory.includes(rec.id)?'Starter example · ':''}{CATEGORY_LABEL[rec.category] ?? rec.category}, {rec.clinic || 'Clinic not recorded'}{' '}
                   {rec.weightAtTimeKg} kg
                 </p>
                 {rec.vetNotes && (
                   <p
                     className={`truncate text-[10px] text-zinc-400 ${PRINT_FULL}`}
-                    title={rec.vetNotes}
+                    title={sources.medicalHistory.includes(rec.id)?`Example note (unverified): ${rec.vetNotes}`:rec.vetNotes}
                   >
-                    {rec.vetNotes}
+                    {sources.medicalHistory.includes(rec.id)?`Example note (unverified): “${rec.vetNotes}”`:rec.vetNotes}
                   </p>
                 )}
               </article>
@@ -823,7 +830,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
         </div>
       ) : (
         <>
-          <div className="flex shrink-0 items-center gap-2 border-hairline-b pb-1.5">
+          <div className="no-print flex shrink-0 items-center gap-2 border-hairline-b pb-1.5">
             <label className="btn btn-accent min-h-7 shrink-0 cursor-pointer px-2 text-[11px]">
               <Upload size={12} aria-hidden="true" /> Add photo
               <input
@@ -873,7 +880,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                       type="button"
                       onClick={() => setPreviewPhotoId(p.id)}
                       title={p.notes ? `${p.notes} — ${formatDate(p.dateTaken)}` : formatDate(p.dateTaken)}
-                      className={`block w-full min-w-0 flex-col items-stretch justify-start gap-0 border-hairline bg-black p-1.5 text-left hover:bg-zinc-900 ${span}`}
+                      className={`record-photo block w-full min-w-0 flex-col items-stretch justify-start gap-0 border-hairline bg-black p-1.5 text-left hover:bg-zinc-900 ${span}`}
                     >
                       <span
                         className={`relative mb-1 block w-full overflow-hidden bg-zinc-900 ${
@@ -903,8 +910,8 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
             <h4 className="label">3D model</h4>
             <p className={`truncate text-[10px] text-zinc-400 ${PRINT_FULL}`}>
               {dog.avatarConfig.customModelUrl
-                ? 'A model file is attached to this record. The avatar in the command deck is drawn procedurally, so the file is stored but not rendered.'
-                : 'No model file attached. The avatar in the command deck is drawn procedurally from this record’s colours and markings.'}
+                ? 'An imported model is attached. The stage attempts to render it; built-in household dogs use illustrated artwork.'
+                : 'No model attached. Household dogs use illustrated artwork; custom coats use the procedural fallback.'}
             </p>
           </div>
         </>
@@ -1017,6 +1024,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
 
         {/* ---- the record --------------------------------------------------- */}
         <div className={`flex min-h-0 flex-1 flex-col ${PRINT_AUTO}`}>
+          <p className="record-source-note text-[10px] leading-snug text-faint border-hairline-b pb-1 mb-1">† Starter examples; other entries owner/imported. Health facts unverified.</p>
           {/* A printed record carries every section, so the masthead is
               print-only and the inactive panels come back on paper. */}
           <div className="print-only border-hairline-b pb-2">
@@ -1031,7 +1039,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
               <dl className="flex gap-6">
                 <div>
                   <dt className="label">Microchip</dt>
-                  <dd className="data text-xs">{dog.microchipId || 'Not recorded'}</dd>
+                  <dd className="data text-xs">{dog.microchipId || 'Not recorded'}{example('microchipId')?' †':''}</dd>
                 </div>
                 <div>
                   <dt className="label">Printed</dt>

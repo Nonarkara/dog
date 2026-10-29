@@ -537,6 +537,10 @@
    it: no 3D stage, no navigation, no action buttons, no footer chrome.
    ------------------------------------------------------------------------- */
 @media print {
+  html,body,#root {height:auto!important;overflow:visible!important;}
+  .region-stage,.region-care,.region-coach,.region-commons,.cockpit-workspace>[role="tablist"] {display:none!important;}
+  .print-sheet button:not(.record-photo),.print-sheet input,.print-sheet select {display:none!important;}
+  .print-sheet article,.print-sheet .record-photo {break-inside:avoid;}
   @page {
     margin: 14mm;
   }

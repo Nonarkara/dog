@@ -1,3 +1,4 @@
+import {recordSources} from '../utils/recordProvenance';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
 import React from 'react';
 import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock} from 'lucide-react';
@@ -194,8 +195,8 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
                   : 'Awake'}
             </span>
             <span className="text-zinc-400 shrink-0 ml-2">
-              {dog.weightKg > 0 ? `${dog.weightKg} kg recorded` : 'Virtual companion'}
-              {isSick ? ' · Sick' : poops > 0 ? ` · ${poops} mess` : ' · Healthy'}
+              {dog.weightKg > 0 ? recordSources(dog).fields.includes('weightKg')?'Weight example':`${dog.weightKg} kg owner/imported` : 'Virtual companion'}
+              {isSick ? ' · Game: sick' : poops > 0 ? ` · Game: ${poops} mess` : ' · Game: well'}
             </span>
           </p>
         </div>
