@@ -138,9 +138,7 @@ export function sleepPressure(state: PetState, now: number = Date.now()): number
  * CAN HE SETTLE ON HIS OWN RIGHT NOW?
  *
  * Not if he is wound up, and not if he has been woken too many times tonight.
- * The second one is the rule that makes this a Tamagotchi and not a
- * checklist: every interruption raises the bar, so keeping him up has a
- * compounding cost.
+ * Interruptions raise the bar temporarily; quiet time lets him recover.
  */
 export function willSettle(state: PetState, now: number = Date.now()): boolean {
   const sleep = state.sleep ?? createSleepState();
@@ -175,9 +173,7 @@ function settleBody(
   if (sleep.restlessness > 0.55) {
     return {
       state,
-      note: `${name} will not settle. ${p.subj} has been woken ${sleep.wakeCount} ${
-        sleep.wakeCount === 1 ? 'time' : 'times'
-      } tonight, and ${p.subj} cannot get back down.`,
+      note: `${name} is restless. Give ${p.obj} some quiet time before trying bed again.`,
     };
   }
   if (state.arousal > 55) {
@@ -199,8 +195,8 @@ function settleBody(
       // checklist. If settling him cleared the count, you could keep him up
       // all night at no cost: bed, wake, bed, wake, and every time the slate
       // was wiped clean. He remembers the interruptions, so the bar for
-      // settling rises every time you interrupt him, and it only falls again
-      // when he has had a REAL stretch of sleep.
+      // settling rises every time you interrupt him. Quiet time reduces
+      // restlessness; sustained sleep clears the interruption tally.
       wakeCount: sleep.wakeCount,
       restlessness: sleep.restlessness,
     },
@@ -234,7 +230,7 @@ export function wake(
   }
 
   const wakeCount = sleep.wakeCount + 1;
-  const restlessness = clamp(sleep.restlessness + 0.24);
+  const restlessness = clamp(sleep.restlessness + 0.24, 0, 1);
   const next: PetState = {
     ...state,
     sleep: { ...sleep, asleep: false, wokenAt: now, wakeCount, restlessness },
@@ -294,6 +290,9 @@ export function happiness(state: PetState): number {
 
 /** The pet drifts whether anyone is watching. */
 export function decay(state: PetState, now: number = Date.now()): PetState {
+  // Repair saves from the old 0–100 clamp before applying any elapsed time.
+  const sleep=state.sleep??createSleepState();
+  state={...state,sleep:{...sleep,restlessness:Number.isFinite(sleep.restlessness)?clamp(sleep.restlessness,0,1):0}};
   if(now<=state.updatedAt)return {...state,life:dailyLife(state),behaviours:Object.fromEntries(Object.entries(state.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]))};
   // The same bounded steps run on load and while open. Sleep, digestion and
   // filth must change rates during a long absence, not only at its end.
@@ -340,6 +339,9 @@ function decayStep(state:PetState,now:number):PetState {
       hygiene: nextHygiene,
     },
     trust: clamp(state.trust - (trustDecayRate * factor) / 24),
+    // Authored game pacing: excitement eases toward neutral during quiet time.
+    // This never winds up a dog whose arousal is already below neutral.
+    arousal: clamp(state.arousal-Math.min(Math.max(0,state.arousal-30),20*factor)),
     ...daily,
     sick: isSick,
     sickSince,
@@ -347,18 +349,15 @@ function decayStep(state:PetState,now:number):PetState {
     weightKg: state.weightKg ?? 24.8,
     sleep: {
       ...sleep,
-      // Time asleep calms him; time awake through the night does not.
-      //
-      // And a REAL stretch of sleep clears the night's tally. Ninety minutes
-      // of unbroken rest is what it takes to forgive a bad night — so the
-      // cost of keeping him up is real, but it is not permanent. He is hard
-      // to settle tonight, and easy again tomorrow.
+      // Both awake quiet time and sleep reduce restlessness, so the sleep
+      // gate can never require sleep as its only route back to sleep.
+      // Ninety minutes of unbroken rest clears the interruption tally.
       wakeCount:
-        asleep && sleep.fellAsleepAt && now - sleep.fellAsleepAt > 90 * 60_000
+        asleep && sleep.fellAsleepAt !== null && now - sleep.fellAsleepAt > 90 * 60_000
           ? 0
           : sleep.wakeCount,
       restlessness: clamp(
-        sleep.restlessness + factor * (asleep ? -0.22 : isNightHour(now) ? 0.06 : 0)
+        sleep.restlessness-factor*(asleep?.22:.30),0,1
       ),
     },
   };

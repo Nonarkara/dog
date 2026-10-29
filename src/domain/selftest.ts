@@ -423,6 +423,28 @@ let shortNight=createPetState(nightStart);for(let i=1;i<=20;i++)shortNight=decay
 ok('sub-tick updates cannot postpone natural night sleep',shortNight.sleep.asleep);
 ok('short and long night updates give comparable bladder progression',near(dailyLife(shortNight).bladder,dailyLife(decay(createPetState(nightStart),nightStart+180000)).bladder,.1));
 
+console.log('\nRECOVERY AFTER INTERRUPTED REST');
+let interrupted=createPetState(nightStart);
+for(let i=0;i<3;i++){
+  const at=nightStart+i*1000;
+  interrupted=interact(settleSleep(interrupted,at).state,'pet',at).state;
+}
+ok('three interruptions temporarily prevent settling',!interrupted.sleep.asleep&&interrupted.sleep.restlessness>.55&&!willSettle(interrupted,interrupted.updatedAt));
+const quietRecovery=decay(interrupted,nightStart+2*60*minute);
+ok('quiet time ends the repeated-waking sleep deadlock',quietRecovery.sleep.asleep);
+ok('recovered sleep restores energy',quietRecovery.needs.energy>interrupted.needs.energy);
+ok('interruptions are remembered until sustained sleep',decay(interrupted,nightStart+45*minute).sleep.wakeCount===3);
+ok('sustained sleep clears the wake tally',decay(interrupted,nightStart+3*60*minute).sleep.wakeCount===0);
+const wired={...createPetState(noon),arousal:100,needs:{...lifeStart.needs,energy:10},sleep:{...lifeStart.sleep,restlessness:1,wakeCount:8}};
+const wiredRecovery=decay(wired,noon+4*60*minute);
+ok('a tired wound-up dog can recover without repeated care clicks',wiredRecovery.sleep.asleep&&wiredRecovery.needs.energy>wired.needs.energy);
+const recoveryTicks=stepLife(interrupted,120),recoveryOffline=decay(interrupted,interrupted.updatedAt+120*minute);
+ok('offline and live recovery agree',recoveryTicks.sleep.asleep===recoveryOffline.sleep.asleep&&near(recoveryTicks.sleep.restlessness,recoveryOffline.sleep.restlessness,.001)&&near(recoveryTicks.needs.energy,recoveryOffline.needs.energy,.001));
+const brokenRest={...wired,sleep:{...wired.sleep,restlessness:2.2}};
+ok('old over-range restlessness cannot prolong the deadlock',decay(brokenRest,noon+4*60*minute).sleep.asleep);
+ok('waking always keeps restlessness within its 0–1 scale',interact({...wired,sleep:{...wired.sleep,asleep:true,restlessness:.98,fellAsleepAt:noon}},'pet',noon).state.sleep.restlessness<=1);
+ok('quiet recovery never raises an already calm dog’s arousal',decay({...lifeStart,arousal:5},noon+minute).arousal<=5);
+
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {
   throw new Error(`${failures} of ${checks} checks FAILED.`);

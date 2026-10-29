@@ -19,6 +19,12 @@ Live ticks and offline catch-up use the same bounded 10-second body steps (maxim
 
 A restored nap wakes after at least an hour with energy at least 65, outside 22:00–06:00. The authored night schedule and energy rates remain game rules. Cleaning can happen quietly without waking the dog. Other care can wake it through the existing interruption model.
 
+### Interrupted rest recovery — 30 October
+
+Repeated waking previously blocked sleep above 0.55 restlessness, while only sleep reduced restlessness. Three interruptions could therefore keep a dog awake indefinitely. Quiet awake time now reduces restlessness by 0.30 per game hour; sleeping reduces it by 0.22. Excitement above 30 eases by 20 points per hour, never increasing a calmer dog's excitement. Restlessness stays within 0–1, including older saves written above that range. Ninety minutes of sustained sleep clears the wake tally; putting a dog to bed does not erase it immediately. These are authored game recovery rates, not measurements of real canine physiology.
+
+Ten additional domain checks cover repeated waking, energy recovery, old saves, calm dogs and live/offline agreement. The new `scripts/test-sleep-recovery.cjs` exercises actual browser timers, the bed-refusal guidance, autonomous sleeping artwork, energy recovery, reload persistence and the cleared wake tally. The old engine failed six of the new checks. Independent review also exercised 45 frozen-input combinations of restlessness and excitement, with exact live/offline agreement and no confirmed findings.
+
 Automatic attention stays in the Care sentence, document title and contextual stage action. It no longer creates a second bottom note that hides the puddle it asks you to clean. User-action notes remain. Sleeping/sick states override play; new live toilet events cancel games before posing so no hidden completion timer survives.
 
 Five new unwell drawings have low heads, closed mouths and heavy eyes. Existing happy-eye artwork remains untouched. Source: `design/reference/household-sick.png`, generated as a reference-preserving expression variant with the built-in image tool; crop manifest: `scripts/illustrated/build-art.cjs`. The five WebPs add 172,960 bytes across the household. Nine drawings load only for the selected illustrated dog. No video, new runtime library or subscription is used.
