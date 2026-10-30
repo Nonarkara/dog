@@ -1,0 +1,87 @@
+[
+  {
+    "name": "expo",
+    "bytes": 1160554,
+    "minimumConsecutiveRunChange": 2.9317272263071987,
+    "depth": [
+      {
+        "start": 80,
+        "unique": 16,
+        "maximumLegAlphaChange": 12.063392857142857
+      },
+      {
+        "start": 96,
+        "unique": 16,
+        "maximumLegAlphaChange": 9.334486607142857
+      }
+    ]
+  },
+  {
+    "name": "mali",
+    "bytes": 1198154,
+    "minimumConsecutiveRunChange": 2.6870028722426493,
+    "depth": [
+      {
+        "start": 80,
+        "unique": 16,
+        "maximumLegAlphaChange": 13.086495535714286
+      },
+      {
+        "start": 96,
+        "unique": 16,
+        "maximumLegAlphaChange": 12.489341517857143
+      }
+    ]
+  },
+  {
+    "name": "oreo",
+    "bytes": 1002896,
+    "minimumConsecutiveRunChange": 1.565305798100493,
+    "depth": [
+      {
+        "start": 80,
+        "unique": 16,
+        "maximumLegAlphaChange": 15.736439732142857
+      },
+      {
+        "start": 96,
+        "unique": 16,
+        "maximumLegAlphaChange": 10.743833705357142
+      }
+    ]
+  },
+  {
+    "name": "paolo",
+    "bytes": 1074534,
+    "minimumConsecutiveRunChange": 2.4323532730800665,
+    "depth": [
+      {
+        "start": 80,
+        "unique": 16,
+        "maximumLegAlphaChange": 16.174693080357144
+      },
+      {
+        "start": 96,
+        "unique": 16,
+        "maximumLegAlphaChange": 12.225892857142858
+      }
+    ]
+  },
+  {
+    "name": "hachiku",
+    "bytes": 943504,
+    "minimumConsecutiveRunChange": 2.134759497549021,
+    "depth": [
+      {
+        "start": 80,
+        "unique": 16,
+        "maximumLegAlphaChange": 14.169782366071429
+      },
+      {
+        "start": 96,
+        "unique": 16,
+        "maximumLegAlphaChange": 6.9400390625
+      }
+    ]
+  }
+]

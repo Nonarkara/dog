@@ -1,3 +1,4 @@
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -11,7 +12,7 @@ import type { Interaction } from '../domain/pet';
 import type { AvatarPose, AvatarInteractionTrigger } from './DogAvatar3D';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { artPoseFor, landmarksFor, poseAnchors, type ArtPose } from './illustratedRig';
-import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles,Broom} from 'lucide-react';
+import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles,Broom,RotateCw} from 'lucide-react';
 import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
@@ -34,70 +35,7 @@ export const ILLUSTRATIONS: Record<string, string> = {
 
 // A textured 2D skin, articulated on a fine mesh. The artwork stays one coherent
 // character per authored pose; motion between display frames comes from the rig.
-export const VERTEX = `
-  varying vec2 vUv;
-  uniform float time, reduced;
-  uniform vec2 morphFrom[8],morphTo[8];
-  uniform float morphAmount;
-  uniform vec2 profile;
-  uniform vec4 motion, more, temperament, fun, lifeAct;
-  uniform vec2 gaze, headPivot, tailPivot;
-  uniform vec4 feet, eyes;
-  uniform float legStart, resting, settling, puppy;
-  float band(float x,float c,float r){return 1.-smoothstep(r*.45,r,abs(x-c));}
-  vec2 turn(vec2 p,vec2 pivot,float a){float s=sin(a),c=cos(a);return pivot+mat2(c,-s,s,c)*(p-pivot);}
-  void main(){
-    vUv=uv;
-    vec2 original=vec2(uv.x,1.-uv.y),p=original;
-    float head=(1.-smoothstep(headPivot.y-.04,headPivot.y+.09,p.y))*(1.-smoothstep(headPivot.x+.03,headPivot.x+.14,p.x));
-    float torso=smoothstep(.29,.45,p.y)*(1.-smoothstep(.64,.80,p.y));
-    float legs=smoothstep(legStart,legStart+.14,p.y);
-    float nearFront=band(p.x,feet.x,.05)*legs;
-    float farFront=band(p.x,feet.y,.045)*legs;
-    float farBack=band(p.x,feet.w,.05)*legs;
-    float nearBack=band(p.x,feet.z,.05)*legs;
-    float phase=time*7.*fun.w;
-    float walk=motion.y*(1.-reduced)*(1.-resting);
-    p.x+=walk*.018*(nearFront*sin(phase)+farFront*sin(phase+3.14159)+nearBack*sin(phase+3.14159)+farBack*sin(phase));
-    p.y-=walk*.016*(nearFront*max(0.,sin(phase))+farFront*max(0.,sin(phase+3.14159))+nearBack*max(0.,sin(phase+3.14159))+farBack*max(0.,sin(phase)));
-    float bodyBreath=sin(time*(1.4+temperament.y)*(1.-temperament.z*.35))*(.004-temperament.z*.002)*(1.-reduced);
-    p.x+=fun.x*sin(time*11.*fun.w)*.009*torso*(1.-head)*(1.-reduced);
-    p.y+=(bodyBreath+walk*abs(sin(phase))*.008)*torso*(1.-legs);
-    p.x+=more.z*sin(time*27.)*.0025*(torso+head)*(1.-reduced);
-    p.x=.47+(p.x-.47)*profile.x;
-    p.y+=profile.y*mix((.91-p.y)*.16,.08,head);
-    // Sitting and resting anatomy comes from authored poses, not a flattened standing skin.
-    p.y+=(settling*.028)*torso;
-
-    float bow=motion.w*.035*(1.-reduced);
-    p.y+=bow*head;
-    float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
-    vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
-    headPosition+=vec2(motion.x*.012,more.z*.012+temperament.z*.015);
-    p=mix(p,headPosition,head);
-    float muzzle=band(original.x,headPivot.x-.12,.095)*band(original.y,headPivot.y-.015,.06);
-    p.y+=motion.z*abs(sin(time*16.))*.007*muzzle;
-    p.y+=lifeAct.x*.026*muzzle*(1.-reduced);
-    float ears=band(original.y,.13,.10)*head;
-    p.x+=lifeAct.y*sin(time*17.)*.012*ears*(1.-reduced);
-    p.x+=lifeAct.z*sin(time*18.)*.018*nearBack*(1.-reduced);
-    p.x+=lifeAct.w*sin(time*19.)*.008*torso*(1.-reduced);
-    float tail=band(original.x,tailPivot.x,.105)*band(original.y,tailPivot.y,.12);
-    vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),sin(time*(motion.x>0.1?13.:3.+temperament.y*5.))*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
-    p=mix(p,tailPosition,tail);
-    if(morphAmount>.001){
-      vec2 shift=vec2(0.);float total=0.;
-      for(int i=0;i<8;i++){float d=distance(original,morphFrom[i]);float w=1./(d*d*d*d+.00008);shift+=(morphTo[i]-morphFrom[i])*w;total+=w;}
-      p+=shift/max(total,.001)*morphAmount;
-    }
-    gl_Position=projectionMatrix*modelViewMatrix*vec4((p.x-.5)*2.,(.5-p.y)*2.,0.,1.);
-  }
-`;
-export const FRAGMENT = `varying vec2 vUv; uniform sampler2D art;uniform float opacity;
- void main(){gl_FragColor=texture2D(art,vUv);gl_FragColor.a*=opacity;if(gl_FragColor.a<.02)discard;
- #include <tonemapping_fragment>
- #include <colorspace_fragment>
- }`;
+export {VERTEX,FRAGMENT} from './illustrationShaders';
 
 export function IllustratedDog(props: Props) {
   const starter=DEFAULT_DOGS.find(d=>d.id===props.dog.id);
@@ -116,6 +54,7 @@ function IllustratedStage(props: Props & {url:string}) {
   const latest = useRef(props); latest.current = props;
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [motionReady,setMotionReady]=useState(false);
   const [game, setGame] = useState<{round:number; score:number; target:'left'|'right'; busy:boolean; result:string}|null>(null);
   const gameRef=useRef(game); gameRef.current=game;
   const gameTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -153,10 +92,10 @@ function IllustratedStage(props: Props & {url:string}) {
   const runTrick=(kind:Trick,fromGame=false)=>{
     const p=latest.current;if(!readyRef.current||p.petState.sick||p.petState.sleep?.asleep||p.pose&&p.pose!=='stand')return;
     if(!fromGame&&(!canPlay()||gameRef.current||findingRef.current))return;
-    if(funTimer.current)clearTimeout(funTimer.current);
-    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'?3100:2400)};
+    if(funTimer.current)clearTimeout(funTimer.current);if(!fromGame)setFetchConfused(false);
+    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?3100:kind==='turn'?1600:2400)};
     fun.current=next;setTrick(next);
-    const text=kind==='highfive'?'Tap my paw!':kind==='bow'?'Come on, let’s play!':kind==='zoomies'?(dog.id==='paolo-pug'?'Tiny pug zoomies!':'Zoomies!'):kind==='tilt'?'Did you say… treat?':personality.greeting;
+    const text=kind==='highfive'?'Tap my paw!':kind==='bow'?'Come on, let’s play!':kind==='zoomies'?(dog.id==='paolo-pug'?'Tiny pug zoomies!':'Zoomies!'):kind==='tilt'?'Did you say… treat?':kind==='come'?'Let me have a sniff!':kind==='turn'?'A little look around.':personality.greeting;
     if(!findingRef.current)showCheer(text);
     funTimer.current=setTimeout(()=>{fun.current=null;setTrick(null);},next.until-now);
   };
@@ -239,16 +178,16 @@ function IllustratedStage(props: Props & {url:string}) {
     const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);camera.position.z=3;
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     const rig=landmarksFor(dog.id,'stand');
-    const uniforms={puppy:{value:0},fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},lifeAct:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
+    const uniforms={artTile:{value:new THREE.Vector4(1,1,0,0)},locomotion:{value:0},running:{value:0},runNeck:{value:new THREE.Vector2(.36,.72)},strideFrom:{value:Array.from({length:16},()=>new THREE.Vector2())},strideTo:{value:Array.from({length:16},()=>new THREE.Vector2())},puppy:{value:0},fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},lifeAct:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
     renderer.info.autoReset=false;
-    const material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,uniforms,transparent:true,depthTest:false,depthWrite:false});
+    const material=new THREE.ShaderMaterial({vertexShader:PARK_VERTEX,fragmentShader:PARK_FRAGMENT,uniforms,transparent:true,depthTest:false,depthWrite:false});
     const geometry=new THREE.PlaneGeometry(2,2,96,96);
     const floorGeometry=new THREE.CircleGeometry(1,48);
     const stageInk=getComputedStyle(container.closest('.cockpit')||container).getPropertyValue('--text-main').trim()||'#294434';
     const floorMaterial=new THREE.MeshBasicMaterial({color:stageInk,transparent:true,opacity:.08,depthWrite:false});
     const floor=new THREE.Mesh(floorGeometry,floorMaterial);floor.scale.set(.63,.045,1);floor.position.y=-.85;floor.renderOrder=0;scene.add(floor);
     const outgoingUniforms=THREE.UniformsUtils.clone(uniforms) as typeof uniforms;
-    const outgoingMaterial=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,uniforms:outgoingUniforms,transparent:true,depthTest:false,depthWrite:false});
+    const outgoingMaterial=new THREE.ShaderMaterial({vertexShader:PARK_VERTEX,fragmentShader:PARK_FRAGMENT,uniforms:outgoingUniforms,transparent:true,depthTest:false,depthWrite:false});
     const outgoing=new THREE.Mesh(geometry,outgoingMaterial);outgoing.visible=false;outgoing.renderOrder=1;scene.add(outgoing);
     const skin=new THREE.Mesh(geometry,material);skin.renderOrder=2;scene.add(skin);
     const toyGeometry=new THREE.SphereGeometry(.055,10,8),toyMaterial=new THREE.MeshBasicMaterial({color:'#b37736',depthTest:false});
@@ -270,6 +209,15 @@ function IllustratedStage(props: Props & {url:string}) {
     let pixels:Uint8ClampedArray|null=null,imageW=0,imageH=0;
     const masks=new Map<ArtPose,{pixels:Uint8ClampedArray,w:number,h:number}>();
     const loader=new THREE.TextureLoader();
+    let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0;
+    const artName=url.split('/').pop()!.replace('.webp','') as MotionArtName;
+    // Load optional movement after the base dog is usable; actions never rebuild
+    // the renderer or wait for this atlas, and a failed atlas preserves care.
+    const atlasTimer=setTimeout(()=>loader.load(`/dogs/motion/${artName}-motion${renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,texture=>{
+      if(disposed){texture.dispose();return;}texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;
+      const image=texture.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=480;mask.height=576;const context=mask.getContext('2d');
+      if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};setMotionReady(true);
+    },undefined,()=>{/* Optional movement never replaces the approved base dog. */}),1200);
     for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow','sick'] as const){
       const source=key==='stand'?url:url.replace('.webp',`-${key}.webp`);
       loader.load(source,t=>{
@@ -280,12 +228,14 @@ function IllustratedStage(props: Props & {url:string}) {
         if(key==='stand'){uniforms.art.value=t;const m=masks.get(key);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}setReady(true);}
       },undefined,()=>{if(!disposed)setFailed(true);});
     }
-    const resize=()=>{const w=container.clientWidth,h=container.clientHeight;if(!w||!h)return;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
-    const observer=new ResizeObserver(resize);observer.observe(container);resize();
+    let pendingResize=false,lastWidth=0,lastHeight=0;
+    const resize=()=>{pendingResize=false;const w=container.clientWidth,h=container.clientHeight;if(!w||!h||w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
+    const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
     const hit=(event:PointerEvent)=>{
       const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
       if(x<0||x>1||y<0||y>1||!pixels)return false;
+      if(hitAtlasFrame>=0&&atlas){const ox=(hitAtlasFrame%MOTION_LAYOUT.columns)*atlas.tile,oy=Math.floor(hitAtlasFrame/MOTION_LAYOUT.columns)*atlas.tile;return atlas.alpha[(Math.min(atlas.tile-1,Math.floor(y*atlas.tile))+oy)*atlas.width+Math.min(atlas.tile-1,Math.floor(x*atlas.tile))+ox]>24;}
       return pixels[(Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW)))*4+3]>24;
     };
     const petAt=(event:PointerEvent)=>{
@@ -313,7 +263,8 @@ function IllustratedStage(props: Props & {url:string}) {
       if(now+.5<next)return;
       const dt=last?Math.min((now-last)/1000,.1):1/30;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
-      if(!uniforms.art.value)return;
+      if(!uniforms.art.value)return;if(pendingResize)resize();
+      uniforms.art.value=textures.get(shownPose)||uniforms.art.value;uniforms.artTile.value.set(1,1,0,0);uniforms.locomotion.value=0;uniforms.running.value=0;hitAtlasFrame=-1;
       const p=latest.current,asleep=!!p.petState.sleep?.asleep,t=(now-start)/1000;
       // The parent owns the care action lifecycle; avoid a second competing clock.
       const action=p.interactionTrigger;
@@ -387,6 +338,35 @@ function IllustratedStage(props: Props & {url:string}) {
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
       skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
+      const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&(zoomies||strolling||kind==='come'||kind==='turn');
+      canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';
+      if(movement&&atlas){
+        const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;motionPhase+=Math.min(.1,Math.abs(delta))/.66;
+        let index:number,face=1,scale=1;
+        if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/1.6*32));
+        else if(kind==='come'){
+          const approach=Math.min(1,elapsed/1.5);scale=.90+.10*approach;
+          index=elapsed<1.5?MOTION_LAYOUT.towardStart+Math.floor(elapsed*22)%16:elapsed<2.2?56:48+Math.round(8*(1-Math.min(1,(elapsed-2.2)/.7)));
+        }else{
+          const d=zoomies?Math.cos(zTime*5):delta;
+          const turning=zoomies&&Math.abs(d)<.35;
+          if(turning)index=48+Math.round((Math.sin(zTime*5)>0?8:24)+(d/.35)*4)%32;
+          else{const fast=zoomies||idle==='trotting';index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);face=d>0?-1:1;scale=fast?1.30:1;}
+        }
+        index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,from);
+        uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
+        if(index<32){const necks=[[.36,.72],[.38,.73],[.40,.76],[.40,.72]],q=index/8,k=Math.floor(q),f=q-k;uniforms.runNeck.value.set(necks[k][0]*(1-f)+necks[(k+1)%4][0]*f,necks[k][1]*(1-f)+necks[(k+1)%4][1]*f);}
+        const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();
+        const ink=art.displayBox,barSpace=toysBox?(canvasBox.right-toysBox.left+6)/canvasBox.width*(camera.right-camera.left):.23;
+        const verticalFit=(camera.top+.82-.07)/(2*(.90625-ink[1]));
+        const horizontalFit=(camera.right-camera.left-barSpace-.10)/(2*ink[2]);
+        scale=Math.min(size*scale,verticalFit,horizontalFit);
+        skin.scale.set(face*scale,scale,1);skin.position.y=-.82+(.90625-.5)*2*scale;
+        const minX=((face>0?ink[0]:1-ink[0]-ink[2])-.5)*2*scale,maxX=minX+ink[2]*2*scale;
+        const lo=camera.left-minX+.05,hi=camera.right-maxX-barSpace;skin.position.x=THREE.MathUtils.clamp(skin.position.x,lo,Math.max(lo,hi));
+        hitAtlasFrame=index;canvas.dataset.motionFrame=String(index);
+      }
+      lastMotionX=skin.position.x;
       outgoing.position.copy(skin.position);outgoing.scale.copy(skin.scale);
       const pickup=request?.pose==='fetch'&&poseRun.settledAt!==null?(now-poseRun.settledAt)/1800:0;
       trainingToy.visible=!!lesson?.toy&&!(pickup>.45&&pickup<.6);
@@ -407,7 +387,7 @@ function IllustratedStage(props: Props & {url:string}) {
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
-    return()=>{disposed=true;if(touchTimer.current)clearTimeout(touchTimer.current);cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
+    return()=>{disposed=true;clearTimeout(atlasTimer);atlas?.texture.dispose();if(touchTimer.current)clearTimeout(touchTimer.current);cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
   },[dog.id,url,failed]);
 
   if(failed||!url)return <>{fallback}</>;
@@ -433,7 +413,7 @@ function IllustratedStage(props: Props & {url:string}) {
     {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop…</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
     {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
     {finding&&dock(<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>)}
-    {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
+    {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind},{kind:'come',label:'Come closer',Icon:Footprints},{kind:'turn',label:'Turn around',Icon:RotateCw}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()||((kind==='come'||kind==='turn')&&!motionReady)} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
     {!game&&!finding&&!cheer&&mood!=='content'&&<div className={`dog-daily-status dog-daily-status--${mood}`} role="status">{needs.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(needs.action!)}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:<span><needs.Icon size={16} aria-hidden="true"/>{needs.text}</span>}</div>}

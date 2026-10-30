@@ -1,0 +1,26 @@
+{
+  "source": "Live33f5efd before deployment",
+  "sameCanvas": true,
+  "writes": [
+    {
+      "key": "width",
+      "value": 380,
+      "inDrawingFrame": false
+    },
+    {
+      "key": "height",
+      "value": 495,
+      "inDrawingFrame": false
+    },
+    {
+      "key": "width",
+      "value": 380,
+      "inDrawingFrame": false
+    },
+    {
+      "key": "height",
+      "value": 461,
+      "inDrawingFrame": false
+    }
+  ]
+}

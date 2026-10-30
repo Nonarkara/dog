@@ -695,7 +695,7 @@
 /* Action feedback owns a row below the canvas, never the dog's floor. */
 .stage-frame {display:flex;flex-direction:column;}
 .stage-canvas {flex:1 1 0%;min-height:0;position:relative;overflow:hidden;}
-.stage-note-slot {flex:0 0 auto;height:0;overflow:clip;background:var(--bg-surface);transition:height .2s ease-out;}
+.stage-note-slot {flex:0 0 auto;height:0;overflow:clip;background:var(--bg-surface);}
 .stage-note-slot[data-open="true"] {height:34px;}
 .stage-note-slot .bar--note {position:static;inset:auto;width:100%;height:34px;padding:2px 6px;border:0;border-top:1px solid var(--border-dim);}
 .stage-note-slot .bar--note button {width:28px;min-width:28px;height:28px;min-height:28px;padding:2px;}
@@ -762,7 +762,8 @@ html {font-synthesis:none;}
 .park-navigation {display:inline-flex;align-items:center;gap:5px;min-height:36px;flex:none;}
 .park-navigation span {font-size:14px;}
 /* Text is scenery. The opaque dog is painted after it and owns its pixels. */
-.illustrated-stage {isolation:isolate;}
+.illustrated-stage {isolation:isolate;container-type:size;container-name:dog-stage;}
+@container dog-stage (max-height:320px){.dog-toys{display:grid;grid-template-columns:repeat(2,36px);}}
 .dog-art-layer {position:absolute;inset:0;z-index:2;}
 .illustrated-stage :is(.dog-daily-status,.dog-cheer,.dog-ambient-caption) {z-index:1;}
 .illustrated-stage .dog-daily-status {pointer-events:none;}
@@ -821,6 +822,8 @@ html {font-synthesis:none;}
  .region-care:not(.care-detail-view)>.care-body>.care-details-toggle {display:block;align-self:flex-start;min-height:32px;padding:1px 4px;font-size:14px;}
  .region-care:not(.care-detail-view)>.care-body {gap:3px;}
 }
+/* The circular ball is an explicit exception to the planar base rule. */
+@layer base {.cockpit .illustration-ball {border-radius:50%!important;}}
 /* A tennis ball is felt and a curved white seam, not an orange dot. */
 .illustration-ball {background:#c8d36a;border:1px solid #727b3b;overflow:hidden;z-index:3;}
 .illustration-ball::before,.illustration-ball::after {content:'';position:absolute;top:-3px;width:12px;height:26px;border:2px solid #fff8e5;border-radius:50%;}

@@ -1,0 +1,494 @@
+[
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Pet Expo",
+    "same": true,
+    "frames": 44,
+    "writes": [
+      {
+        "at": 1735,
+        "key": "width",
+        "value": 380,
+        "inFrame": true
+      },
+      {
+        "at": 1735,
+        "key": "height",
+        "value": 495,
+        "inFrame": true
+      },
+      {
+        "at": 1913,
+        "key": "width",
+        "value": 380,
+        "inFrame": true
+      },
+      {
+        "at": 1913,
+        "key": "height",
+        "value": 461,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 105,
+    "writes": []
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Clean Expo",
+    "same": true,
+    "frames": 124,
+    "writes": []
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 185,
+    "writes": []
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Play Expo",
+    "same": true,
+    "frames": 202,
+    "writes": [
+      {
+        "at": 6992,
+        "key": "width",
+        "value": 380,
+        "inFrame": true
+      },
+      {
+        "at": 6992,
+        "key": "height",
+        "value": 422,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 263,
+    "writes": []
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Come closer",
+    "same": true,
+    "frames": 300,
+    "writes": [
+      {
+        "at": 9585,
+        "key": "width",
+        "value": 380,
+        "inFrame": true
+      },
+      {
+        "at": 9585,
+        "key": "height",
+        "value": 461,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Turn around",
+    "same": true,
+    "frames": 404,
+    "writes": [
+      {
+        "at": 14002,
+        "key": "width",
+        "value": 380,
+        "inFrame": true
+      },
+      {
+        "at": 14002,
+        "key": "height",
+        "value": 495,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Zoomies",
+    "same": true,
+    "frames": 508,
+    "writes": []
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "label": "Park pet",
+    "same": true,
+    "frames": 23,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Pet Expo",
+    "same": true,
+    "frames": 50,
+    "writes": [
+      {
+        "at": 1817,
+        "key": "width",
+        "value": 1014,
+        "inFrame": true
+      },
+      {
+        "at": 1817,
+        "key": "height",
+        "value": 469,
+        "inFrame": true
+      },
+      {
+        "at": 1857,
+        "key": "width",
+        "value": 1014,
+        "inFrame": true
+      },
+      {
+        "at": 1857,
+        "key": "height",
+        "value": 435,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 111,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Clean Expo",
+    "same": true,
+    "frames": 129,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 189,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Play Expo",
+    "same": true,
+    "frames": 207,
+    "writes": [
+      {
+        "at": 7057,
+        "key": "width",
+        "value": 1014,
+        "inFrame": true
+      },
+      {
+        "at": 7057,
+        "key": "height",
+        "value": 395,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 268,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Come closer",
+    "same": true,
+    "frames": 317,
+    "writes": [
+      {
+        "at": 9650,
+        "key": "width",
+        "value": 1014,
+        "inFrame": true
+      },
+      {
+        "at": 9650,
+        "key": "height",
+        "value": 435,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Turn around",
+    "same": true,
+    "frames": 422,
+    "writes": [
+      {
+        "at": 14066,
+        "key": "width",
+        "value": 1014,
+        "inFrame": true
+      },
+      {
+        "at": 14066,
+        "key": "height",
+        "value": 469,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Zoomies",
+    "same": true,
+    "frames": 525,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "label": "Park pet",
+    "same": true,
+    "frames": 22,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Pet Expo",
+    "same": true,
+    "frames": 52,
+    "writes": [
+      {
+        "at": 1849,
+        "key": "width",
+        "value": 706,
+        "inFrame": true
+      },
+      {
+        "at": 1849,
+        "key": "height",
+        "value": 747,
+        "inFrame": true
+      },
+      {
+        "at": 1890,
+        "key": "width",
+        "value": 706,
+        "inFrame": true
+      },
+      {
+        "at": 1890,
+        "key": "height",
+        "value": 713,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 113,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Clean Expo",
+    "same": true,
+    "frames": 131,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 192,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Play Expo",
+    "same": true,
+    "frames": 210,
+    "writes": [
+      {
+        "at": 7171,
+        "key": "width",
+        "value": 706,
+        "inFrame": true
+      },
+      {
+        "at": 7171,
+        "key": "height",
+        "value": 674,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "tip close",
+    "same": true,
+    "frames": 271,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Come closer",
+    "same": true,
+    "frames": 308,
+    "writes": [
+      {
+        "at": 9757,
+        "key": "width",
+        "value": 706,
+        "inFrame": true
+      },
+      {
+        "at": 9757,
+        "key": "height",
+        "value": 713,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Turn around",
+    "same": true,
+    "frames": 413,
+    "writes": [
+      {
+        "at": 14161,
+        "key": "width",
+        "value": 706,
+        "inFrame": true
+      },
+      {
+        "at": 14161,
+        "key": "height",
+        "value": 747,
+        "inFrame": true
+      }
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Zoomies",
+    "same": true,
+    "frames": 518,
+    "writes": []
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "label": "Park pet",
+    "same": true,
+    "frames": 22,
+    "writes": []
+  }
+]
