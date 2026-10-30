@@ -233,7 +233,7 @@ PROBE = """
 # The page must be Canine OS. This machine runs dozens of other projects'
 # servers, and ports collide: a check that measures the wrong app produces
 # confident numbers about somebody else's interface.
-EXPECTED_TITLE = "Canine OS"
+EXPECTED_TITLE = "Tama-Dog-Chi"  # renamed from Canine OS, 2026-10-30
 
 
 def parse_viewport(spec):
@@ -353,7 +353,7 @@ def run(url, viewports, out_path):
 
             if EXPECTED_TITLE.lower() not in facts["title"].lower():
                 msg = (
-                    f"{width}x{height}: this is not Canine OS — the page served is "
+                    f"{width}x{height}: this is not Tama-Dog-Chi — the page served is "
                     f'"{facts["title"]}". The check is pointed at the wrong server.'
                 )
                 print("  WRONG APP " + msg, flush=True)
