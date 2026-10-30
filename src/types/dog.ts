@@ -105,4 +105,8 @@ export interface MetaverseNeighborDog {
   position: [number, number, number]; // [x, y, z] in the 3D park
   action: 'sniffing' | 'walking' | 'sitting' | 'barking' | 'running';
   speed: number;
+  /** The illustration to draw, when it is one of the household dogs. */
+  artId?: string;
+  /** A friend's dog in a live park: steered by its owner's browser. */
+  remote?: boolean;
 }

@@ -11,11 +11,20 @@ import type {MetaverseNeighborDog} from '../types/dog';
 import {parkScenery} from './parkScenery';
 import {sound} from '../utils/proceduralAudio';
 import {chooseActivity,personalityOf} from '../domain/parkPersonality';
+import type {LiveIntent} from '../domain/parkProtocol';
 
-export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeNeighbor:(id:string)=>void;pet:(id:string)=>void;}
+export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeNeighbor:(id:string)=>void;pet:(id:string)=>void;
+ /** Live park: move a friend's dog to where its owner's browser says it is going. */
+ steer:(id:string,intent:LiveIntent)=>void;
+ /** Live park: show a pet on a dog without counting it as yours (hearts only). */
+ cheer:(id:string)=>void;}
 interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onWalk?:(distance:number,seconds:number)=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;
  /** Watch mode: the camera frames the whole pack and your dog plays on its own. */
- ambient?:boolean;}
+ ambient?:boolean;
+ /** Live park: your dog decided something (sent to friends' screens). */
+ onIntent?:(intent:LiveIntent)=>void;
+ /** Live park: you petted a friend's dog. */
+ onPetRemote?:(id:string)=>void;}
 interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:number;left:number;right:number;top:number;bottom:number;pixelWidth?:number;originX?:number;originY?:number;tile?:THREE.Vector4;alphaOnly?:boolean;}
 const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
 const NS='http://www.w3.org/2000/svg';
@@ -56,13 +65,16 @@ export function IllustratedPark(props:Props){
     const result={texture,pixels,w:scratch.width,h:scratch.height,alphaOnly:atlasMask,left:left/scratch.width,right:(right+1)/scratch.width,top:top/scratch.height,bottom:(bottom+1)/scratch.height};
     if(disposed){texture.dispose();reject(new Error('Park closed'));return;}resolve(result);
    };image.onerror=()=>reject(new Error('Dog artwork could not load'));image.src=url;});rasters.set(url,found);return found;};
-  type Actor={id:string;name:string;artId:string;source:string;own:boolean;phase:number;heading:number;speed:number;stride:number;strideSize:number;motionFile:MotionArtName|null;motionFrames:Raster[];motionFrame:number;hasWalked:boolean;blend:number;baseRaster:Raster|null;poseRaster:Raster|null;contacts:SVGEllipseElement[];x:number;y:number;homeX:number;homeY:number;tx:number;ty:number;facing:number;until:number;petUntil:number;lastPet:number;sniffUntil:number;pose:ArtPose;poseAt:number;requestedPose:ArtPose;mode:'wander'|'visit'|'chase'|'flee'|'rest'|'sit'|'feed'|'nap'|'walkto';then:'sit'|'feed'|'nap'|null;partner:string|null;bowUntil:number;bubble:SVGGElement|null;raster:Raster|null;mesh:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>;label:SVGTextElement;shadow:SVGEllipseElement;heart:SVGPathElement;w:number;h:number;};
+  type Actor={id:string;name:string;artId:string;source:string;own:boolean;phase:number;heading:number;speed:number;stride:number;strideSize:number;motionFile:MotionArtName|null;motionFrames:Raster[];motionFrame:number;hasWalked:boolean;blend:number;baseRaster:Raster|null;poseRaster:Raster|null;contacts:SVGEllipseElement[];x:number;y:number;homeX:number;homeY:number;tx:number;ty:number;facing:number;until:number;petUntil:number;lastPet:number;sniffUntil:number;pose:ArtPose;poseAt:number;requestedPose:ArtPose;mode:'wander'|'visit'|'chase'|'flee'|'rest'|'sit'|'feed'|'nap'|'walkto';then:'sit'|'feed'|'nap'|null;partner:string|null;remote:boolean;remoteAsleep:boolean;remoteHungry:boolean;bowUntil:number;bubble:SVGGElement|null;raster:Raster|null;mesh:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>;label:SVGTextElement;shadow:SVGEllipseElement;heart:SVGPathElement;w:number;h:number;};
   const actors=new Map<string,Actor>(),ownId=`you-${props.dogId}`;
   const uniformsFor=(id:string)=>{const r=landmarksFor(id,'stand');return {running:{value:0},runNeck:{value:new THREE.Vector2(.36,.72)},artTile:{value:new THREE.Vector4(1,1,0,0)},locomotion:{value:0},strideFrom:{value:Array.from({length:16},()=>new THREE.Vector2())},strideTo:{value:Array.from({length:16},()=>new THREE.Vector2())},art:{value:null as THREE.Texture|null},opacity:{value:1},time:{value:0},reduced:{value:0},puppy:{value:0},morphFrom:{value:poseAnchors(id,'stand').map(v=>new THREE.Vector2(...v))},morphTo:{value:poseAnchors(id,'stand').map(v=>new THREE.Vector2(...v))},morphAmount:{value:0},profile:{value:new THREE.Vector2(1,0)},motion:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},temperament:{value:new THREE.Vector4(.7,.4,.2,.2)},fun:{value:new THREE.Vector4(0,0,0,1)},lifeAct:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()},headPivot:{value:new THREE.Vector2(...r.head)},tailPivot:{value:new THREE.Vector2(...r.tail)},feet:{value:new THREE.Vector4(...r.feet)},eyes:{value:new THREE.Vector4(...r.eyes)},legStart:{value:r.legStart},resting:{value:0},settling:{value:0}};};
   function applyPose(a:Actor,pose:ArtPose){if(a.requestedPose===pose)return;a.requestedPose=pose;const file=a.motionFile;if(!file)return;
    const url=pose==='stand'?`/dogs/${file}.webp`:`/dogs/${file}-${pose}.webp`;
    raster(url).then(r=>{if(disposed||a.requestedPose!==pose||!actors.has(a.id))return;const oldPose=a.pose;a.poseRaster=r;if(pose!=='stand'||!a.hasWalked)a.raster=r;a.pose=pose;a.poseAt=performance.now();const u=a.mesh.material.uniforms;poseAnchors(a.artId,pose).forEach((v,i)=>u.morphFrom.value[i].set(...v));poseAnchors(a.artId,oldPose).forEach((v,i)=>u.morphTo.value[i].set(...v));const rig=landmarksFor(a.artId,pose);u.art.value=r.texture;u.headPivot.value.set(...rig.head);u.tailPivot.value.set(...rig.tail);u.feet.value.set(...rig.feet);u.legStart.value=rig.legStart;u.resting.value=['sleep','down','sit'].includes(pose)?1:0;}).catch(()=>{/* Keep the available coherent drawing if an optional pose fails. */});
   }
+  const hungerBubble=()=>{const g=document.createElementNS(NS,'g');g.setAttribute('class','park-hungry');g.setAttribute('opacity','0');
+    g.innerHTML='<circle r="21" fill="#fbfaee" stroke="#614c37" stroke-width="2.5"/><circle cx="-12" cy="25" r="4.5" fill="#fbfaee" stroke="#614c37" stroke-width="2"/><circle cx="-18" cy="34" r="2.5" fill="#fbfaee" stroke="#614c37" stroke-width="1.6"/><path d="M-12 -2h24l-4 10h-16z" fill="#77624e" stroke="#614c37" stroke-width="2" stroke-linejoin="round"/><ellipse cy="-2" rx="12" ry="3.5" fill="#c9905b" stroke="#614c37" stroke-width="1.6"/>';
+    overlay.append(g);return g;};
   const spawn=(id:string,name:string,artId:string,source:string,x:number,y:number,own=false)=>{
    if(actors.has(id))return;const material=new THREE.ShaderMaterial({vertexShader:PARK_VERTEX,fragmentShader:PARK_FRAGMENT,uniforms:uniformsFor(artId),transparent:true,depthTest:false,depthWrite:false});const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);
    const shadow=document.createElementNS(NS,'ellipse');shadow.setAttribute('class','park-contact-shadow');labels.append(shadow);
@@ -70,11 +82,9 @@ export function IllustratedPark(props:Props){
    const heart=document.createElementNS(NS,'path');heart.setAttribute('d','M0 4C-18-8-11-19 0-11C11-19 18-8 0 4Z');heart.setAttribute('class','park-pet-heart');labels.append(heart);
    const contacts=Array.from({length:4},()=>{const dot=document.createElementNS(NS,'ellipse');dot.setAttribute('class','park-contact-shadow');dot.setAttribute('rx',String(4*unit));dot.setAttribute('ry',String(1.6*unit));labels.append(dot);return dot;});
    const motionFile=source===`/dogs/${FILES[artId]}.webp`?FILES[artId] as MotionArtName:null;
-   const a:Actor={id,name,artId,source,own,heading:Math.PI,speed:0,stride:0,strideSize:76*unit,motionFile,motionFrames:[],motionFrame:-1,hasWalked:false,blend:0,baseRaster:null,poseRaster:null,contacts,phase:[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)*.13,x:x*unit,y:y*unit,homeX:x*unit,homeY:y*unit,tx:x*unit,ty:y*unit,facing:1,until:performance.now()+3000+Math.random()*4000,petUntil:0,lastPet:-Infinity,sniffUntil:0,pose:'stand',poseAt:0,requestedPose:'stand',mode:'wander',then:null,partner:null,bowUntil:0,bubble:null,raster:null,mesh,label,shadow,heart,w:0,h:0};actors.set(id,a);
+   const a:Actor={id,name,artId,source,own,heading:Math.PI,speed:0,stride:0,strideSize:76*unit,motionFile,motionFrames:[],motionFrame:-1,hasWalked:false,blend:0,baseRaster:null,poseRaster:null,contacts,phase:[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)*.13,x:x*unit,y:y*unit,homeX:x*unit,homeY:y*unit,tx:x*unit,ty:y*unit,facing:1,until:performance.now()+3000+Math.random()*4000,petUntil:0,lastPet:-Infinity,sniffUntil:0,pose:'stand',poseAt:0,requestedPose:'stand',mode:'wander',then:null,partner:null,remote:false,remoteAsleep:false,remoteHungry:false,bowUntil:0,bubble:null,raster:null,mesh,label,shadow,heart,w:0,h:0};actors.set(id,a);
    // A hungry dog says so without words: a bowl in a thought bubble.
-   if(own){const g=document.createElementNS(NS,'g');g.setAttribute('class','park-hungry');g.setAttribute('opacity','0');
-    g.innerHTML='<circle r="21" fill="#fbfaee" stroke="#614c37" stroke-width="2.5"/><circle cx="-12" cy="25" r="4.5" fill="#fbfaee" stroke="#614c37" stroke-width="2"/><circle cx="-18" cy="34" r="2.5" fill="#fbfaee" stroke="#614c37" stroke-width="1.6"/><path d="M-12 -2h24l-4 10h-16z" fill="#77624e" stroke="#614c37" stroke-width="2" stroke-linejoin="round"/><ellipse cy="-2" rx="12" ry="3.5" fill="#c9905b" stroke="#614c37" stroke-width="1.6"/>';
-    overlay.append(g);a.bubble=g;}
+   if(own)a.bubble=hungerBubble();
    raster(source).then(r=>{if(disposed||!actors.has(id))return;a.baseRaster=r;if(!a.poseRaster||a.requestedPose==='stand')a.poseRaster=r;if(!a.raster||a.requestedPose==='stand'){a.raster=r;material.uniforms.art.value=r.texture;}if(own)setReady(true);}).catch(()=>{if(!disposed&&own){setReady(true);latest.current.onError('The dog illustration could not load. Please try again.');}});
    if(motionFile)raster(`/dogs/motion/${motionFile}-motion${own&&renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,true).then(atlas=>{if(disposed||!actors.has(id))return;atlas.texture.generateMipmaps=false;atlas.texture.minFilter=THREE.LinearFilter;
     const tileSize=atlas.w/10;a.motionFrames=Array.from({length:MOTION_LAYOUT.frames},(_,index)=>{const box=frameArt(motionFile,index).box;return {...atlas,w:tileSize,h:tileSize,left:box[0],right:box[0]+box[2],top:box[1],bottom:MOTION_FLOOR,pixelWidth:atlas.w,originX:(index%10)*tileSize,originY:Math.floor(index/10)*tileSize,tile:new THREE.Vector4(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12)};});}).catch(()=>{/* Optional gait art never removes the available dog or blocks care. */});
@@ -83,13 +93,18 @@ export function IllustratedPark(props:Props){
   const ownFallback:MetaverseNeighborDog={id:ownId,name:props.name,breed:props.appearance.breed,tribe:'Your dog',ownerName:'You',personality:'',avatarColors:{base:props.appearance.avatarConfig.baseColor,secondary:props.appearance.avatarConfig.secondaryColor,mask:props.appearance.avatarConfig.maskColor},earShape:'pricked',position:[0,0,0],action:'sitting',speed:0};
   spawn(ownId,props.name,authored?props.dogId:'',authored?`/dogs/${FILES[props.dogId]}.webp`:visitorArt(ownFallback),0,95,true);
   const positions=[[-112,-46],[118,-42],[-117,235],[112,244],[-300,-90],[290,220],[-265,365],[310,-290],[0,-375]];
-  const spawnNeighbor=(dog:MetaverseNeighborDog)=>{const known=dog.id.startsWith('pack-')?dog.id.slice(5):'',file=FILES[known],i=actors.size-1,p=positions[i%positions.length];spawn(dog.id,dog.name,known||'expo-2021',file?`/dogs/${file}.webp`:visitorArt(dog),p[0]+Math.floor(i/positions.length)*35,p[1]);};
+  const spawnNeighbor=(dog:MetaverseNeighborDog)=>{const known=dog.artId??(dog.id.startsWith('pack-')?dog.id.slice(5):''),file=FILES[known],i=actors.size-1,p=positions[i%positions.length];spawn(dog.id,dog.name,known||'expo-2021',file?`/dogs/${file}.webp`:visitorArt(dog),p[0]+Math.floor(i/positions.length)*35,p[1]);
+   const a=actors.get(dog.id);if(a&&dog.remote){a.remote=true;a.bubble=hungerBubble();}};
   props.neighbors.forEach(spawnNeighbor);
-  const removeNeighbor=(id:string)=>{const a=actors.get(id);if(!a||a.own)return;scene.remove(a.mesh);a.mesh.material.dispose();a.label.remove();a.shadow.remove();a.heart.remove();a.contacts.forEach(dot=>dot.remove());actors.delete(id);};
+  const removeNeighbor=(id:string)=>{const a=actors.get(id);if(!a||a.own)return;scene.remove(a.mesh);a.mesh.material.dispose();a.label.remove();a.shadow.remove();a.heart.remove();a.bubble?.remove();a.contacts.forEach(dot=>dot.remove());actors.delete(id);};
+  const steer=(id:string,i:LiveIntent)=>{const a=actors.get(id);if(!a||!a.remote)return;a.tx=i.x*unit;a.ty=i.y*unit;a.mode=i.mode;a.partner=null;a.then=null;a.remoteAsleep=i.asleep;a.remoteHungry=i.hungry;
+   // A dog seen for the first time appears where it already is, not at a default spot.
+   if(!a.hasWalked&&Math.hypot(a.x-a.tx,a.y-a.ty)>200*unit){a.x=a.tx;a.y=a.ty;}};
+  const cheer=(id:string)=>{const a=actors.get(id);if(!a)return;const now=performance.now();a.petUntil=now+2200;a.tx=a.x;a.ty=a.y;sound.happyYip();};
   let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity;
   const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
-   const now=performance.now();a.tx=a.x;a.ty=a.y;a.speed=0;if(now-a.lastPet<(a.own?2300:700)){a.petUntil=Math.max(a.petUntil,now+600);return;}a.lastPet=lastPet=now;a.petUntil=now+2200;sound.happyYip();if(a.own)latest.current.onPet();};
-  latest.current.onReady({spawnNeighbor,removeNeighbor,pet});
+   const now=performance.now();a.tx=a.x;a.ty=a.y;a.speed=0;if(now-a.lastPet<(a.own?2300:700)){a.petUntil=Math.max(a.petUntil,now+600);return;}a.lastPet=lastPet=now;a.petUntil=now+2200;sound.happyYip();if(a.own)latest.current.onPet();if(a.remote)latest.current.onPetRemote?.(id);};
+  latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer});
   let width=1,height=1;
   let pendingResize=false;const resize=()=>{pendingResize=false;const w=host.clientWidth,h=host.clientHeight;if(w===width&&h===height)return;width=w;height=h;renderer.setSize(width,height);};const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(host);resize();
   const point=(e:PointerEvent)=>{const b=canvas.getBoundingClientRect();return {x:cx+(e.clientX-b.left-width/2)/zoom,y:cy+(e.clientY-b.top-height/2)/zoom};};
@@ -105,7 +120,7 @@ export function IllustratedPark(props:Props){
   const cancel=(e:PointerEvent)=>{pointers.delete(e.pointerId);pinching=true;strokeId=null;};
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',blur);
   const contextLost=(event:Event)=>{event.preventDefault();cancelAnimationFrame(frame);canvas.dataset.contextLost='true';latest.current.onError('The graphics connection was interrupted. Try the alternate view, or reopen the garden.');};
-  const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet});frame=requestAnimationFrame(animate);};
+  const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer});frame=requestAnimationFrame(animate);};
   canvas.addEventListener('webglcontextlost',contextLost);canvas.addEventListener('webglcontextrestored',contextRestored);
   // ---- PLAY ------------------------------------------------------------
   // Dogs in a park do four things: wander, go and sniff a friend, chase and
@@ -118,7 +133,7 @@ export function IllustratedPark(props:Props){
   const pick=<T,>(list:T[])=>list[Math.floor(Math.random()*list.length)];
   const hungry=()=>(latest.current.petState?.needs.hunger??100)<35;
   const ownFree=()=>!!latest.current.ambient&&!latest.current.petState?.sleep.asleep&&!latest.current.petState?.sick&&!hungry();
-  const canPlay=(b:Actor)=>!!b.raster&&b.mode==='wander'&&(!b.own||ownFree());
+  const canPlay=(b:Actor)=>!!b.raster&&!b.remote&&b.mode==='wander'&&(!b.own||ownFree());
   const farPoint=(b:Actor):[number,number]=>{const angle=Math.random()*Math.PI*2,r=(170+Math.random()*130)*unit;return [clampX(b.x+Math.cos(angle)*r),clampY(b.y+Math.sin(angle)*r*.8)];};
   const settle=(a:Actor,now:number)=>{a.mode='wander';a.partner=null;a.tx=a.x;a.ty=a.y;a.until=now+1500+Math.random()*2500;};
   const face=(a:Actor,b:Actor)=>{a.facing=b.x>a.x?-1:1;b.facing=a.x>b.x?-1:1;};
@@ -165,7 +180,7 @@ export function IllustratedPark(props:Props){
    if(a.mode==='chase'||a.mode==='flee'){if(partner&&partner.partner===a.id)settle(partner,now);}
    choose(a,now);
   };
-  let ambientZoom=props.zoom;
+  let ambientZoom=props.zoom,lastIntentKey='',lastIntentAt=-Infinity;
   let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=1000/(latest.current.ambient?30:60);if(next<now-1000/60)next=now+1000/60;
    if(pendingResize)resize();{const tall=height>width*1.15;roamX=tall?210:400;roamTop=-240;roamBottom=tall?620:380;}const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
    const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
@@ -179,7 +194,7 @@ export function IllustratedPark(props:Props){
     const nx=d>.01?gx/d:1,ny=d>.01?gy/d:0;
     // Even a dog that is sniffing or lying down is eased apart a little;
     // only a dog you are steering (or one asleep at home) holds its ground.
-    const slides=(c:Actor)=>!c.own||ownFree();
+    const slides=(c:Actor)=>!c.remote&&(!c.own||ownFree());
     const sa=slides(a),sb=slides(b),share=sa&&sb?.5:1,push=(min-d)*Math.min(1,dt*4);
     if(sa){a.x=clampX(a.x-nx*push*share);a.y=clampY(a.y-ny*push*share*.55);}
     if(sb){b.x=clampX(b.x+nx*push*share);b.y=clampY(b.y+ny*push*share*.55);}
@@ -189,7 +204,7 @@ export function IllustratedPark(props:Props){
     mover.tx=clampX(mover.x+sign*nx*gap);mover.ty=clampY(mover.y+sign*ny*gap*.6);
    }
    for(const a of actors.values()){
-    if(!reduced.matches&&(!a.own||ownFree()))behave(a,now);
+    if(!reduced.matches&&!a.remote&&(!a.own||ownFree()))behave(a,now);
     else if(a.own&&a.mode!=='wander')settle(a,now);
     if(a.own&&p.ambient&&hungry()&&!resting){a.tx=a.x;a.ty=a.y;}
     const distance=Math.hypot(a.tx-a.x,a.ty-a.y),moving=distance>2&&(a.own||!reduced.matches)&&!(a.own&&resting)&&now>a.petUntil&&now>a.sniffUntil&&now>a.bowUntil&&!still(a.mode);
@@ -204,7 +219,7 @@ export function IllustratedPark(props:Props){
     if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;if(a.own&&traveled>.01)p.onWalk?.(traveled/unit,dt);}
     a.blend+=((traveled>.01?1:0)-a.blend)*(1-Math.exp(-dt*10));
     const view=viewFor(a.heading);if(step>.01)a.facing=view.facing;
-    const pose:ArtPose=a.own&&p.petState?.sleep.asleep?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':now<a.bowUntil?'bow':a.mode==='rest'?'down':a.mode==='nap'?'sleep':a.mode==='sit'?'sit':a.mode==='feed'?'feed':a.own&&p.ambient&&hungry()?'sit':'stand';applyPose(a,pose);
+    const pose:ArtPose=(a.own&&p.petState?.sleep.asleep)||(a.remote&&a.remoteAsleep)?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':now<a.bowUntil?'bow':a.mode==='rest'?'down':a.mode==='nap'?'sleep':a.mode==='sit'?'sit':a.mode==='feed'?'feed':a.own&&p.ambient&&hungry()?'sit':'stand';applyPose(a,pose);
     const growth=a.own&&p.petState?growthStage(p.petState):{scale:1,progress:1};a.w=Math.max(128,(a.own?166:142)*unit*growth.scale);
     const u=a.mesh.material.uniforms,petting=now<a.petUntil;
     const animated=a.motionFile&&a.motionFrames.length===MOTION_LAYOUT.frames&&a.hasWalked&&a.pose==='stand'&&!(a.own&&resting)&&now>a.sniffUntil;
@@ -233,8 +248,13 @@ export function IllustratedPark(props:Props){
     attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit));attr(a.shadow,'opacity',a.raster?'.12':'0');
     attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit));attr(a.label,'font-size',String(14*unit));attr(a.label,'opacity',a.raster?'1':'0');
     attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit})`);attr(a.heart,'opacity',petting?'1':'0');
-    if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit}) scale(${unit})`);attr(a.bubble,'opacity',hungry()&&!resting&&a.raster?'1':'0');}
+    if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit}) scale(${unit})`);attr(a.bubble,'opacity',(a.remote?a.remoteHungry&&!a.remoteAsleep:hungry()&&!resting)&&a.raster?'1':'0');}
    }
+   // LIVE: tell friends' screens what your dog decided, not where every frame
+   // is. A new message only when the goal moves 20 units or the activity
+   // changes, at most every 0.7 s.
+   if(p.onIntent){const asleep=!!p.petState?.sleep.asleep,h=hungry(),key=`${Math.round(own.tx/unit/20)}|${Math.round(own.ty/unit/20)}|${own.mode}|${h}|${asleep}`;
+    if(key!==lastIntentKey&&now-lastIntentAt>700){lastIntentKey=key;lastIntentAt=now;p.onIntent({x:own.tx/unit,y:own.ty/unit,mode:own.mode,hungry:h,asleep});}}
    const target=actors.get(focus)||own;
    if(p.ambient){
     // WATCH FROM AFAR: frame the whole pack and drift slowly as they move.

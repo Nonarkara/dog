@@ -1,4 +1,5 @@
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
+import { validRoom } from './domain/parkProtocol';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
 import {growCompanion,growthStage} from './domain/growth';
@@ -140,7 +141,10 @@ export const App: React.FC = () => {
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
   const [coachRequest,setCoachRequest]=useState<'fetch'|undefined>();
-  const [activeRegion, setActiveRegion] = useState<RegionKey>('care');
+  // A live park invite (?park=<room>) opens straight into the park.
+  const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
+  const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
+  useEffect(()=>{const url=new URL(location.href);if(liveRoom)url.searchParams.set('park',liveRoom);else url.searchParams.delete('park');if(url.href!==location.href)history.replaceState(history.state,'',url);},[liveRoom]);
   const outing=useRef({distance:0,seconds:0});
   useEffect(()=>{outing.current={distance:0,seconds:0};},[activeRegion,activeDogId]);
 
@@ -574,7 +578,7 @@ export const App: React.FC = () => {
       case 'commons':
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
-            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onGoHome={togglePark} />
+            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onGoHome={togglePark} liveRoom={liveRoom} onLiveRoom={setLiveRoom} />
           </Suspense>
         );
     }

@@ -2,7 +2,9 @@ import {IllustratedPark} from './IllustratedPark';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils } from 'lucide-react';
+import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils, Link2, Copy, LogOut } from 'lucide-react';
+import { useLivePark } from './useLivePark';
+import { newRoomName, type LiveDog } from '../domain/parkProtocol';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 import type {PetState} from '../domain/types';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
@@ -36,6 +38,21 @@ export interface CommonsPanelProps {
   guide?:React.ReactNode;
   /** Take the dog home (from the park). */
   onGoHome?:()=>void;
+  /** The live park room this browser is in, if any (from an invite link). */
+  liveRoom?:string|null;
+  onLiveRoom?:(room:string|null)=>void;
+}
+
+const OWNER_KEY='tama_dog_chi_live_owner';
+const STARTER_ART=['expo-2021','mali-2022','oreo-frenchie','paolo-pug','shiba-chai'];
+const HEX=/^#[0-9a-fA-F]{6}$/;
+/** Only what the park draws. Never the record. */
+function liveDogFor(dog:DogProfile,owner:string):LiveDog{
+  const starter=DEFAULT_DOGS.find(d=>d.id===dog.id);
+  const drawn=!!starter&&STARTER_ART.includes(dog.id)&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>starter.avatarConfig[k]===dog.avatarConfig[k]);
+  const hex=(c:string,fallback:string)=>HEX.test(c)?c:fallback;
+  return {name:dog.name.slice(0,24)||'Dog',breed:(dog.breed||'Dog').slice(0,40),art:drawn?dog.id:'',owner:owner.slice(0,32)||`${dog.name}'s person`,
+    coat:{base:hex(dog.avatarConfig.baseColor,'#d8c5a3'),light:hex(dog.avatarConfig.secondaryColor,'#f5efdf'),dark:hex(dog.avatarConfig.maskColor,'#302c29')}};
 }
 
 /* ------------------------------------------------------------------ types */
@@ -87,6 +104,8 @@ interface SceneApi {
   spawnNeighbor: (nbr: MetaverseNeighborDog) => void;
   removeNeighbor: (id: string) => void;
   pet: (id: string) => void;
+  steer?: import('./IllustratedPark').ParkApi['steer'];
+  cheer?: import('./IllustratedPark').ParkApi['cheer'];
 }
 
 /* ------------------------------------------------------------- seed lines */
@@ -230,7 +249,7 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide,onGoHome }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide,onGoHome,liveRoom=null,onLiveRoom }) => {
   /**
    * WATCH MODE — the park as a second screen.
    *
@@ -268,7 +287,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
   const heartRef=useRef<HTMLDivElement>(null);
   const stateRef=useRef(petState);stateRef.current=petState;
   const socialRef=useRef(onSocialize);socialRef.current=onSocialize;
-  const [drawer,setDrawer]=useState<'dogs'|'chat'|null>(null);
+  const [drawer,setDrawer]=useState<'dogs'|'chat'|'live'|null>(null);
   const [zoom,setZoom]=useState(1);
   const zoomRef=useRef(1);
   const petCallback=useRef(onPet);petCallback.current=onPet;
@@ -293,6 +312,27 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
   // The scene's handles, so a visitor can be spawned (or removed) from a
   // handler that lives outside the effect that built the scene.
   const sceneApiRef = useRef<SceneApi | null>(null);
+
+  /* ---- LIVE PARK: friends' real dogs, by invite link ------------------- */
+  const [owner,setOwner]=useState(()=>{try{return localStorage.getItem(OWNER_KEY)||'';}catch{return '';}});
+  const ownerName=owner.trim()||`${myDog.name}'s person`;
+  const [liveNote,setLiveNote]=useState<string|null>(null);
+  const liveNoteTimer=useRef(0);
+  const sayLive=(text:string)=>{setLiveNote(text);clearTimeout(liveNoteTimer.current);liveNoteTimer.current=window.setTimeout(()=>setLiveNote(null),6000);};
+  const me=useMemo(()=>liveDogFor(myDog,ownerName),[myDog,ownerName]);
+  const live=useLivePark({room:liveRoom,me,scene:()=>sceneApiRef.current,
+    packDog:art=>parkNeighbors.find(n=>n.id===`pack-${art}`),
+    hungry:()=>(stateRef.current?.needs.hunger??100)<35,
+    onPetted:by=>{petCallback.current?.();sceneApiRef.current?.cheer?.(myDogRowId);sayLive(`${by} petted ${myDog.name}.`);},
+    onNote:sayLive});
+  const friendCount=Object.keys(live.friends).length;
+  const inviteLink=liveRoom?`${location.origin}/?park=${liveRoom}`:'';
+  const shareLink=async(link:string)=>{
+    const text=`Come to the park with ${myDog.name}`;
+    try{if(navigator.share&&matchMedia('(pointer: coarse)').matches){await navigator.share({title:'Tama-Dog-Chi park',text,url:link});return;}}catch{/* cancelled or unsupported: fall through to copying */}
+    try{await navigator.clipboard.writeText(link);sayLive(`Link copied. Friends see ${myDog.name}'s name, look and play — nothing from the record.`);}catch{sayLive(`Send this link: ${link}`);}
+  };
+  const invite=()=>{if(liveRoom){setDrawer(drawer==='live'?null:'live');return;}const room=newRoomName();onLiveRoom?.(room);setDrawer('live');void shareLink(`${location.origin}/?park=${room}`);};
   const spawnedRef = useRef<Set<string>>(new Set());
   const neighborMeshesRef = useRef<NeighborEntry[]>([]);
 
@@ -963,7 +1003,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             never grow the region. */}
         <div ref={worldRef} className={`park-world relative w-full overflow-hidden border-hairline-b${watching?' park-world--watching':''}${watching&&watchIdle?' park-world--idle':''}`}>
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
-          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} ambient={watching} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} ambient={watching} onIntent={liveRoom?live.sendIntent:undefined} onPetRemote={live.petFriend} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;live.resync();spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -976,7 +1016,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
 
           <div ref={heartRef} className="park-affection" aria-hidden="true"><Heart size={25} fill="currentColor"/></div>
           {watching&&<div className="park-watch-overlay">
-            <p className="park-watch-title">{myDog.name} at the park</p>
+            <p className="park-watch-title">{myDog.name} at the park{friendCount?` · live with ${friendCount} friend${friendCount===1?'':'s'}`:''}</p>
+            {liveNote&&<p className="park-watch-note" role="status">{liveNote}</p>}
             <button type="button" className="park-watch-exit" aria-label="Stop watching" onClick={stopWatching}><X size={20}/></button>
             {hungry&&<div className="park-watch-hungry" role="status"><span>{myDog.name} is hungry.</span>{onGoHome&&<button type="button" onClick={()=>{stopWatching();onGoHome();}}><Utensils size={16}/>Take {myDog.name} home to eat</button>}</div>}
           </div>}
@@ -988,6 +1029,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
 
           <button type="button" aria-label={`${sceneCount} dogs`} aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/><span>{sceneCount}<span className="park-dogs-word"> dogs</span></span><ChevronDown size={14}/></button>
           <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} title={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button></>}</div>
+          <button type="button" className={liveRoom?'park-live-on':''} aria-expanded={drawer==='live'} aria-controls="park-live" onClick={invite} title={liveRoom?'Live park':'Invite a friend to this park'}><Link2 size={18}/><span>{liveRoom?(live.status==='live'?`Live · ${friendCount+1}`:'Connecting…'):'Invite'}</span></button>
           <div className="park-camera" role="group" aria-label="Park camera">
             <button type="button" aria-label="Zoom in" disabled={zoom>=1.5} onClick={()=>changeZoom(zoomRef.current*1.2)}><ZoomIn size={20}/></button>
             <button type="button" aria-label="Zoom out" disabled={zoom<=.85} onClick={()=>changeZoom(zoomRef.current/1.2)}><ZoomOut size={20}/></button>
@@ -1000,6 +1042,12 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             One compact line per dog. It is not a scroll container: the law
             allows exactly one of those, and the chat log is the one that
             earns it. */}
+        <div id="park-live" className="park-live" hidden={drawer!=='live'||!liveRoom}>
+          <p>Friends who open this link bring their dog to your park. They see {myDog.name}'s name, look and play — nothing from the record.</p>
+          <div className="park-live-row"><input readOnly value={inviteLink} aria-label="Invite link" onFocus={e=>e.currentTarget.select()}/><button type="button" onClick={()=>void shareLink(inviteLink)}><Copy size={16}/><span>Copy</span></button></div>
+          <label className="park-live-row"><span>Shown as</span><input value={owner} maxLength={32} placeholder={`${myDog.name}'s person`} onChange={e=>{setOwner(e.target.value);try{localStorage.setItem(OWNER_KEY,e.target.value);}catch{/* not remembered */}}}/></label>
+          <div className="park-live-row"><span className="park-live-status">{live.status==='live'?(friendCount?`${friendCount} friend${friendCount===1?'':'s'} here`:'Waiting for friends'):live.status==='lost'?'Connection lost':live.status==='full'?'Park full':'Connecting…'}</span><button type="button" onClick={()=>{onLiveRoom?.(null);setDrawer(null);}}><LogOut size={16}/><span>Leave live park</span></button></div>
+        </div>
         <div id="park-roster" className="park-roster" hidden={drawer!=='dogs'}>
           <button type="button" className="park-view-toggle btn-quiet" onClick={()=>setLegacyScene(!legacyScene)}>{legacyScene?'Illustrated garden':'Simple 3D view'}</button>
           <ul className="min-h-0 overflow-hidden">
@@ -1042,6 +1090,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
         {/* ---- 3. THE NOTE ------------------------------------------------
             What the import did, said once, in the panel, in a line. Nothing
             pops over the reader. */}
+        {liveNote&&!watching&&<p className="park-live-note" role="status">{liveNote}</p>}
         {note && (
           <div
             className="park-import-note shrink-0 flex items-start gap-2 border-hairline bg-elevated px-2 py-1.5"

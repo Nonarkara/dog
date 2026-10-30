@@ -20,7 +20,7 @@ export const RATE_LIMIT = 40;
 /** The park's walkable world, in park units (matches IllustratedPark's widest roam). */
 export const WORLD = { minX: -420, maxX: 420, minY: -250, maxY: 620 };
 
-export const MODES = ['wander', 'visit', 'chase', 'flee', 'rest'] as const;
+export const MODES = ['wander', 'visit', 'chase', 'flee', 'rest', 'sit', 'feed', 'nap', 'walkto'] as const;
 export type LiveMode = (typeof MODES)[number];
 
 export interface LiveDog {
