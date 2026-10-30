@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils } from 'lucide-react';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 import type {PetState} from '../domain/types';
-import { DEFAULT_DOGS, METAVERSE_NEIGHBORS } from '../data/defaultDogs';
+import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { sound } from '../utils/proceduralAudio';
 
 /**
@@ -247,8 +247,6 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
   const stopWatching=()=>{setWatching(false);if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});};
   useEffect(()=>{
    if(!watching)return;
-   // Only the illustrated pack: the placeholder drawings break the picture.
-   const api=sceneApiRef.current;METAVERSE_NEIGHBORS.forEach(n=>api?.removeNeighbor(n.id));
    let lock:{release:()=>Promise<void>}|null=null;
    const wake=()=>{const nav=navigator as Navigator&{wakeLock?:{request:(t:'screen')=>Promise<{release:()=>Promise<void>}>}};nav.wakeLock?.request('screen').then(l=>{lock=l;}).catch(()=>{});};
    wake();
@@ -258,13 +256,14 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
    const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setWatching(false);};
    document.addEventListener('visibilitychange',visible);document.addEventListener('fullscreenchange',fs);window.addEventListener('pointermove',touch);window.addEventListener('pointerdown',touch);window.addEventListener('keydown',esc);
    return()=>{clearTimeout(idle);void lock?.release().catch(()=>{});document.removeEventListener('visibilitychange',visible);document.removeEventListener('fullscreenchange',fs);window.removeEventListener('pointermove',touch);window.removeEventListener('pointerdown',touch);window.removeEventListener('keydown',esc);
-    const back=sceneApiRef.current;METAVERSE_NEIGHBORS.forEach(n=>back?.spawnNeighbor(n));};
+};
   },[watching]);
   const [clearPending,setClearPending]=useState(false);
   const [legacyScene,setLegacyScene]=useState(false);
   const parkNeighbors=useMemo<MetaverseNeighborDog[]>(()=>[
     ...DEFAULT_DOGS.filter(d=>d.id!==myDog.id).map(d=>({id:`pack-${d.id}`,name:d.name,breed:d.breed,tribe:'The home pack',ownerName:'Local companion',personality:d.metaverseBio,avatarColors:{base:d.avatarConfig.baseColor,secondary:d.avatarConfig.secondaryColor,mask:d.avatarConfig.maskColor},earShape:d.avatarConfig.earShape==='floppy'?'floppy' as const:'pricked' as const,position:[0,0,0] as [number,number,number],action:'walking' as const,speed:.01})),
-    ...METAVERSE_NEIGHBORS,
+    // Only the hand-drawn household dogs. The placeholder visitors
+    // (Somtum, Baozi, Waffles, the collie and Chai) are out of the park.
   ],[myDog.id]);
   const heartRef=useRef<HTMLDivElement>(null);
   const stateRef=useRef(petState);stateRef.current=petState;
