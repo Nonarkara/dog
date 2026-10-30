@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import React,{useState,useEffect,useRef} from 'react';
 import {Lightbulb,X} from 'lucide-react';
 import {modeKey} from '../utils/playMode';
 const TIPS={
@@ -15,7 +15,7 @@ const TIPS={
  coach:{title:'Watch, mark, reward',text:'Cue once, wait for the dog’s movement, mark that moment, then give the promised treat.'},
  record:{title:'Your dog’s notebook',text:'Identity, health notes and photos live here. Starter health examples are marked, not verified facts.'},
  care:{title:'Read the dog',text:'Six symbols show needs and mood. Follow the next-action sentence; History opens the full details.'},
- park:{title:'Your little universe',text:'Tap dogs to pet, ground to walk. Pinch or use ± to zoom; people and chat open below.'},
+ park:{title:'Your little universe',text:'Pet a dog or tap a place to walk. Pinch to come closer.'},
  dogs:{title:'Meet the pack',text:'Each dog keeps separate care, training and personality. Switching dogs never transfers progress.'},
  tricks:{title:'A little invitation',text:'Try a gesture and watch the response. Let a tired or unwell dog rest instead.'},
  nose:{title:'Clever nose',text:'Watch where the treat goes, then choose a cup. Sniffing games ease boredom.'},
@@ -52,4 +52,4 @@ export function useFirstPlayTips(){
  };
  return {tip,show,capture,close:()=>setTip(null)};
 }
-export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span><span>{t.text}</span></p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}
+export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const close=useRef(onClose);close.current=onClose;useEffect(()=>{if(!['park','zoom','walk'].includes(tip))return;const timer=setTimeout(()=>close.current(),16000);return()=>clearTimeout(timer);},[tip]);const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span><span>{t.text}</span></p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}

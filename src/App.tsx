@@ -569,7 +569,7 @@ export const App: React.FC = () => {
       case 'commons':
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
-            <CommonsPanel myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onPet={()=>handleInteract('pet')} />
+            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onPet={()=>handleInteract('pet')} />
           </Suspense>
         );
     }
@@ -605,18 +605,15 @@ export const App: React.FC = () => {
 
           </div>
 
-          <button type="button" className="btn-quiet park-navigation" aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>{setIsDogMenuOpen(false);setLabelsVisible(false);setActiveRegion(activeRegion==='commons'?'care':'commons');}}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
+          <button type="button" className={`btn-quiet park-navigation ${activeRegion==='commons'?'park-navigation--home':''}`} aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>{setIsDogMenuOpen(false);setLabelsVisible(false);setActiveRegion(activeRegion==='commons'?'care':'commons');}}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
           {/* The facts about the dog you are with. */}
           <p className="header-dog-facts min-w-0 flex-1 truncate text-[12px] text-zinc-400">
             <span className="text-zinc-300">{currentDog.breed}</span>
-            <span className="text-zinc-600"> / </span>
-            <span className="data">{starterAge?'Age unverified':age.formattedCalendarAge}</span>
-            <span className="text-zinc-600"> / </span>
-            <span className="data">{currentDog.birthDate&&!starterAge ? `${age.dogYears} dog years` : 'Virtual companion'}</span>
+            {!starterAge&&currentDog.birthDate&&<><span className="text-zinc-600"> / </span><span className="data">{age.formattedCalendarAge} / {age.dogYears} dog years</span></>}
           </p>
 
-          <span title="Saved on this device" className="hidden lg:inline text-[11px] text-faint shrink-0">
-            {DOG_THEMES[currentDog.id]?.name || 'Your companion'}
+          <span title="Color palette for this dog; not a measured personality" className="hidden lg:inline text-[11px] text-faint shrink-0">
+            Palette · {DOG_THEMES[currentDog.id]?.name || 'Your companion'}
           </span>
 
           <button
@@ -639,7 +636,7 @@ export const App: React.FC = () => {
           activeRegion==='commons' ? 'cockpit-workspace--park' : isWide ? 'cockpit-workspace--wide' : 'cockpit-workspace--tall'
         }`}
       >
-        {activeRegion==='commons' ? <>{renderRegion('commons')}{firstGuide.tip&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}</> : <>
+        {activeRegion==='commons' ? renderRegion('commons') : <>
         {/* The animal. The biggest region on the screen, and the one the
             reader came for. */}
         <section className="panel region-stage" aria-label={`${currentDog.name}, live avatar`}>
@@ -721,6 +718,7 @@ export const App: React.FC = () => {
             )}
             </div>
             </div>
+            {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={petState.growth.careDays.length}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span></div>}
             <div className="stage-game-dock" hidden={isDogMenuOpen} ref={setGameControlsHost} aria-label="Dog game controls"/>
           </div>
         </section>
@@ -879,13 +877,14 @@ export const App: React.FC = () => {
 /** A region that has not arrived yet. A quiet plate, not a hole. */
 const RegionLoading: React.FC<{ label: string }> = ({ label }) => (
   <div data-workspace-loading="true" role="status" className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
-    <span className="label">{label} — loading</span>
+    <div className="region-loading-lines" aria-hidden="true"><i/><i/><i/></div><span className="sr-only">{label} — loading</span>
   </div>
 );
 
 /** The scene has not arrived yet. */
-const StageLoading: React.FC<{ name: string }> = ({ name }) => (
-  <div data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center bg-black">
-    <span className="label">{name} — loading</span>
-  </div>
-);
+const StageLoading: React.FC<{ name: string }> = ({ name }) => {
+  const file=({Expo:'expo',Mali:'mali',Oreo:'oreo',Paolo:'paolo',Hachiku:'hachiku'} as Record<string,string>)[name];
+  return <div data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center bg-black">
+    {file?<img src={`/dogs/${file}.webp`} className="stage-loading-art" alt=""/>:<div className="region-loading-lines" aria-hidden="true"><i/><i/><i/></div>}<span className="sr-only">{name} — loading</span>
+  </div>;
+};

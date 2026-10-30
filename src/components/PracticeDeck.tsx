@@ -181,7 +181,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     trial.current.markAt=now;
     trial.current.early=!Number.isFinite(trial.current.doneAt)||now<trial.current.doneAt;
     clearTimers();sound.markerClick();setPhase('marked');
-    setStatus(trial.current.early?'Early marker — still follow it with a reward.':'Marked. Now the treat.');
+    setStatus(trial.current.early?'A little soon—give the promised reward, then try again.':'Marked. Now the treat.');
     later(()=>finish({responded:trial.current.responds,markedBeforeCompletion:trial.current.early,markDelayMs:trial.current.early?undefined:now-trial.current.doneAt}),TREAT_WINDOW_MS+600);
   };
 
@@ -307,7 +307,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
       </div>
 
       <details className="practice-real-notes border-hairline-t px-2 py-1.5">
-        <summary className="label">With the real {dog.name} · notes</summary>
+        <summary className="label">Try this with your real dog · guide</summary>
         <p className="mt-1 text-[11px] leading-snug text-zinc-300">{real.lure}</p>
         <p className="mt-1 text-[11px] leading-snug text-zinc-400">Common mistake: {real.mistake}</p>
         <p className="mt-1 text-[10px] leading-snug text-faint">

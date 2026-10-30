@@ -1,3 +1,4 @@
+import {IllustratedPark} from './IllustratedPark';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -31,6 +32,7 @@ export interface CommonsPanelProps {
   onPet?: () => void;
   petState?:PetState;
   onSocialize?:()=>void;
+  guide?:React.ReactNode;
 }
 
 /* ------------------------------------------------------------------ types */
@@ -225,18 +227,24 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,guide }) => {
+  const [clearPending,setClearPending]=useState(false);
+  const [legacyScene,setLegacyScene]=useState(false);
+  const parkNeighbors=useMemo<MetaverseNeighborDog[]>(()=>[
+    ...DEFAULT_DOGS.filter(d=>d.id!==myDog.id).map(d=>({id:`pack-${d.id}`,name:d.name,breed:d.breed,tribe:'The home pack',ownerName:'Local companion',personality:d.metaverseBio,avatarColors:{base:d.avatarConfig.baseColor,secondary:d.avatarConfig.secondaryColor,mask:d.avatarConfig.maskColor},earShape:d.avatarConfig.earShape==='floppy'?'floppy' as const:'pricked' as const,position:[0,0,0] as [number,number,number],action:'walking' as const,speed:.01})),
+    ...METAVERSE_NEIGHBORS,
+  ],[myDog.id]);
   const heartRef=useRef<HTMLDivElement>(null);
   const stateRef=useRef(petState);stateRef.current=petState;
   const socialRef=useRef(onSocialize);socialRef.current=onSocialize;
   const [drawer,setDrawer]=useState<'dogs'|'chat'|null>(null);
-  const [zoom,setZoom]=useState(9);
-  const zoomRef=useRef(9);
+  const [zoom,setZoom]=useState(1);
+  const zoomRef=useRef(1);
   const petCallback=useRef(onPet);petCallback.current=onPet;
   const focusRef=useRef<string|null>(null);
   const petTimes=useRef(new Map<string,number>());
   const lastPet=useRef(-Infinity);
-  const changeZoom=(distance:number)=>{const next=Math.max(4,Math.min(28,distance));zoomRef.current=next;setZoom(next);};
+  const changeZoom=(distance:number)=>{const next=Math.max(.85,Math.min(1.5,distance));zoomRef.current=next;setZoom(next);};
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
@@ -284,7 +292,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
 
   useEffect(() => {
     const container = mountRef.current;
-    if (!container) return;
+    if (!container||!legacyScene) return;
 
     let renderer: THREE.WebGLRenderer | null = null;
     try {
@@ -502,7 +510,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       neighborMeshesRef.current.splice(index, 1);
     };
 
-    METAVERSE_NEIGHBORS.forEach((nbr) => spawnNeighbor(nbr));
+    parkNeighbors.forEach((nbr) => spawnNeighbor(nbr));
 
     // Visitors that were already imported survive a rebuild of the scene
     // (a dog change), because they belong to the park, not to the render.
@@ -518,7 +526,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       lastPet.current=now;petTimes.current.set(id,now);sound.happyYip();
       if(id===`you-${myDog.id}`)petCallback.current?.();
     };
-    sceneApiRef.current = { spawnNeighbor, removeNeighbor, pet:petDog };
+    const legacyApi={ spawnNeighbor, removeNeighbor, pet:petDog };
+    sceneApiRef.current = legacyApi;
 
     /* ---------------------------------------------------------- the pointer */
 
@@ -654,7 +663,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       dogBody.position.y = isMoving ? 0.65 + Math.abs(Math.sin(elapsed * 12)) * 0.1 : 0.65;
 
       const focus=neighborMeshesRef.current.find(n=>n.data.id===focusRef.current)?.group.position??myDogGroup.position;
-      const distance=zoomRef.current;
+      const distance=9/zoomRef.current;
       camera.position.x += (focus.x - camera.position.x) * .07;
       camera.position.y += (distance*.68 - camera.position.y) * .07;
       camera.position.z += (focus.z + distance - camera.position.z) * .07;
@@ -692,7 +701,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       });
 
       const closestNeighbor=neighborMeshesRef.current.find(n=>n.group.position.distanceTo(myDogGroup.position)<2.4);
-      if(!resting&&closestNeighbor&&elapsed-lastSocial>30){lastSocial=elapsed;socialRef.current?.();setNote(`${myDog.name} and ${closestNeighbor.data.name} share a gentle sniff. Social practice, at their pace.`);}
+      if(!resting&&closestNeighbor&&elapsed-lastSocial>30){lastSocial=elapsed;socialRef.current?.();gl.domElement.dataset.socialWith=closestNeighbor.data.id;}
       const affection=Math.max(0,1-(performance.now()-(petTimes.current.get(focusRef.current??'')??-Infinity))/1800);
       if(heartRef.current){const pos=focus.clone().add(new THREE.Vector3(0,2.8+(.8-affection)*.8,0)).project(camera);heartRef.current.style.left=`${(pos.x+1)*50}%`;heartRef.current.style.top=`${(1-pos.y)*50}%`;heartRef.current.style.opacity=String(affection);}
       gl.render(scene, camera);
@@ -730,8 +739,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       gl.domElement.removeEventListener('pointerdown',down);gl.domElement.removeEventListener('pointermove',move);gl.domElement.removeEventListener('pointerup',up);gl.domElement.removeEventListener('pointercancel',up);gl.domElement.removeEventListener('wheel',wheel);
       gl.domElement.removeEventListener('webglcontextlost', handleContextLost);
 
-      sceneApiRef.current = null;
-      spawnedRef.current.clear();
+      if(sceneApiRef.current===legacyApi){sceneApiRef.current=null;spawnedRef.current.clear();}
       neighborMeshesRef.current = [];
 
       scene.traverse((child) => {
@@ -750,7 +758,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myDog.id, myDog.avatarConfig.baseColor, myDog.avatarConfig.secondaryColor]);
+  }, [myDog.id, myDog.avatarConfig.baseColor, myDog.avatarConfig.secondaryColor,legacyScene]);
 
   /* ----------------------------------------------- visitors vs. the scene */
 
@@ -825,7 +833,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
         sender: 'Park',
         text: sceneApiRef.current
           ? `${visitor.name} the ${visitor.breed} has entered the park.`
-          : `${visitor.name} the ${visitor.breed} joined the visitor list — the 3D park is unavailable on this browser.`,
+          : `${visitor.name} the ${visitor.breed} joined the visitor list — the park renderer is unavailable on this browser.`,
         time: clockNow(),
       },
     ]);
@@ -834,6 +842,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
   const clearVisitors = () => {
     if (!visitors.length) return;
     const count = visitors.length;
+    visitors.forEach(v=>{sceneApiRef.current?.removeNeighbor(v.id);spawnedRef.current.delete(v.id);});
     setVisitors([]);
     setSelectedId((current) => {
       if (current && current.startsWith('visitor-')) return null;
@@ -865,7 +874,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
         tribe: myDog.metaverseTribe || 'Your pack',
         kind: 'you',
       },
-      ...METAVERSE_NEIGHBORS.map((n) => ({
+      ...parkNeighbors.map((n) => ({
         id: n.id,
         name: n.name,
         breed: n.breed,
@@ -882,17 +891,17 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
         kind: 'visitor' as VisitorKind,
       })),
     ],
-    [myDog, myDogRowId, visitors]
+    [myDog, myDogRowId, visitors,parkNeighbors]
   );
 
   const selectedRow = rows.find((r) => r.id === selectedId) ?? null;
-  const sceneCount = 1 + METAVERSE_NEIGHBORS.length + visitors.length;
+  const sceneCount = 1 + parkNeighbors.length + visitors.length;
 
   return (
     <section className="panel region-commons h-full" aria-label="Commons">
       {/* ---- the head: what this region is, and its two controls -------- */}
       <header className="panel-head">
-        <h2 className="label text-zinc-300 truncate">Commons · local</h2>
+        <h2 className="label text-zinc-300 truncate" title="A local simulated park; no online players">Park</h2>
         <div className="flex items-center gap-1.5 min-w-0">
           <label className="btn btn-quiet min-h-0 px-1.5 py-1 text-[10px] cursor-pointer shrink-0">
             <Upload size={11} aria-hidden="true" />
@@ -906,7 +915,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             />
           </label>
           <button
-            onClick={clearVisitors}
+            onClick={()=>setClearPending(true)}
             disabled={visitors.length === 0}
             className="btn btn-quiet min-h-0 px-1.5 py-1 text-[10px] shrink-0"
             aria-label="Clear the visitors from the park"
@@ -922,66 +931,38 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             decided before the WebGL context exists. It can shrink; it can
             never grow the region. */}
         <div className="park-world relative w-full overflow-hidden border-hairline-b">
-          <div ref={mountRef} className="absolute inset-0 cursor-crosshair" />
+          <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">
               <div className="text-center max-w-[36ch]">
                 <p className="label mb-1">Park scene unavailable</p>
-                <p className="text-[11px] leading-relaxed text-zinc-400">{webglError}</p>
+                <p className="text-[11px] leading-relaxed text-zinc-400">{webglError}</p><button type="button" className="btn-quiet" onClick={()=>{setWebglError(null);setLegacyScene(!legacyScene);}}>Try {legacyScene?'illustrated':'simple 3D'} view</button>
               </div>
             </div>
           )}
 
-          {/* One readout rule across the top edge — the only overlay chrome. */}
-          {!webglError && (
-            <p className="park-help" title="WASD or arrow keys to walk. Pinch or use the camera buttons to zoom.">Tap a dog to pet · ground to walk</p>
-          )}
-
           <div ref={heartRef} className="park-affection" aria-hidden="true"><Heart size={25} fill="currentColor"/></div>
           <div className="park-camera" role="group" aria-label="Park camera">
-            <button type="button" aria-label="Zoom in" disabled={zoom<=4} onClick={()=>changeZoom(zoomRef.current/1.3)}><ZoomIn size={20}/></button>
-            <button type="button" aria-label="Zoom out" disabled={zoom>=28} onClick={()=>changeZoom(zoomRef.current*1.3)}><ZoomOut size={20}/></button>
-            <button type="button" aria-label="Find my dog" onClick={()=>{focusRef.current=null;changeZoom(9);setSelectedId(myDogRowId);}}><LocateFixed size={20}/></button>
+            <button type="button" aria-label="Zoom in" disabled={zoom>=1.5} onClick={()=>changeZoom(zoomRef.current*1.2)}><ZoomIn size={20}/></button>
+            <button type="button" aria-label="Zoom out" disabled={zoom<=.85} onClick={()=>changeZoom(zoomRef.current/1.2)}><ZoomOut size={20}/></button>
+            <button type="button" aria-label="Find my dog" onClick={()=>{focusRef.current=null;changeZoom(1);setSelectedId(myDogRowId);}}><LocateFixed size={20}/></button>
           </div>
-          {/* The dog in hand, as a slim bar over the stage it describes. */}
-          {selectedRow && (
-            <div className="bar park-selected" role="status" aria-live="polite">
-              <span className="label shrink-0">
-                {selectedRow.kind === 'you'
-                  ? 'Your dog'
-                  : selectedRow.kind === 'visitor'
-                    ? 'Visitor'
-                    : 'Neighbour'}
-              </span>
-              <span className="font-display text-[12px] text-accent truncate min-w-0 shrink-0">
-                {selectedRow.name}
-              </span>
-              <span className="text-[11px] text-zinc-400 truncate min-w-0 flex-1">
-                {selectedRow.breed} / {selectedRow.tribe}
-              </span>
-              <button type="button" className="btn-quiet" aria-label={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button>
-              <button
-                onClick={() => setSelectedId(null)}
-                aria-label={`Close the details for ${selectedRow.name}`}
-                className="btn btn-quiet w-5 h-5 min-h-0 p-0 shrink-0"
-              >
-                <X size={11} />
-              </button>
-            </div>
-          )}
         </div>
-
+        {guide&&<div className="park-guide">{guide}</div>}
+        {clearPending&&<div className="park-clear-confirm" role="group" aria-label="Confirm clearing visitors"><span>Let {visitors.length} visitor{visitors.length===1?'':'s'} leave?</span><button type="button" className="btn-quiet" onClick={()=>{clearVisitors();setClearPending(false);}}>Clear visitors</button><button type="button" className="btn-quiet" onClick={()=>setClearPending(false)}>Keep them</button></div>}
         <div className="park-drawers" role="group" aria-label="Park details">
           <button type="button" aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/>{sceneCount} dogs<ChevronDown size={14}/></button>
-          <span className="park-local-note">Pinch to zoom</span>
-          <button type="button" aria-expanded={drawer==='chat'} aria-controls="park-chat" onClick={()=>setDrawer(drawer==='chat'?null:'chat')}><MessageSquare size={18}/>Chat<ChevronDown size={14}/></button>
+          <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button></>}</div>
+          <button type="button" aria-expanded={drawer==='chat'} aria-controls="park-chat" onClick={()=>setDrawer(drawer==='chat'?null:'chat')}><MessageSquare size={18}/><span className="sr-only">Chat</span></button>
         </div>
         {/* ---- 2. WHO IS HERE --------------------------------------------
             One compact line per dog. It is not a scroll container: the law
             allows exactly one of those, and the chat log is the one that
             earns it. */}
         <div id="park-roster" className="park-roster" hidden={drawer!=='dogs'}>
+          <button type="button" className="park-view-toggle btn-quiet" onClick={()=>setLegacyScene(!legacyScene)}>{legacyScene?'Illustrated garden':'Simple 3D view'}</button>
           <ul className="min-h-0 overflow-hidden">
             {rows.map((row) => {
               const isSelected = row.id === selectedId;
@@ -1024,7 +1005,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             pops over the reader. */}
         {note && (
           <div
-            className="bar--note shrink-0 flex items-start gap-2 border-hairline bg-elevated px-2 py-1.5"
+            className="park-import-note shrink-0 flex items-start gap-2 border-hairline bg-elevated px-2 py-1.5"
             role="status"
             aria-live="polite"
           >

@@ -1,0 +1,126 @@
+import React,{useEffect,useRef,useState} from 'react';
+import * as THREE from 'three';
+import {PLAY_PERSONALITIES} from './dogPlay';
+import {VERTEX,FRAGMENT} from './IllustratedDog';
+import {landmarksFor,poseAnchors,type ArtPose} from './illustratedRig';
+import {growthStage} from '../domain/growth';
+import type {PetState} from '../domain/types';
+import {DEFAULT_DOGS} from '../data/defaultDogs';
+import type {DogProfile} from '../types/dog';
+import type {MetaverseNeighborDog} from '../types/dog';
+import {parkScenery} from './parkScenery';
+import {sound} from '../utils/proceduralAudio';
+
+export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeNeighbor:(id:string)=>void;pet:(id:string)=>void;}
+interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;}
+interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:number;left:number;right:number;top:number;bottom:number;}
+const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
+const NS='http://www.w3.org/2000/svg';
+const attr=(element:Element,name:string,value:string)=>{if(element.getAttribute(name)!==value)element.setAttribute(name,value);};
+/** An illustrated fallback visitor, not a pretend mesh of the friend's real dog. */
+function visitorArt(d:MetaverseNeighborDog){
+ const coat=d.avatarColors.base,cream=d.avatarColors.secondary||'#fbfaee',mask=d.avatarColors.mask||'#294434',short=/corgi|pug/i.test(d.breed),fluffy=/chow/i.test(d.breed);
+ const svg=`<svg xmlns="${NS}" width="512" height="512" viewBox="0 0 512 512"><g stroke="#614c37" stroke-width="5" stroke-linejoin="round"><path d="M370 248Q477 129 454 269Q432 300 399 294" fill="${coat}"/><path d="M180 220Q284 173 397 233Q428 291 400 358L374 402H337L333 327L241 335L213 407H175L180 315Z" fill="${coat}"/><path d="M203 301Q296 318 340 282L324 338H240L210 395H183Z" fill="${cream}"/><path d="M94 197L99 110L161 161L213 126L218 225" fill="${coat}"/><path d="M107 191L112 139L141 176M180 178l24-27-1 49" stroke="#ccbaa0" stroke-width="9"/><path d="M86 190Q147 149 214 196L${fluffy?'239 234L224 252L241 277L218 292L221 317':'228 280'}Q178 335 111 284L67 251Z" fill="${coat}"/><path d="M71 229Q103 218 126 245L170 246Q159 289 112 278L69 257Z" fill="${cream}"/><path d="M65 236Q81 224 96 239L87 254Q67 256 65 236" fill="${mask}"/><path d="M92 267q21 22 40-1" fill="none"/><ellipse cx="128" cy="217" rx="10" ry="13" fill="${mask}"/><circle cx="125" cy="213" r="3.5" fill="#fbfaee"/>${short?'<path d="M242 338v48m91-54v53" fill="none"/>':''}<path d="M180 407h30M340 402h33" fill="none"/></g></svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+export function IllustratedPark(props:Props){
+ const mount=useRef<HTMLDivElement>(null),latest=useRef(props);latest.current=props;
+ const [ready,setReady]=useState(false);
+ useEffect(()=>{
+  const host=mount.current;if(!host)return;setReady(false);let disposed=false,frame=0,last=0,next=0;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const unit=Math.min(1.35,Math.max(1,host.clientWidth/600));
+  host.insertAdjacentHTML('beforeend',parkScenery());const scenery=host.querySelector<SVGSVGElement>('svg')!;
+  const landmarks=scenery.querySelector<SVGGElement>('.park-landmarks')!;landmarks.setAttribute('transform',`scale(${unit})`);
+  const labels=document.createElementNS(NS,'g');labels.setAttribute('class','park-dog-labels');scenery.append(labels);
+  let renderer:THREE.WebGLRenderer;
+  try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});}catch{scenery.remove();setReady(true);latest.current.onError('The illustrated park needs WebGL. The dog list and visitor tools still work.');return;}
+  renderer.setClearColor(0,0);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));host.append(renderer.domElement);
+  const canvas=renderer.domElement;canvas.style.touchAction='none';canvas.dataset.renderer='illustrated-park';
+  const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-200,200,300,-300,.1,50);camera.position.z=10;
+  const geometry=new THREE.PlaneGeometry(2,2,32,32),rasters=new Map<string,Promise<Raster>>();
+  const raster=(url:string)=>{let found=rasters.get(url);if(found)return found;
+   found=new Promise<Raster>((resolve,reject)=>{const image=new Image();image.onload=()=>{
+    if(disposed){reject(new Error('Park closed'));return;}
+    const scratch=document.createElement('canvas');scratch.width=image.width;scratch.height=image.height;const context=scratch.getContext('2d');if(!context){reject(new Error('Could not read dog artwork'));return;}
+    context.drawImage(image,0,0);const pixels=context.getImageData(0,0,image.width,image.height).data;let left=image.width,right=0,top=image.height,bottom=0;
+    for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++)if(pixels[(y*image.width+x)*4+3]>32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+    const texture=new THREE.Texture(image);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;texture.userData.asset=url;
+    const result={texture,pixels,w:image.width,h:image.height,left:left/image.width,right:(right+1)/image.width,top:top/image.height,bottom:(bottom+1)/image.height};
+    if(disposed){texture.dispose();reject(new Error('Park closed'));return;}resolve(result);
+   };image.onerror=()=>reject(new Error('Dog artwork could not load'));image.src=url;});rasters.set(url,found);return found;};
+  type Actor={id:string;name:string;artId:string;source:string;own:boolean;phase:number;x:number;y:number;homeX:number;homeY:number;tx:number;ty:number;facing:number;until:number;petUntil:number;sniffUntil:number;pose:ArtPose;poseAt:number;requestedPose:ArtPose;raster:Raster|null;mesh:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>;label:SVGTextElement;shadow:SVGEllipseElement;heart:SVGPathElement;w:number;h:number;};
+  const actors=new Map<string,Actor>(),ownId=`you-${props.dogId}`;
+  const uniformsFor=(id:string)=>{const r=landmarksFor(id,'stand');return {art:{value:null as THREE.Texture|null},opacity:{value:1},time:{value:0},reduced:{value:0},puppy:{value:0},morphFrom:{value:poseAnchors(id,'stand').map(v=>new THREE.Vector2(...v))},morphTo:{value:poseAnchors(id,'stand').map(v=>new THREE.Vector2(...v))},morphAmount:{value:0},profile:{value:new THREE.Vector2(1,0)},motion:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},temperament:{value:new THREE.Vector4(.7,.4,.2,.2)},fun:{value:new THREE.Vector4(0,0,0,1)},lifeAct:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()},headPivot:{value:new THREE.Vector2(...r.head)},tailPivot:{value:new THREE.Vector2(...r.tail)},feet:{value:new THREE.Vector4(...r.feet)},eyes:{value:new THREE.Vector4(...r.eyes)},legStart:{value:r.legStart},resting:{value:0},settling:{value:0}};};
+  function applyPose(a:Actor,pose:ArtPose){if(a.requestedPose===pose)return;a.requestedPose=pose;const file=FILES[a.artId];if(!file)return;
+   const url=pose==='stand'?`/dogs/${file}.webp`:`/dogs/${file}-${pose}.webp`;
+   raster(url).then(r=>{if(disposed||a.requestedPose!==pose||!actors.has(a.id))return;const oldPose=a.pose;a.raster=r;a.pose=pose;a.poseAt=performance.now();const u=a.mesh.material.uniforms;poseAnchors(a.artId,pose).forEach((v,i)=>u.morphFrom.value[i].set(...v));poseAnchors(a.artId,oldPose).forEach((v,i)=>u.morphTo.value[i].set(...v));const rig=landmarksFor(a.artId,pose);u.art.value=r.texture;u.headPivot.value.set(...rig.head);u.tailPivot.value.set(...rig.tail);u.feet.value.set(...rig.feet);u.legStart.value=rig.legStart;u.resting.value=['sleep','down','sit'].includes(pose)?1:0;}).catch(()=>{/* Keep the available coherent drawing if an optional pose fails. */});
+  }
+  const spawn=(id:string,name:string,artId:string,source:string,x:number,y:number,own=false)=>{
+   if(actors.has(id))return;const material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,uniforms:uniformsFor(artId),transparent:true,depthTest:false,depthWrite:false});const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);
+   const shadow=document.createElementNS(NS,'ellipse');shadow.setAttribute('class','park-contact-shadow');labels.append(shadow);
+   const label=document.createElementNS(NS,'text');label.textContent=name;label.setAttribute('text-anchor','middle');labels.append(label);
+   const heart=document.createElementNS(NS,'path');heart.setAttribute('d','M0 4C-18-8-11-19 0-11C11-19 18-8 0 4Z');heart.setAttribute('class','park-pet-heart');labels.append(heart);
+   const a:Actor={id,name,artId,source,own,phase:[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)*.13,x:x*unit,y:y*unit,homeX:x*unit,homeY:y*unit,tx:x*unit,ty:y*unit,facing:1,until:performance.now()+3000+Math.random()*4000,petUntil:0,sniffUntil:0,pose:'stand',poseAt:0,requestedPose:'stand',raster:null,mesh,label,shadow,heart,w:0,h:0};actors.set(id,a);
+   raster(source).then(r=>{if(disposed||!actors.has(id))return;if(!a.raster||a.requestedPose==='stand'){a.raster=r;material.uniforms.art.value=r.texture;}if(own)setReady(true);}).catch(()=>{if(!disposed&&own){setReady(true);latest.current.onError('The dog illustration could not load. Please try again.');}});
+  };
+  const original=DEFAULT_DOGS.find(d=>d.id===props.dogId),authored=original&&!props.appearance.avatarConfig.customModelUrl&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>original.avatarConfig[k]===props.appearance.avatarConfig[k]);
+  const ownFallback:MetaverseNeighborDog={id:ownId,name:props.name,breed:props.appearance.breed,tribe:'Your dog',ownerName:'You',personality:'',avatarColors:{base:props.appearance.avatarConfig.baseColor,secondary:props.appearance.avatarConfig.secondaryColor,mask:props.appearance.avatarConfig.maskColor},earShape:'pricked',position:[0,0,0],action:'sitting',speed:0};
+  spawn(ownId,props.name,authored?props.dogId:'',authored?`/dogs/${FILES[props.dogId]}.webp`:visitorArt(ownFallback),0,95,true);
+  const positions=[[-112,-46],[118,-42],[-117,235],[112,244],[-300,-90],[290,220],[-265,365],[310,-290],[0,-375]];
+  const spawnNeighbor=(dog:MetaverseNeighborDog)=>{const known=dog.id.startsWith('pack-')?dog.id.slice(5):'',file=FILES[known],i=actors.size-1,p=positions[i%positions.length];spawn(dog.id,dog.name,known||'expo-2021',file?`/dogs/${file}.webp`:visitorArt(dog),p[0]+Math.floor(i/positions.length)*35,p[1]);};
+  props.neighbors.forEach(spawnNeighbor);
+  const removeNeighbor=(id:string)=>{const a=actors.get(id);if(!a||a.own)return;scene.remove(a.mesh);a.mesh.material.dispose();a.label.remove();a.shadow.remove();a.heart.remove();actors.delete(id);};
+  let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity;
+  const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
+   const now=performance.now();if(now-lastPet<(a.own?2300:700))return;lastPet=now;a.petUntil=now+2200;sound.happyYip();if(a.own)latest.current.onPet();};
+  latest.current.onReady({spawnNeighbor,removeNeighbor,pet});
+  let width=1,height=1;
+  const resize=()=>{width=host.clientWidth;height=host.clientHeight;renderer.setSize(width,height);};const observer=new ResizeObserver(resize);observer.observe(host);resize();
+  const point=(e:PointerEvent)=>{const b=canvas.getBoundingClientRect();return {x:cx+(e.clientX-b.left-width/2)/zoom,y:cy+(e.clientY-b.top-height/2)/zoom};};
+  const hit=(p:{x:number;y:number})=>[...actors.values()].sort((a,b)=>b.y-a.y).find(a=>{if(!a.raster)return false;const v=a.mesh.worldToLocal(new THREE.Vector3(p.x,-p.y,0)),x=(v.x+1)/2,y=(1-v.y)/2,r=a.raster;if(x<0||x>1||y<0||y>1)return false;return r.pixels[(Math.min(r.h-1,Math.floor(y*r.h))*r.w+Math.min(r.w-1,Math.floor(x*r.w)))*4+3]>32;});
+  const pointers=new Map<number,{x:number;y:number}>();let pinching=false,pinch=0,strokeId:string|null=null;
+  const down=(e:PointerEvent)=>{if(!pointers.size){pinching=false;strokeId=null;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});canvas.setPointerCapture(e.pointerId);if(pointers.size>1){pinching=true;strokeId=null;const[a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);return;}const a=hit(point(e));if(a){strokeId=a.id;pet(a.id);}};
+  const move=(e:PointerEvent)=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2){const[a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch&&d)latest.current.onZoom(zoom*d/pinch);pinch=d;}else if(!pinching&&strokeId&&hit(point(e))?.id===strokeId)pet(strokeId);};
+  const up=(e:PointerEvent)=>{if(!pointers.has(e.pointerId))return;const start=pointers.get(e.pointerId)!;pointers.delete(e.pointerId);if(!pinching&&!strokeId&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<15){const own=actors.get(ownId)!;if(!latest.current.petState?.sleep.asleep&&!latest.current.petState?.sick){const p=point(e);own.tx=Math.max(-420*unit,Math.min(420*unit,p.x));own.ty=Math.max(-280*unit,Math.min(400*unit,p.y));const dx=own.tx/unit+275,dy=(own.ty/unit-90)*1.2;if(Math.hypot(dx,dy)<100){const angle=Math.atan2(dy,dx);own.tx=(-275+Math.cos(angle)*108)*unit;own.ty=(90+Math.sin(angle)*90)*unit;}focus=ownId;latest.current.onSelect(ownId);}}pinch=0;};
+  const wheel=(e:WheelEvent)=>{e.preventDefault();latest.current.onZoom(zoom*Math.exp(-e.deltaY*.001));};
+  const keys=new Set<string>(),typing=(t:EventTarget|null)=>t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||(t instanceof HTMLElement&&t.isContentEditable);
+  const keydown=(e:KeyboardEvent)=>{if(typing(e.target)||e.ctrlKey||e.metaKey)return;const key=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();keys.add(key);focus=ownId;}};const keyup=(e:KeyboardEvent)=>keys.delete(e.key.toLowerCase());const blur=()=>keys.clear();
+  const cancel=(e:PointerEvent)=>{pointers.delete(e.pointerId);pinching=true;strokeId=null;};
+  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',blur);
+  const contextLost=(event:Event)=>{event.preventDefault();cancelAnimationFrame(frame);canvas.dataset.contextLost='true';latest.current.onError('The graphics connection was interrupted. Try the alternate view, or reopen the garden.');};
+  const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet});frame=requestAnimationFrame(animate);};
+  canvas.addEventListener('webglcontextlost',contextLost);canvas.addEventListener('webglcontextrestored',contextRestored);
+  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;keys.clear();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/30;last=now;next+=1000/30;if(next<now-1000/30)next=now+1000/30;
+   const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
+   const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
+   let dx=0,dy=0;if(!resting){if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;}if(dx||dy){own.tx=Math.max(-420*unit,Math.min(420*unit,own.x+dx*50));own.ty=Math.max(-280*unit,Math.min(400*unit,own.y+dy*50));}
+   for(const a of actors.values()){
+    if(!a.own&&!reduced.matches&&now>a.until){a.until=now+3500+Math.random()*5000;if(Math.random()<.6){a.tx=a.homeX+(Math.random()-.5)*100*unit;a.ty=a.homeY+(Math.random()-.5)*95*unit;}}
+    const distance=Math.hypot(a.tx-a.x,a.ty-a.y),moving=distance>2&&(a.own||!reduced.matches)&&!(a.own&&resting)&&now>a.petUntil&&now>a.sniffUntil;
+    if(moving){const step=Math.min(distance,(a.own?76:22)*unit*dt);a.x+=(a.tx-a.x)/distance*step;a.y+=(a.ty-a.y)/distance*step;if(Math.abs(a.tx-a.x)>5)a.facing=a.tx>a.x?-1:1;}
+    const pose:ArtPose=a.own&&p.petState?.sleep.asleep?'sleep':a.own&&p.petState?.sick?'sick':'stand';applyPose(a,pose);
+    const growth=a.own&&p.petState?growthStage(p.petState):{scale:1,progress:1};a.w=Math.max(128,(a.own?166:142)*unit*growth.scale);
+    const r=a.raster,u=a.mesh.material.uniforms,petting=now<a.petUntil;
+    u.profile.value.set(a.artId==='mali-2022'?1.08:a.artId==='paolo-pug'?1.05:1,a.artId==='mali-2022'&&a.pose==='stand'?.65:0);u.morphAmount.value=reduced.matches?0:Math.max(0,1-(now-a.poseAt)/420);u.time.value=reduced.matches?0:now/1000+a.phase;u.reduced.value=reduced.matches?1:0;u.puppy.value=1-growth.progress;
+    u.motion.value.lerp(new THREE.Vector4(petting?1:0,moving?1:0,0,0),1-Math.exp(-dt*7));u.more.value.lerp(new THREE.Vector4(0,now<a.sniffUntil?1:0,a.own&&p.petState?.sick?1:0,0),1-Math.exp(-dt*5));
+    const personality=PLAY_PERSONALITIES[a.artId]||PLAY_PERSONALITIES['expo-2021'];u.fun.value.set(petting?personality.wag*.65:0,0,!moving&&(now+a.phase*1000)%12000<2200?.4:0,personality.pace);if(a.own&&p.petState)u.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*4));
+    a.mesh.renderOrder=Math.round(a.y+1000);if(r){const size=a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-((r.left+r.right)/2-.5)*size*a.facing,-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();}
+    attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit));attr(a.shadow,'opacity',a.raster?'.12':'0');
+    attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit));attr(a.label,'font-size',String(14*unit));attr(a.label,'opacity',a.raster?'1':'0');
+    attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit})`);attr(a.heart,'opacity',petting?'1':'0');
+   }
+   const target=actors.get(focus)||own;
+   zoom=Math.min(zoom,Math.max(.85,(height-72)/Math.max(1,target.h)));
+   const halfView=height/(2*zoom),wantedY=Math.max(target.y-halfView+45/zoom,Math.min(target.y-65*unit,target.y-target.h+halfView-18/zoom));
+   const ease=reduced.matches?1:1-Math.exp(-dt*6);cx+=(target.x-cx)*ease;cy+=(wantedY-cy)*ease;
+   camera.left=cx-width/(2*zoom);camera.right=cx+width/(2*zoom);camera.top=-cy+height/(2*zoom);camera.bottom=-cy-height/(2*zoom);camera.updateProjectionMatrix();attr(scenery,'viewBox',`${cx-width/(2*zoom)} ${cy-height/(2*zoom)} ${width/zoom} ${height/zoom}`);
+   let visible=0;for(const a of actors.values())if(a.raster){const x=(a.x-cx)*zoom+width/2,y=(a.y-a.h/2-cy)*zoom+height/2;if(x>a.w*zoom*.3&&x<width-a.w*zoom*.3&&y>a.h*zoom*.25&&y<height-a.h*zoom*.25)visible++;}
+   const near=[...actors.values()].find(a=>!a.own&&a.raster&&Math.hypot(a.x-own.x,a.y-own.y)<86*unit);
+   if(near&&!resting&&now-lastSocial>30000){lastSocial=now;near.sniffUntil=own.sniffUntil=now+2200;near.facing=own.x>near.x?-1:1;own.facing=near.x>own.x?-1:1;p.onSocialize();}
+   renderer.render(scene,camera);canvas.dataset.frames=String(++frames);canvas.dataset.focusX=String((target.x-cx)*zoom+width/2);canvas.dataset.focusY=String((target.y-target.h/2-cy)*zoom+height/2);canvas.dataset.focusWidth=String(target.w*zoom);canvas.dataset.focusHeight=String(target.h*zoom);canvas.dataset.zoom=zoom.toFixed(3);canvas.dataset.dogX=String((own.x-cx)*zoom+width/2);canvas.dataset.dogY=String((own.y-own.h/2-cy)*zoom+height/2);canvas.dataset.dogWidth=String(own.w*zoom);canvas.dataset.dogHeight=String(own.h*zoom);canvas.dataset.dogWorldX=String(own.x);canvas.dataset.dogWorldY=String(own.y);canvas.dataset.visibleDogs=String(visible);canvas.dataset.artPose=own.pose;canvas.dataset.artSource=own.mesh.material.uniforms.art.value?.userData.asset||'';canvas.dataset.dogCount=String(actors.size);canvas.dataset.smallestDogWidth=String(Math.min(...[...actors.values()].map(a=>a.w*zoom)));canvas.dataset.petDog=focus;canvas.dataset.lastPet=String(lastPet);canvas.dataset.drawCalls=String(renderer.info.render.calls);canvas.dataset.triangles=String(renderer.info.render.triangles);
+  };frame=requestAnimationFrame(animate);
+  return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',blur);canvas.removeEventListener('webglcontextlost',contextLost);canvas.removeEventListener('webglcontextrestored',contextRestored);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('wheel',wheel);actors.forEach(a=>a.mesh.material.dispose());geometry.dispose();rasters.forEach(p=>p.then(r=>r.texture.dispose()).catch(()=>{}));renderer.dispose();canvas.remove();scenery.remove();};
+ },[props.dogId,props.name,props.appearance.avatarConfig.pattern,props.appearance.avatarConfig.baseColor,props.appearance.avatarConfig.secondaryColor,props.appearance.avatarConfig.maskColor,props.appearance.avatarConfig.customModelUrl]);
+ return <div ref={mount} className="illustrated-park" aria-label="Illustrated dog park" aria-busy={!ready}>{!ready&&<p data-workspace-loading="true" className="park-loading" role="status">Opening the garden…</p>}</div>;
+}

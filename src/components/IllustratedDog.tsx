@@ -34,7 +34,7 @@ export const ILLUSTRATIONS: Record<string, string> = {
 
 // A textured 2D skin, articulated on a fine mesh. The artwork stays one coherent
 // character per authored pose; motion between display frames comes from the rig.
-const VERTEX = `
+export const VERTEX = `
   varying vec2 vUv;
   uniform float time, reduced;
   uniform vec2 morphFrom[8],morphTo[8];
@@ -93,7 +93,7 @@ const VERTEX = `
     gl_Position=projectionMatrix*modelViewMatrix*vec4((p.x-.5)*2.,(.5-p.y)*2.,0.,1.);
   }
 `;
-const FRAGMENT = `varying vec2 vUv; uniform sampler2D art;uniform float opacity;
+export const FRAGMENT = `varying vec2 vUv; uniform sampler2D art;uniform float opacity;
  void main(){gl_FragColor=texture2D(art,vUv);gl_FragColor.a*=opacity;if(gl_FragColor.a<.02)discard;
  #include <tonemapping_fragment>
  #include <colorspace_fragment>
@@ -430,7 +430,7 @@ function IllustratedStage(props: Props & {url:string}) {
       <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
       <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
     </div>)}
-    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop… ?</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
+    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop…</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
     {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
     {finding&&dock(<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>)}
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
