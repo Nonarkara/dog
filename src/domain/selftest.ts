@@ -20,6 +20,7 @@ import type { Behaviour, PetState } from './types';
 import { dailyLife, dailyMood } from './dailyLife';
 import { settleSleep, willSettle } from './pet';
 import { coatColorAt } from './coat';
+import { coax, maybeRunAway, COAX_PETS, RETURN_TRUST } from './runaway';
 import { chooseActivity, type Activity } from './parkPersonality';
 import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
@@ -582,6 +583,18 @@ ok('Expo keeps watch from a lookout', share('expo-2021', 'lookout') > 0.3);
 ok('Mali goes to the bowl; Expo does not', share('mali-2022', 'bowl') > 0.2 && share('expo-2021', 'bowl') === 0);
 ok('Hachiku waits by the bench, and rarely visits', share('shiba-chai', 'wait') > 0.3 && share('shiba-chai', 'visit') < 0.1);
 ok('with no friend free, nobody tries to chase or visit', [0, 0.3, 0.6, 0.99].every((r) => !['chase', 'visit'].includes(chooseActivity('oreo-frenchie', r, false))));
+
+console.log('\nNEGLECT: HE RUNS AWAY, HE NEVER DIES');
+const t0 = new Date(2026, 9, 31, 12).getTime();
+const neglected = decay({ ...createPetState(t0), trust: 70 }, t0 + 4 * 86_400_000);
+ok('four days without care: he has run away', !!neglected.away, `hunger ${neglected.needs.hunger}`);
+ok('a dog cared for yesterday stays home', !decay(createPetState(t0), t0 + 86_400_000).away);
+ok('a well-fed dog does not run away even if left alone', !maybeRunAway({ ...createPetState(t0), needs: { hunger: 80, energy: 50, hygiene: 50 } }, t0 + 4 * 86_400_000).away);
+let coaxing = neglected, home = false;
+for (let i = 0; i < COAX_PETS; i++) ({ state: coaxing, home } = coax(coaxing, t0 + 5 * 86_400_000 + i));
+ok('a few gentle pets bring him home', home && !coaxing.away);
+ok('he comes home trusting you less', coaxing.trust <= RETURN_TRUST);
+ok('nothing in neglect ends a dog', !JSON.stringify(neglected).match(/dead|died|death/i));
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

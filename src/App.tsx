@@ -1,6 +1,7 @@
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
 import { startCloudSync } from './utils/cloud';
+import { coax } from './domain/runaway';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
 import {growCompanion,growthStage} from './domain/growth';
@@ -397,6 +398,11 @@ export const App: React.FC = () => {
     let message='',trigger:AvatarInteractionTrigger=action;
     const care=['feed','play','walk','groom'].includes(action)?action as 'feed'|'play'|'walk'|'groom':undefined;
     const next=await commitPet(latest=>{
+      // He ran away: only gentle pets in the park reach him (domain/runaway.ts).
+      if(latest.away){
+        if(action==='pet'&&activeRegion==='commons'){const r=coax(latest,Date.now());message=r.home?`${currentDog.name} came home with you. Hungry, and a little wary — feed him.`:`${currentDog.name} let you come closer. Stay gentle.`;trigger='pet';return r.state;}
+        message=`${currentDog.name} isn't home. He slipped out — find him in the park.`;trigger=null;return latest;
+      }
       if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
       const touched=part?discoverTouch(latest,id,part):latest;
       const result=interact(touched,action,Date.now(),subject);
@@ -663,6 +669,7 @@ export const App: React.FC = () => {
           </h1>
           <div className="panel-body">
             <div className="stage-frame" data-feedback={!!note}>
+              {petState.away&&<div className="stage-away" role="status"><p><strong>{currentDog.name} slipped out.</strong> Three days without care was too long. He's in the park, wary — go and win him back.</p><button type="button" className="btn-accent" onClick={()=>togglePark()}>Go to the park</button></div>}
               <div className="stage-canvas">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>
                 {!isAddDogOpen && currentDog.avatarConfig.customModelUrl ? (

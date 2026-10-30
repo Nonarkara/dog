@@ -32,6 +32,7 @@
  *    produced it.
  */
 
+import { maybeRunAway } from './runaway';
 import type {
   Behaviour,
   BehaviourName,
@@ -308,7 +309,8 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
     if(willSettle(next,cursor))next=settleBody(next,cursor).state;
   }
   next.behaviours=Object.fromEntries(Object.entries(next.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]));
-  return next;
+  // Three days of neglect while hungry and he slips out. He never dies.
+  return maybeRunAway(next,now);
 }
 
 function decayStep(state:PetState,now:number):PetState {

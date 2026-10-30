@@ -248,6 +248,8 @@ export interface PetState {
   together?: import('./attention').Together;
   /** He is asking for you, and why. */
   call?: import('./attention').Call;
+  /** He ran away after long neglect: he is in the park until coaxed home (domain/runaway.ts). */
+  away?: { since: number; coaxed: number };
   /** Tamagotchi waste mechanic: uncleaned poops on the stage (0..4). */
   poopCount: number;
   /** Persisted daily timers: toilet, digestion and boredom. Old saves default safely. */

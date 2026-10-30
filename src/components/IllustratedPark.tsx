@@ -102,7 +102,7 @@ export function IllustratedPark(props:Props){
    if(!a.hasWalked&&Math.hypot(a.x-a.tx,a.y-a.ty)>200*unit){a.x=a.tx;a.y=a.ty;}};
   const cheer=(id:string)=>{const a=actors.get(id);if(!a)return;const now=performance.now();a.petUntil=now+2200;a.tx=a.x;a.ty=a.y;sound.happyYip();};
   let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity;
-  const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
+  const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&!latest.current.petState?.away&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
    const now=performance.now();a.tx=a.x;a.ty=a.y;a.speed=0;if(now-a.lastPet<(a.own?2300:700)){a.petUntil=Math.max(a.petUntil,now+600);return;}a.lastPet=lastPet=now;a.petUntil=now+2200;sound.happyYip();if(a.own)latest.current.onPet();if(a.remote)latest.current.onPetRemote?.(id);};
   latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer});
   let width=1,height=1;

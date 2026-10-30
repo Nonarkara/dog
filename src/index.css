@@ -1014,3 +1014,8 @@ html {font-synthesis:none;}
 .entry-signin div {display:flex;gap:6px;flex-wrap:wrap;}
 .entry-signin button {display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;}
 .entry-account button,.entry-account a {display:inline;min-height:0;padding:0;font-size:inherit;text-decoration:underline;}
+
+/* ---- He ran away: the empty home ---------------------------------------- */
+.stage-away {position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;background:var(--stage-ground);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--text-main);}
+.stage-away p {margin:0;max-width:34ch;}
+.stage-away button {min-height:40px;padding:0 16px;}

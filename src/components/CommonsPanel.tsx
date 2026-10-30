@@ -592,7 +592,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
 
     const petDog=(id:string)=>{
       setSelectedId(id);focusRef.current=id;
-      if(id===`you-${myDog.id}`&&(stateRef.current?.sick||stateRef.current?.sleep.asleep)){setNote(`${myDog.name} is resting. Gentle company for now.`);return;}
+      if(id===`you-${myDog.id}`&&!stateRef.current?.away&&(stateRef.current?.sick||stateRef.current?.sleep.asleep)){setNote(`${myDog.name} is resting. Gentle company for now.`);return;}
       const now=performance.now();if(now-lastPet.current<900)return;
       lastPet.current=now;petTimes.current.set(id,now);sound.happyYip();
       if(id===`you-${myDog.id}`)petCallback.current?.();
@@ -1090,6 +1090,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
         {/* ---- 3. THE NOTE ------------------------------------------------
             What the import did, said once, in the panel, in a line. Nothing
             pops over the reader. */}
+        {petState?.away&&<p className="park-live-note" role="status">{myDog.name} is here, wary. Pet him gently, a few times, to bring him home.</p>}
         {liveNote&&!watching&&<p className="park-live-note" role="status">{liveNote}</p>}
         {note && (
           <div
