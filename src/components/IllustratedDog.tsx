@@ -1,4 +1,4 @@
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -233,14 +233,14 @@ function IllustratedStage(props: Props & {url:string}) {
     const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
     const hit=(event:PointerEvent)=>{
-      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
+      const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
       if(x<0||x>1||y<0||y>1||!pixels)return false;
       if(hitAtlasFrame>=0&&atlas){const ox=(hitAtlasFrame%MOTION_LAYOUT.columns)*atlas.tile,oy=Math.floor(hitAtlasFrame/MOTION_LAYOUT.columns)*atlas.tile;return atlas.alpha[(Math.min(atlas.tile-1,Math.floor(y*atlas.tile))+oy)*atlas.width+Math.min(atlas.tile-1,Math.floor(x*atlas.tile))+ox]>24;}
       return pixels[(Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW)))*4+3]>24;
     };
     const petAt=(event:PointerEvent)=>{
-      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
-      const part=touchPart(x,y),favorite=TOUCH_PREFERENCES[dog.id]??'chest';
+      const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
+      const part=motionTouchPart(x,y,hitAtlasFrame)||touchPart(x,y),favorite=TOUCH_PREFERENCES[dog.id]??'chest';
       const message=part===favorite?`${dog.name} melts into those ${part} scratches!`:`A gentle ${part} stroke… try another spot?`;
       touchRef.current=message;pet(message,part);setTouchMessage(message);if(touchTimer.current)clearTimeout(touchTimer.current);touchTimer.current=setTimeout(()=>setTouchMessage(''),2200);
       if(part===favorite)reaction.current.petUntil=performance.now()+2400;
@@ -248,8 +248,8 @@ function IllustratedStage(props: Props & {url:string}) {
     let stroking=false;
     const down=(event:PointerEvent)=>{if(hit(event)){
       stroking=true;canvas.setPointerCapture(event.pointerId);petAt(event);
-      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
-      if(x<uniforms.headPivot.value.x+.05&&y<uniforms.headPivot.value.y){runTrick('tilt',true);showCheer('Boop!');}
+      const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
+      if((motionTouchPart(x,y,hitAtlasFrame)||touchPart(x,y))==='cheeks'){runTrick('tilt',true);showCheer('Boop!');}
     }else{const parent=canvas.closest('.illustrated-stage');const button=parent?.querySelector<HTMLButtonElement>('.dog-daily-status button');if(button){const b=button.getBoundingClientRect();if(event.clientX>=b.left&&event.clientX<=b.right&&event.clientY>=b.top&&event.clientY<=b.bottom)button.click();}}};
     const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))petAt(event);};
     const up=()=>{stroking=false;};
@@ -355,7 +355,7 @@ function IllustratedStage(props: Props & {url:string}) {
         }
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,from);
         uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
-        if(index<32){const necks=[[.36,.72],[.38,.73],[.40,.76],[.40,.72]],q=index/8,k=Math.floor(q),f=q-k;uniforms.runNeck.value.set(necks[k][0]*(1-f)+necks[(k+1)%4][0]*f,necks[k][1]*(1-f)+necks[(k+1)%4][1]*f);}
+        if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
         const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();
         const ink=art.displayBox,barSpace=toysBox?(canvasBox.right-toysBox.left+6)/canvasBox.width*(camera.right-camera.left):.23;
         const verticalFit=(camera.top+.82-.07)/(2*(.90625-ink[1]));

@@ -59,3 +59,34 @@ export const PARK_VERTEX=VERTEX.replace('varying vec2 vUv;',`varying vec2 vUv;
  }
  gl_Position=projectionMatrix`);
 export const PARK_FRAGMENT=FRAGMENT.replace('uniform float opacity;', 'uniform float opacity;uniform vec4 artTile;').replace('texture2D(art,vUv)','texture2D(art,vUv*artTile.xy+artTile.zw)');
+
+/** The touch mask stays in source-art coordinates while the running head grows. */
+export function runNeckFor(frame:number):Point {
+ const keys:Point[]=[[.36,.72],[.38,.73],[.40,.76],[.40,.72]],q=((frame%32)+32)%32/8,k=Math.floor(q),t=q-k;
+ return [keys[k][0]*(1-t)+keys[(k+1)%4][0]*t,keys[k][1]*(1-t)+keys[(k+1)%4][1]*t];
+}
+const smooth=(a:number,b:number,v:number)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
+export function warpMotionPoint(point:Point,frame:number):Point {
+ if(frame<0||frame>=32)return [...point];
+ const [nx,ny]=runNeckFor(frame),[x,y]=point,m=(1-smooth(nx-.035,nx+.065,x))*(1-smooth(ny-.07,ny+.035,y));
+ return [x+(x-nx)*.4*m,y+(y-ny)*.4*m];
+}
+export function unwarpMotionPoint(point:Point,frame:number):Point {
+ if(frame<0||frame>=32)return [...point];
+ let [x,y]=point;const h=.0001;
+ for(let i=0;i<8;i++){
+  const p=warpMotionPoint([x,y],frame),ex=p[0]-point[0],ey=p[1]-point[1];if(Math.abs(ex)+Math.abs(ey)<.00001)break;
+  const px=warpMotionPoint([x+h,y],frame),py=warpMotionPoint([x,y+h],frame),a=(px[0]-p[0])/h,b=(py[0]-p[0])/h,c=(px[1]-p[1])/h,d=(py[1]-p[1])/h,det=a*d-b*c;
+  if(Math.abs(det)<.05)break;x-=(d*ex-b*ey)/det;y-=(-c*ex+a*ey)/det;
+ }
+ return [x,y];
+}
+/** Keep learned touch preferences meaningful when the dog faces us or turns away. */
+export function motionTouchPart(x:number,y:number,frame:number):'cheeks'|'chest'|'shoulders'|'back'|null {
+ const front=()=>y<.54?'cheeks':(x<.35||x>.65)&&y<.72?'shoulders':'chest';
+ if(frame>=80&&frame<96)return front();
+ if(frame>=96&&frame<112)return y<.32?'shoulders':'back';
+ if(frame>=48&&frame<80){const angle=frame-48;if(angle>=6&&angle<=10)return front();if(angle>=22&&angle<=26)return y<.32?'shoulders':'back';if(angle>10&&angle<22)x=1-x;return x<.37&&y<.55?'cheeks':x<.48&&y>=.55?'chest':x<.58?'shoulders':'back';}
+ if(frame>=0&&frame<32){const [nx,ny]=runNeckFor(frame);return x<nx+.01&&y<ny-.06?'cheeks':x<nx+.06&&y>=ny-.08?'chest':x<.6?'shoulders':'back';}
+ return null;
+}

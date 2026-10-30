@@ -965,3 +965,9 @@ html {font-synthesis:none;}
 .entry-dog {position:relative;}
 .entry-dog-skeleton {position:absolute;inset:10%;width:80%;height:75%;pointer-events:none;}
 .entry-dog>img {position:relative;z-index:1;}
+
+/* Camera tools share the existing park footer, leaving every dog unobstructed. */
+.park-drawers .park-camera {position:static;flex:none;align-items:center;}
+.park-drawers>button {flex:none;white-space:nowrap;}
+@media(max-width:479px){.park-dogs-word{display:none;}}
+@media(max-width:339px){.park-drawers{gap:3px;padding-inline:4px;}.park-drawers .park-camera button{width:32px;min-width:32px;height:32px;min-height:32px;}.park-selected-inline>span{display:none;}.park-selected-inline{gap:0;}}

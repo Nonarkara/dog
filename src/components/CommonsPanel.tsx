@@ -944,17 +944,19 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
           )}
 
           <div ref={heartRef} className="park-affection" aria-hidden="true"><Heart size={25} fill="currentColor"/></div>
+
+        </div>
+        {guide&&<div className="park-guide">{guide}</div>}
+        {clearPending&&<div className="park-clear-confirm" role="group" aria-label="Confirm clearing visitors"><span>Let {visitors.length} visitor{visitors.length===1?'':'s'} leave?</span><button type="button" className="btn-quiet" onClick={()=>{clearVisitors();setClearPending(false);}}>Clear visitors</button><button type="button" className="btn-quiet" onClick={()=>setClearPending(false)}>Keep them</button></div>}
+        <div className="park-drawers" role="group" aria-label="Park details">
+
+          <button type="button" aria-label={`${sceneCount} dogs`} aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/><span>{sceneCount}<span className="park-dogs-word"> dogs</span></span><ChevronDown size={14}/></button>
+          <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} title={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button></>}</div>
           <div className="park-camera" role="group" aria-label="Park camera">
             <button type="button" aria-label="Zoom in" disabled={zoom>=1.5} onClick={()=>changeZoom(zoomRef.current*1.2)}><ZoomIn size={20}/></button>
             <button type="button" aria-label="Zoom out" disabled={zoom<=.85} onClick={()=>changeZoom(zoomRef.current/1.2)}><ZoomOut size={20}/></button>
             <button type="button" aria-label="Find my dog" onClick={()=>{focusRef.current=null;changeZoom(1);setSelectedId(myDogRowId);}}><LocateFixed size={20}/></button>
           </div>
-        </div>
-        {guide&&<div className="park-guide">{guide}</div>}
-        {clearPending&&<div className="park-clear-confirm" role="group" aria-label="Confirm clearing visitors"><span>Let {visitors.length} visitor{visitors.length===1?'':'s'} leave?</span><button type="button" className="btn-quiet" onClick={()=>{clearVisitors();setClearPending(false);}}>Clear visitors</button><button type="button" className="btn-quiet" onClick={()=>setClearPending(false)}>Keep them</button></div>}
-        <div className="park-drawers" role="group" aria-label="Park details">
-          <button type="button" aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/>{sceneCount} dogs<ChevronDown size={14}/></button>
-          <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button></>}</div>
           <button type="button" aria-expanded={drawer==='chat'} aria-controls="park-chat" onClick={()=>setDrawer(drawer==='chat'?null:'chat')}><MessageSquare size={18}/><span className="sr-only">Chat</span></button>
         </div>
         {/* ---- 2. WHO IS HERE --------------------------------------------

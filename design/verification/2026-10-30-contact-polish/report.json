@@ -1,0 +1,115 @@
+{
+  "report": [
+    {
+      "case": "camera",
+      "w": 278,
+      "h": 667,
+      "world": {
+        "x": 5,
+        "y": 85.296875,
+        "width": 268,
+        "height": 496
+      },
+      "camera": {
+        "x": 134,
+        "y": 627,
+        "width": 104,
+        "height": 32
+      }
+    },
+    {
+      "case": "camera",
+      "w": 390,
+      "h": 667,
+      "world": {
+        "x": 5,
+        "y": 85.296875,
+        "width": 380,
+        "height": 492
+      },
+      "camera": {
+        "x": 229,
+        "y": 623,
+        "width": 116,
+        "height": 36
+      }
+    },
+    {
+      "case": "camera",
+      "w": 390,
+      "h": 844,
+      "world": {
+        "x": 5,
+        "y": 85.296875,
+        "width": 380,
+        "height": 669
+      },
+      "camera": {
+        "x": 229,
+        "y": 800,
+        "width": 116,
+        "height": 36
+      }
+    },
+    {
+      "case": "camera",
+      "w": 1024,
+      "h": 768,
+      "world": {
+        "x": 5,
+        "y": 85.296875,
+        "width": 1014,
+        "height": 596
+      },
+      "camera": {
+        "x": 863,
+        "y": 724,
+        "width": 116,
+        "height": 36
+      }
+    },
+    {
+      "case": "camera",
+      "w": 1440,
+      "h": 900,
+      "world": {
+        "x": 5,
+        "y": 85.296875,
+        "width": 1430,
+        "height": 728
+      },
+      "camera": {
+        "x": 1279,
+        "y": 856,
+        "width": 116,
+        "height": 36
+      }
+    },
+    {
+      "case": "drag",
+      "distance": 0
+    },
+    {
+      "case": "key release",
+      "distance": 6.890432614125032,
+      "speed": 6.936352149295383
+    },
+    {
+      "case": "pet cancels walk",
+      "distance": 0
+    },
+    {
+      "case": "independent pet responses",
+      "hearts": 2
+    },
+    {
+      "case": "visible running head touch",
+      "x": 324,
+      "y": 298,
+      "frame": 0,
+      "before": 60,
+      "after": 64
+    }
+  ],
+  "errors": []
+}
