@@ -62,4 +62,3 @@ export const FRAGMENT = `varying vec2 vUv; uniform sampler2D art;uniform float o
  #include <tonemapping_fragment>
  #include <colorspace_fragment>
  }`;
-
