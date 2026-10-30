@@ -1,4 +1,5 @@
 import { validRoom } from '../src/domain/parkProtocol';
+import { handleAccounts, type AccountEnv } from './accounts';
 export { ParkRoom } from './parkRoom';
 
 interface DurableObjectNamespace {
@@ -6,7 +7,7 @@ interface DurableObjectNamespace {
   get(id: unknown): { fetch: (request: Request) => Promise<Response> };
 }
 
-interface Env {
+interface Env extends AccountEnv {
   ASSETS: {
     fetch: (request: Request) => Promise<Response>;
   };
@@ -23,6 +24,10 @@ export default {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // Sign-in, cloud-saved dogs, export, delete.
+    const account = await handleAccounts(request, env, url);
+    if (account) return account;
 
     // A live park room: one Durable Object per invite link.
     const live = url.pathname.match(/^\/api\/park\/([^/]+)$/);

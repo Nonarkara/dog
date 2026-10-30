@@ -1007,3 +1007,10 @@ html {font-synthesis:none;}
 .park-live-on {color:var(--accent);}
 .park-live-note {margin:0;padding:3px 8px;font-family:var(--font-body);font-size:13px;color:var(--text-main);border-top:1px solid var(--border-dim);}
 .park-watch-note {position:absolute;left:16px;top:34px;margin:0;font-family:var(--font-body);font-size:14px;color:var(--text-main);}
+
+/* ---- ACCOUNTS: naming and sign-in on the start screen ------------------ */
+.adoption-name {display:flex;align-items:center;gap:8px;font-size:15px;}
+.adoption-name input {flex:1;min-width:0;min-height:36px;padding:0 10px;font-size:16px;}
+.entry-signin div {display:flex;gap:6px;flex-wrap:wrap;}
+.entry-signin button {display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;}
+.entry-account button,.entry-account a {display:inline;min-height:0;padding:0;font-size:inherit;text-decoration:underline;}

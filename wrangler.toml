@@ -24,3 +24,17 @@ class_name = "ParkRoom"
 [[migrations]]
 tag = "v1-park-room"
 new_sqlite_classes = ["ParkRoom"]
+
+# Accounts and cloud-saved dogs (design/accounts-and-saves-plan.md).
+[[d1_databases]]
+binding = "DB"
+database_name = "dog-saves"
+database_id = "a8931b9d-f7b1-4bb6-af9e-466626a53a8b"
+migrations_dir = "migrations"
+
+# Sign-in providers. Client ids are public; the secrets are set with
+# `npx wrangler secret put GOOGLE_CLIENT_SECRET` / `LINE_CHANNEL_SECRET`.
+# A provider with an empty id is simply not offered.
+[vars]
+GOOGLE_CLIENT_ID = ""
+LINE_CHANNEL_ID = ""

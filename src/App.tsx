@@ -1,5 +1,6 @@
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
+import { startCloudSync } from './utils/cloud';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
 import {growCompanion,growthStage} from './domain/growth';
@@ -144,6 +145,8 @@ export const App: React.FC = () => {
   // A live park invite (?park=<room>) opens straight into the park.
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
+  // Signed-in owners: every save goes to the cloud a few seconds later.
+  useEffect(()=>playMode()==='own'?startCloudSync():undefined,[]);
   useEffect(()=>{const url=new URL(location.href);if(liveRoom)url.searchParams.set('park',liveRoom);else url.searchParams.delete('park');if(url.href!==location.href)history.replaceState(history.state,'',url);},[liveRoom]);
   const outing=useRef({distance:0,seconds:0});
   useEffect(()=>{outing.current={distance:0,seconds:0};},[activeRegion,activeDogId]);

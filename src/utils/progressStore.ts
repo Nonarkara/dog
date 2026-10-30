@@ -59,6 +59,8 @@ function current(){
 function write(save:ReturnType<typeof current>){
   if(!validSave(save))throw new Error('Saved progress needs recovery; no data was replaced.');
   localStorage.setItem(SAVE_KEY,JSON.stringify({...save,revision:save.revision+1}));
+  // Signed-in owners push this to the cloud a few seconds later (utils/cloud.ts).
+  window.dispatchEvent(new Event('tdc-saved'));
 }
 
 export function mutatePet(id:string,update:PetMutation,care?:'feed'|'play'|'walk'|'groom'):Promise<PetState>{
