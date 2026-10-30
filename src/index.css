@@ -921,6 +921,7 @@ html {font-synthesis:none;}
 .illustrated-park {position:absolute;inset:0;overflow:hidden;background:var(--stage-ground);}
 .illustrated-park>canvas,.park-scenery {position:absolute;inset:0;display:block;width:100%;height:100%;}
 .illustrated-park>canvas {z-index:1;}
+.park-overlay {position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none;overflow:visible;}
 .park-scenery {z-index:0;pointer-events:none;}
 .park-dog-labels {font-family:var(--font-body);fill:var(--text-main);}
 .park-contact-shadow {fill:var(--text-main);}
@@ -976,3 +977,19 @@ html {font-synthesis:none;}
 .growth-backup {display:inline-flex;align-items:center;gap:4px;margin-left:auto;flex:none;min-height:32px;padding:2px 6px;color:inherit;background:transparent;border:1px solid var(--border-dim);cursor:pointer;font:inherit;}
 .growth-backup:focus-visible {outline:2px solid currentColor;outline-offset:2px;}
 @media(max-width:359px){.growth-backup span{display:none;}.growth-caption{gap:5px;font-size:11px;}}
+
+/* ---- WATCH MODE: the park as a second screen ----------------------------
+   Full screen via the Fullscreen API; where a browser cannot fullscreen an
+   element (iPhone Safari) the same layer covers the viewport instead. The
+   controls fade when the pointer is still, the hungry note never does. */
+.park-world--watching {position:fixed;inset:0;z-index:60;min-height:100dvh;border:0;}
+.park-world--watching:fullscreen {position:relative;}
+.park-world--idle {cursor:none;}
+.park-world--idle .illustrated-park canvas {cursor:none;}
+.park-watch-overlay {position:absolute;inset:0;z-index:3;pointer-events:none;}
+.park-watch-title {position:absolute;left:16px;top:12px;margin:0;font-family:var(--font-body);font-size:14px;color:var(--text-main);transition:opacity .4s ease;}
+.park-watch-exit {position:absolute;right:12px;top:10px;display:grid;place-items:center;width:44px;height:44px;pointer-events:auto;background:var(--bg-surface);border:1px solid var(--border-strong);transition:opacity .4s ease;}
+.park-world--idle .park-watch-title,.park-world--idle .park-watch-exit {opacity:0;}
+.park-watch-hungry {position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;pointer-events:auto;background:var(--bg-surface);border:1px solid var(--border-strong);font-family:var(--font-body);font-size:14px;color:var(--text-main);white-space:nowrap;}
+.park-watch-hungry button {display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 10px;background:var(--accent);color:#000;border:1px solid var(--accent);font-weight:700;}
+@media (prefers-reduced-motion: reduce){.park-watch-title,.park-watch-exit{transition:none;}}

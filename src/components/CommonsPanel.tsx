@@ -2,7 +2,7 @@ import {IllustratedPark} from './IllustratedPark';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown } from 'lucide-react';
+import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils } from 'lucide-react';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
 import type {PetState} from '../domain/types';
 import { DEFAULT_DOGS, METAVERSE_NEIGHBORS } from '../data/defaultDogs';
@@ -34,6 +34,8 @@ export interface CommonsPanelProps {
   onSocialize?:()=>void;
   onWalk?:(distance:number,seconds:number)=>void;
   guide?:React.ReactNode;
+  /** Take the dog home (from the park). */
+  onGoHome?:()=>void;
 }
 
 /* ------------------------------------------------------------------ types */
@@ -228,7 +230,36 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide,onGoHome }) => {
+  /**
+   * WATCH MODE — the park as a second screen.
+   *
+   * Full screen where the browser allows it (a fixed full-viewport layer
+   * where it does not, as on iPhone). The camera pulls back to the whole
+   * pack, your dog plays on its own, the screen is kept awake, and the
+   * controls fade when the pointer is still. Esc, or the X, leaves.
+   */
+  const [watching,setWatching]=useState(false);
+  const [watchIdle,setWatchIdle]=useState(false);
+  const worldRef=useRef<HTMLDivElement>(null);
+  const hungry=(petState?.needs.hunger??100)<35&&!petState?.sleep.asleep;
+  const startWatching=()=>{setWatching(true);const el=worldRef.current;if(el?.requestFullscreen)el.requestFullscreen().catch(()=>{/* fixed layer is the fallback */});};
+  const stopWatching=()=>{setWatching(false);if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});};
+  useEffect(()=>{
+   if(!watching)return;
+   // Only the illustrated pack: the placeholder drawings break the picture.
+   const api=sceneApiRef.current;METAVERSE_NEIGHBORS.forEach(n=>api?.removeNeighbor(n.id));
+   let lock:{release:()=>Promise<void>}|null=null;
+   const wake=()=>{const nav=navigator as Navigator&{wakeLock?:{request:(t:'screen')=>Promise<{release:()=>Promise<void>}>}};nav.wakeLock?.request('screen').then(l=>{lock=l;}).catch(()=>{});};
+   wake();
+   const visible=()=>{if(document.visibilityState==='visible')wake();};
+   let idle=0;const touch=()=>{setWatchIdle(false);clearTimeout(idle);idle=window.setTimeout(()=>setWatchIdle(true),3000);};touch();
+   const fs=()=>{if(!document.fullscreenElement)setWatching(false);};
+   const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setWatching(false);};
+   document.addEventListener('visibilitychange',visible);document.addEventListener('fullscreenchange',fs);window.addEventListener('pointermove',touch);window.addEventListener('pointerdown',touch);window.addEventListener('keydown',esc);
+   return()=>{clearTimeout(idle);void lock?.release().catch(()=>{});document.removeEventListener('visibilitychange',visible);document.removeEventListener('fullscreenchange',fs);window.removeEventListener('pointermove',touch);window.removeEventListener('pointerdown',touch);window.removeEventListener('keydown',esc);
+    const back=sceneApiRef.current;METAVERSE_NEIGHBORS.forEach(n=>back?.spawnNeighbor(n));};
+  },[watching]);
   const [clearPending,setClearPending]=useState(false);
   const [legacyScene,setLegacyScene]=useState(false);
   const parkNeighbors=useMemo<MetaverseNeighborDog[]>(()=>[
@@ -931,9 +962,9 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             The scene holds a fixed aspect ratio, so the panel's height is
             decided before the WebGL context exists. It can shrink; it can
             never grow the region. */}
-        <div className="park-world relative w-full overflow-hidden border-hairline-b">
+        <div ref={worldRef} className={`park-world relative w-full overflow-hidden border-hairline-b${watching?' park-world--watching':''}${watching&&watchIdle?' park-world--idle':''}`}>
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
-          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} ambient={watching} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -945,6 +976,11 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
           )}
 
           <div ref={heartRef} className="park-affection" aria-hidden="true"><Heart size={25} fill="currentColor"/></div>
+          {watching&&<div className="park-watch-overlay">
+            <p className="park-watch-title">{myDog.name} at the park</p>
+            <button type="button" className="park-watch-exit" aria-label="Stop watching" onClick={stopWatching}><X size={20}/></button>
+            {hungry&&<div className="park-watch-hungry" role="status"><span>{myDog.name} is hungry.</span>{onGoHome&&<button type="button" onClick={()=>{stopWatching();onGoHome();}}><Utensils size={16}/>Take {myDog.name} home to eat</button>}</div>}
+          </div>}
 
         </div>
         {guide&&<div className="park-guide">{guide}</div>}
@@ -957,6 +993,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             <button type="button" aria-label="Zoom in" disabled={zoom>=1.5} onClick={()=>changeZoom(zoomRef.current*1.2)}><ZoomIn size={20}/></button>
             <button type="button" aria-label="Zoom out" disabled={zoom<=.85} onClick={()=>changeZoom(zoomRef.current/1.2)}><ZoomOut size={20}/></button>
             <button type="button" aria-label="Find my dog" onClick={()=>{focusRef.current=null;changeZoom(1);setSelectedId(myDogRowId);}}><LocateFixed size={20}/></button>
+            <button type="button" aria-label="Watch the park full screen" title="Watch full screen" onClick={startWatching} disabled={legacyScene}><Maximize2 size={20}/></button>
           </div>
           <button type="button" aria-expanded={drawer==='chat'} aria-controls="park-chat" onClick={()=>setDrawer(drawer==='chat'?null:'chat')}><MessageSquare size={18}/><span className="sr-only">Chat</span></button>
         </div>

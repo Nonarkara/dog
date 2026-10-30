@@ -221,6 +221,8 @@ export const App: React.FC = () => {
     requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="Close control labels"]')?.focus());
   };
   const regionBeforeChooser=useRef<RegionKey>('care');
+  // Park <-> home. Coming home from a real outing credits the walk.
+  const togglePark=()=>{setIsDogMenuOpen(false);setLabelsVisible(false);if(activeRegion==='commons'){const trip={...outing.current};outing.current={distance:0,seconds:0};if(trip.seconds>=10&&trip.distance>=120)void commitPet(base=>completeParkWalk(base,Date.now(),trip.seconds,trip.distance)).then(saved=>{if(saved&&saved.game?.lastOutingAt&&Date.now()-saved.game.lastOutingAt<1500)say('Home from a sniff walk: calmer, closer, less bored. +3 paw coins.');});}setActiveRegion(activeRegion==='commons'?'care':'commons');};
   const closeDogChooser=()=>{setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus());};
   const toggleDogChooser=()=>{
     if(isDogMenuOpen){closeDogChooser();return;}
@@ -572,7 +574,7 @@ export const App: React.FC = () => {
       case 'commons':
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
-            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} />
+            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onGoHome={togglePark} />
           </Suspense>
         );
     }
@@ -608,7 +610,7 @@ export const App: React.FC = () => {
 
           </div>
 
-          <button type="button" className={`btn-quiet park-navigation ${activeRegion==='commons'?'park-navigation--home':''}`} aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>{setIsDogMenuOpen(false);setLabelsVisible(false);if(activeRegion==='commons'){const trip={...outing.current};outing.current={distance:0,seconds:0};if(trip.seconds>=10&&trip.distance>=120)void commitPet(base=>completeParkWalk(base,Date.now(),trip.seconds,trip.distance)).then(saved=>{if(saved&&saved.game?.lastOutingAt&&Date.now()-saved.game.lastOutingAt<1500)say('Home from a sniff walk: calmer, closer, less bored. +3 paw coins.');});}setActiveRegion(activeRegion==='commons'?'care':'commons');}}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
+          <button type="button" className={`btn-quiet park-navigation ${activeRegion==='commons'?'park-navigation--home':''}`} aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>togglePark()}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
           {/* The facts about the dog you are with. */}
           <p className="header-dog-facts min-w-0 flex-1 truncate text-[12px] text-zinc-400">
             <span className="text-zinc-300">{currentDog.breed}</span>
