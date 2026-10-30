@@ -14,3 +14,13 @@ custom_domain = true
 
 [observability]
 enabled = true
+
+# Live park rooms: one Durable Object per invite link (SQLite-backed, so it
+# runs on the Workers Free plan). See design/live-sharing-plan.md.
+[[durable_objects.bindings]]
+name = "PARK_ROOM"
+class_name = "ParkRoom"
+
+[[migrations]]
+tag = "v1-park-room"
+new_sqlite_classes = ["ParkRoom"]

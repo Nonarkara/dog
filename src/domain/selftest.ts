@@ -20,6 +20,8 @@ import type { Behaviour, PetState } from './types';
 import { dailyLife, dailyMood } from './dailyLife';
 import { settleSleep, willSettle } from './pet';
 import { coatColorAt } from './coat';
+import { chooseActivity, type Activity } from './parkPersonality';
+import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
 import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
 
@@ -549,6 +551,37 @@ let grown:PetState=puppy;for(let day=0;day<7;day++)grown=growCompanion(grown,60,
 ok('seven distinct care days reach full size',growthStage(grown).name==='Adult'&&growthStage(grown).scale===1);
 const petter=interact(pantry,'pet',noon).state,walker=interact(pantry,'walk',noon).state;
 ok('care histories shape different personalities',petter.personality.sociability>walker.personality.sociability&&walker.personality.boldness>petter.personality.boldness);
+
+console.log('\nLIVE PARK MESSAGES');
+const liveDog = { name: 'Expo', breed: 'Thai Bangkaew Dog', art: 'expo-2021', owner: "Expo's person", coat: { base: '#ece7de', light: '#f8f6f1', dark: '#211c18' } };
+ok('a proper hello is accepted', parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: liveDog }))?.t === 'hello');
+ok('broken JSON is dropped', parseClient('{"t":"hello"') === null);
+ok('an unknown message type is dropped', parseClient(JSON.stringify({ t: 'admin', id: 'x' })) === null);
+const leaky = parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: { ...liveDog, microchip: 'TH-985141002849102', vet: 'Thonglor' } }));
+ok('record fields never pass through, even if a client sends them', leaky?.t === 'hello' && !JSON.stringify(leaky).includes('985141') && !JSON.stringify(leaky).includes('Thonglor'));
+const marked = parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: { ...liveDog, name: '<img src=x>Mochi' } }));
+ok('markup is stripped from names', marked?.t === 'hello' && !marked.dog.name.includes('<'));
+ok('a bad coat colour rejects the dog', parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: { ...liveDog, coat: { ...liveDog.coat, base: 'red; drop' } } })) === null);
+const far = parseClient(JSON.stringify({ t: 'intent', x: 1e9, y: -1e9, mode: 'chase', hungry: false, asleep: false }));
+ok('positions are clamped to the park', far?.t === 'intent' && far.x === WORLD.maxX && far.y === WORLD.minY);
+ok('an oversized message is dropped', parseClient(JSON.stringify({ t: 'pet', target: 'abcd1234', pad: 'x'.repeat(2000) })) === null);
+const bucket = { start: 0, count: 0 };
+let allowed = 0;
+for (let i = 0; i < RATE_LIMIT + 10; i++) if (withinRate(bucket, 1000)) allowed++;
+ok('a flooding connection is cut off at the limit', allowed === RATE_LIMIT);
+ok('the limit resets after ten seconds', withinRate(bucket, 12_000));
+const room = newRoomName();
+ok('a new room name is valid and hard to guess', validRoom(room) && room.split('-')[2].length === 8, room);
+ok('a path-like room name is refused', !validRoom('../../etc') && !validRoom('a'));
+
+console.log('\nEACH DOG BEING ITSELF IN THE PARK');
+const share = (art: string, act: Activity) => { let n = 0; for (let i = 0; i < 1000; i++) if (chooseActivity(art, i / 1000, true) === act) n++; return n / 1000; };
+ok('Oreo starts chases more than any other dog', ['expo-2021', 'mali-2022', 'paolo-pug', 'shiba-chai'].every((d) => share('oreo-frenchie', 'chase') > share(d, 'chase')));
+ok('Paolo naps; Oreo never does', share('paolo-pug', 'nap') > 0.25 && share('oreo-frenchie', 'nap') === 0);
+ok('Expo keeps watch from a lookout', share('expo-2021', 'lookout') > 0.3);
+ok('Mali goes to the bowl; Expo does not', share('mali-2022', 'bowl') > 0.2 && share('expo-2021', 'bowl') === 0);
+ok('Hachiku waits by the bench, and rarely visits', share('shiba-chai', 'wait') > 0.3 && share('shiba-chai', 'visit') < 0.1);
+ok('with no friend free, nobody tries to chase or visit', [0, 0.3, 0.6, 0.99].every((r) => !['chase', 'visit'].includes(chooseActivity('oreo-frenchie', r, false))));
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

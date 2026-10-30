@@ -1,7 +1,16 @@
+import { validRoom } from '../src/domain/parkProtocol';
+export { ParkRoom } from './parkRoom';
+
+interface DurableObjectNamespace {
+  idFromName(name: string): unknown;
+  get(id: unknown): { fetch: (request: Request) => Promise<Response> };
+}
+
 interface Env {
   ASSETS: {
     fetch: (request: Request) => Promise<Response>;
   };
+  PARK_ROOM: DurableObjectNamespace;
 }
 
 export default {
@@ -13,6 +22,14 @@ export default {
       return new Response(JSON.stringify({ status: "ok", service: "dog-os", version: "1.0.0" }), {
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // A live park room: one Durable Object per invite link.
+    const live = url.pathname.match(/^\/api\/park\/([^/]+)$/);
+    if (live) {
+      const room = decodeURIComponent(live[1]);
+      if (!validRoom(room)) return new Response('Unknown park', { status: 404 });
+      return env.PARK_ROOM.get(env.PARK_ROOM.idFromName(room)).fetch(request);
     }
 
     // Try serving asset directly
