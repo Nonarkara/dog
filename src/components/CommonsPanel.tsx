@@ -32,6 +32,7 @@ export interface CommonsPanelProps {
   onPet?: () => void;
   petState?:PetState;
   onSocialize?:()=>void;
+  onWalk?:(distance:number,seconds:number)=>void;
   guide?:React.ReactNode;
 }
 
@@ -227,7 +228,7 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,guide }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide }) => {
   const [clearPending,setClearPending]=useState(false);
   const [legacyScene,setLegacyScene]=useState(false);
   const parkNeighbors=useMemo<MetaverseNeighborDog[]>(()=>[
@@ -932,7 +933,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             never grow the region. */}
         <div className="park-world relative w-full overflow-hidden border-hairline-b">
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
-          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">

@@ -12,7 +12,7 @@ import {parkScenery} from './parkScenery';
 import {sound} from '../utils/proceduralAudio';
 
 export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeNeighbor:(id:string)=>void;pet:(id:string)=>void;}
-interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;}
+interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onWalk?:(distance:number,seconds:number)=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;}
 interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:number;left:number;right:number;top:number;bottom:number;pixelWidth?:number;originX?:number;originY?:number;tile?:THREE.Vector4;alphaOnly?:boolean;}
 const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
 const NS='http://www.w3.org/2000/svg';
@@ -97,7 +97,7 @@ export function IllustratedPark(props:Props){
   const contextLost=(event:Event)=>{event.preventDefault();cancelAnimationFrame(frame);canvas.dataset.contextLost='true';latest.current.onError('The graphics connection was interrupted. Try the alternate view, or reopen the garden.');};
   const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet});frame=requestAnimationFrame(animate);};
   canvas.addEventListener('webglcontextlost',contextLost);canvas.addEventListener('webglcontextrestored',contextRestored);
-  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/30;last=now;next+=1000/30;if(next<now-1000/30)next=now+1000/30;
+  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=1000/60;if(next<now-1000/60)next=now+1000/60;
    if(pendingResize)resize();const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
    const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
    let dx=0,dy=0;if(!resting){if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;}if(keys.size&&!dx&&!dy)stopKeyboard();if(dx||dy){own.tx=Math.max(-420*unit,Math.min(420*unit,own.x+dx*50));own.ty=Math.max(-280*unit,Math.min(400*unit,own.y+dy*50));}
@@ -111,7 +111,7 @@ export function IllustratedPark(props:Props){
     a.speed+=(wantedSpeed-a.speed)*(1-Math.exp(-dt*(moving?7:11)));
     if(!moving&&(now<a.petUntil||now<a.sniffUntil||(a.own&&resting)))a.speed=0;
     const step=moving?Math.min(distance,a.speed*dt):0;let traveled=0;
-    if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;}
+    if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;if(a.own&&traveled>.01)p.onWalk?.(traveled/unit,dt);}
     a.blend+=((traveled>.01?1:0)-a.blend)*(1-Math.exp(-dt*10));
     const view=viewFor(a.heading);if(step>.01)a.facing=view.facing;
     const pose:ArtPose=a.own&&p.petState?.sleep.asleep?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':'stand';applyPose(a,pose);
@@ -121,8 +121,8 @@ export function IllustratedPark(props:Props){
     let motionPoints:[number,number][]|null=null,contactFlags:boolean[]=[];
     if(animated){
      const traveling=a.blend>.15&&!reduced.matches&&Math.abs(error)<.25;
-     const depth=traveling&&Math.abs(Math.sin(a.heading))>.78;
-     const side=traveling&&!depth,running=side&&a.speed>85*unit;
+     const depth=traveling&&Math.abs(Math.sin(a.heading))>(a.motionFrame>=80?.70:.84);
+     const side=traveling&&!depth,running=side&&a.speed>(a.motionFrame>=0&&a.motionFrame<32?78:92)*unit;
      const turnIndex=(Math.round((((Math.PI-a.heading)/(Math.PI*2))%1+1)%1*32)%32);
      const index=side?(running?Math.floor(a.stride*32)%32:32+Math.floor(a.stride*16)%16):depth?(Math.sin(a.heading)>0?80:96)+Math.floor(a.stride*16)%16:48+turnIndex;
      a.motionFrame=index;a.raster=a.motionFrames[index];a.facing=side?view.facing:1;
