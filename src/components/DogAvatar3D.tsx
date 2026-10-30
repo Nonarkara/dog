@@ -896,6 +896,22 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     let blink = 0;
     const camLocal = new THREE.Vector3();
 
+    // IDLE THEATRE — the dog's own life between interactions. One act at a
+    // time, chosen by mood-weighted odds: shift weight, look around, sniff
+    // the podium, tip a paw, and — when arousal and trust are both high —
+    // the play bow, a real dog's invitation to play. The stretch after
+    // waking is not chosen; it is compulsory, like a real dog's.
+    const idle = {
+      name: 'none',
+      start: 0,
+      dur: 0,
+      next: 2.5 + Math.random() * 3,
+      yaw: 0,
+    };
+    const wasAsleep = { v: false };
+    const earTwitch = { last: -99, next: 3 + Math.random() * 5, side: 1 };
+    const wagE = { f: 3, a: 0.15 };
+
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
       const frameNow = performance.now();
@@ -1008,6 +1024,77 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       }
       if(lesson?.run){stride=Math.sin(t*8);bounce=Math.abs(stride)*.04;}
 
+      // ---- idle theatre -------------------------------
+      // Every so often, on his own clock, he does one small authored thing.
+      // Acts ease in and out over ~1/3 s and run once; nothing loops
+      // mechanically, and sleep, sickness, petting and interactions cancel.
+      const idleAllowed =
+        !reducedMotion && acting === 'idle' && !asleep && !isSick && !melting &&
+        !lesson && gameLeap.current.dir === null && !beingPetted;
+      if (!idleAllowed && idle.name !== 'none') idle.name = 'none';
+      idle.next -= dt;
+      if (idleAllowed && idle.name === 'none' && idle.next <= 0) {
+        const standing = bodyPoseFor(poseRef.current) === 'stand';
+        const pool = ['shift', 'look', 'sniff', 'shift', 'look'];
+        if (standing) pool.push('pawtip');
+        if (standing && arousal > 0.55) pool.push('hop');
+        // The play bow needs a dog who feels good: arousal invites, trust
+        // permits. A frightened or worn-out dog does not bow.
+        if (standing && arousal > 0.45 && friendly > 0.5) pool.push('bow', 'bow');
+        idle.name = pool[(Math.random() * pool.length) | 0];
+        idle.start = t;
+        idle.dur =
+          idle.name === 'bow' ? 2.4 :
+          idle.name === 'sniff' ? 2.8 :
+          idle.name === 'look' ? 2.2 :
+          1.4 + Math.random() * 0.8;
+        if (idle.name === 'look') idle.yaw = (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.3);
+        // Livelier dogs try the next thing sooner.
+        idle.next = idle.dur + 1.5 + Math.random() * 3.5 / (0.5 + arousal);
+      }
+
+      // Waking stretch: the first act after the bolster cushion is always
+      // the same — forepaws out, chest down, a long yawn. Real dogs do not
+      // simply switch on.
+      if (!asleep && wasAsleep.v && acting === 'idle' && !isSick) {
+        idle.name = 'stretch';
+        idle.start = t;
+        idle.dur = 2.6;
+        idle.next = idle.dur + 2;
+      }
+      wasAsleep.v = asleep;
+
+      let idleLook = 0;
+      let idleLean = 0;
+      let idlePaw = 0;
+      let idleBow = 0;
+      let idleNose = 0;
+      let idleYawn = 0;
+      if (idle.name !== 'none') {
+        const e = t - idle.start;
+        const w = Math.max(0, Math.min(1, Math.min(e, idle.dur - e) * 3)); // ~⅓ s ease
+        if (idle.name === 'shift') idleLean = Math.sin(Math.min(e / 0.7, 1) * Math.PI) * 0.06 * w;
+        else if (idle.name === 'look') idleLook = idle.yaw * w;
+        else if (idle.name === 'sniff') idleNose = w;
+        else if (idle.name === 'pawtip') idlePaw = Math.sin(Math.min(e / 1.1, 1) * Math.PI) * 0.3 * w;
+        else if (idle.name === 'hop') bounce += Math.max(0, Math.sin(Math.min(e / 0.9, 1) * Math.PI * 3)) * 0.07 * w;
+        else if (idle.name === 'bow') idleBow = w;
+        else if (idle.name === 'stretch') { idleBow = w * 0.9; idleYawn = w; }
+      }
+
+      // EAR TWITCH: a flick nobody told him to do, on a random clock.
+      earTwitch.next -= dt;
+      let earFlick = 0;
+      if (earTwitch.next <= 0) {
+        earTwitch.last = t;
+        earTwitch.next = 3.5 + Math.random() * 5;
+        earTwitch.side = Math.random() < 0.5 ? 1 : -1;
+      }
+      {
+        const age = t - earTwitch.last;
+        if (age < 0.5 && !asleep) earFlick = Math.sin(age * 46) * Math.exp(-age * 9) * 0.4;
+      }
+
       // Mini-Game Leaping
       if (gameLeap.current.dir !== null) {
         gameLeap.current.progress = Math.min(1, gameLeap.current.progress + dt * 2.2);
@@ -1019,12 +1106,12 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
       dogRoot.position.set(walkX + shiverX+(lesson?.x??0)*.5, cur.rootY + bounce, 0);
       dogRoot.scale.copy(trainingScale).multiplyScalar(lesson?.scale??1);
-      dogRoot.rotation.z = shiverRot;
-      chassis.rotation.x = cur.pitch;
-      frontL.rotation.x = cur.front + stride * 0.5;
-      frontR.rotation.x = cur.frontR - stride * 0.5;
-      backL.rotation.x = cur.back - stride * 0.4;
-      backR.rotation.x = cur.back + stride * 0.4;
+      dogRoot.rotation.z = shiverRot + idleLean;
+      chassis.rotation.x = cur.pitch + idleBow * 0.32;
+      frontL.rotation.x = cur.front + stride * 0.5 - idleBow * 1.15;
+      frontR.rotation.x = cur.frontR - stride * 0.5 - idleBow * 1.15 - idlePaw;
+      backL.rotation.x = cur.back - stride * 0.4 + idleBow * 0.18;
+      backR.rotation.x = cur.back + stride * 0.4 + idleBow * 0.18;
       if (poseRef.current === 'paw' && !asleep) frontR.rotation.x += Math.sin(t * 6) * 0.12;
 
       // The head: follows you, rests on bolster cushion asleep
@@ -1032,19 +1119,20 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       dogRoot.worldToLocal(camLocal);
       const gaze = asleep ? 0 : lesson?.gaze||Math.max(-0.6, Math.min(0.6, Math.atan2(camLocal.x, camLocal.z - 0.6)));
       head.position.set(HEAD_REST.x, HEAD_REST.y + cur.headY + (friendly * 0.03 - tired * 0.03), HEAD_REST.z);
-      head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 - head.rotation.y) * 0.08;
+      head.rotation.y += (gaze + Math.sin(t * 0.7) * 0.06 + idleLook - head.rotation.y) * 0.08;
 
       const spot = beingPetted ? petting.spot : null;
       head.rotation.x =
         cur.headPitch - cur.pitch * 0.9 +
         (isFeeding ? 0.48 : 0) +
-        (spot === 'chin' ? -0.32 : 0);
+        (spot === 'chin' ? -0.32 : 0) +
+        idleNose * 0.55 + idleBow * 0.25;
       head.rotation.z =
-        acting === 'communicate'
+        (acting === 'communicate'
           ? 0.2
           : spot === 'chest' || melting
             ? 0.18
-            : Math.sin(t * 1.3) * 0.04;
+            : Math.sin(t * 1.3) * 0.04) + idleNose * Math.sin(t * 18) * 0.012;
 
       // Articulated Jaw movement (Barking & Chewing)
       if (isFeeding) {
@@ -1052,15 +1140,18 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       } else if (acting === 'walk' || acting === 'play' || gameLeap.current.dir !== null) {
         jaw.rotation.x = Math.abs(Math.sin(t * 16)) * 0.26;
       } else {
-        jaw.rotation.x = 0;
+        // The waking yawn; otherwise the mouth rests.
+        jaw.rotation.x = idleYawn * 0.5;
       }
 
-      // Ears: flatten when unsure, droop when sick, relax under petting
+      // Ears: flatten when unsure, droop when sick, relax under petting.
+      // The twitch flick lands on one ear at a time.
       const flat = asleep ? 0.7 : isSick ? 0.95 : spot === 'head' ? 0.75 : (1 - trust) * 0.45 + tired * 0.2;
       ears.forEach((ear, i) => {
         const s = i === 0 ? 1 : -1;
-        ear.rotation.x = (akita && i === 0 ? 0.85 : pug ? 0.25 : dog.avatarConfig.earShape === 'floppy' ? 1.4 : 0) - flat * 0.8;
-        ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert;
+        const flick = earTwitch.side === s ? earFlick : 0;
+        ear.rotation.x = (akita && i === 0 ? 0.85 : pug ? 0.25 : dog.avatarConfig.earShape === 'floppy' ? 1.4 : 0) - flat * 0.8 - flick * 0.2;
+        ear.rotation.z = -s * (0.18 + flat * 0.5) + Math.sin(t * (3.1 + i * 0.4)) * 0.04 * alert + flick;
       });
 
       // Eyes & Blinking
@@ -1083,7 +1174,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       // Tail Wagging
       let wagF = Math.max(1, 3 + friendly * 7 + alert * 3 - tired * 3);
       let wagA = Math.max(0.05, 0.18 + friendly * 0.28 + alert * 0.1 - tired * 0.15);
-      if (acting === 'pet' || acting === 'feed' || spot === 'back' || spot === 'chest') {
+      if (acting === 'pet' || acting === 'feed' || spot === 'back' || spot === 'chest' || idle.name === 'bow') {
         wagF = 13;
         wagA = 0.5;
       } else if (acting === 'play' || gameLeap.current.dir !== null) {
@@ -1094,8 +1185,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         wagA = 0.02;
         wagF = 1;
       }
-      tail.rotation.y = reducedMotion ? 0 : Math.sin(t * wagF) * wagA;
-      tail.rotation.x = asleep ? 0.9 : 0;
+      // The tail spools: excitement arrives fast but fades slowly, so the
+      // wag keeps swinging for a while after the treat is gone. The whole
+      // curl also rides a slow bob — the tail is carried, not motorised.
+      wagE.f += (wagF - wagE.f) * Math.min(1, dt * (wagF > wagE.f ? 7 : 1.2));
+      wagE.a += (wagA - wagE.a) * Math.min(1, dt * (wagA > wagE.a ? 7 : 1.2));
+      tail.rotation.y = reducedMotion ? 0 : Math.sin(t * wagE.f) * wagE.a;
+      tail.rotation.x = asleep ? 0.9 : reducedMotion ? 0 : Math.sin(t * wagE.f * 0.5) * wagE.a * 0.3;
 
       // Ball item physics
       const parts = dogParts.current;
