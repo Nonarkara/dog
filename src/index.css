@@ -971,3 +971,8 @@ html {font-synthesis:none;}
 .park-drawers>button {flex:none;white-space:nowrap;}
 @media(max-width:479px){.park-dogs-word{display:none;}}
 @media(max-width:339px){.park-drawers{gap:3px;padding-inline:4px;}.park-drawers .park-camera button{width:32px;min-width:32px;height:32px;min-height:32px;}.park-selected-inline>span{display:none;}.park-selected-inline{gap:0;}}
+
+/* Keep recovery at the point of ownership, without another panel. */
+.growth-backup {display:inline-flex;align-items:center;gap:4px;margin-left:auto;flex:none;min-height:32px;padding:2px 6px;color:inherit;background:transparent;border:1px solid var(--border-dim);cursor:pointer;font:inherit;}
+.growth-backup:focus-visible {outline:2px solid currentColor;outline-offset:2px;}
+@media(max-width:359px){.growth-backup span{display:none;}.growth-caption{gap:5px;font-size:11px;}}

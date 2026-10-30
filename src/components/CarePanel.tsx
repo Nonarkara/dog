@@ -1,4 +1,4 @@
-import {ownedBackup} from '../utils/progressStore';
+import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
 import {growthStage} from '../domain/growth';
 import {recordSources} from '../utils/recordProvenance';
@@ -183,7 +183,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           </p>
         </div>
 
-        {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7 care days · your {dog.name}</p><p>One minute of active attention on a new day helps your puppy grow.</p><button type="button" className="btn-quiet" onClick={()=>{try{const data=ownedBackup(),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`Tama-Dog-Chi-${dog.name}-backup.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
+        {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7 care days · your {dog.name}</p><p>One minute of active attention on a new day helps your puppy grow.</p><button type="button" className="btn-quiet" onClick={()=>{try{downloadOwnedBackup(dog.name);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
         {/* THE CARE LOG */}
         <div className="care-history border-hairline-t">
           <p className="label">Last</p>

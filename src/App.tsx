@@ -1,3 +1,4 @@
+import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
 import {growCompanion,growthStage} from './domain/growth';
@@ -29,7 +30,7 @@ import { CommandBar,ControlLegend } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
-import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck } from 'lucide-react';
+import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download } from 'lucide-react';
 import {
   interact,
   communicate,
@@ -718,7 +719,7 @@ export const App: React.FC = () => {
             )}
             </div>
             </div>
-            {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={petState.growth.careDays.length}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span></div>}
+            {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={petState.growth.careDays.length}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span><button type="button" className="growth-backup" aria-label={`Back up ${currentDog.name}`} title="Stored in this browser. Download a backup to keep your dog if you clear site data or change devices." onClick={()=>{try{downloadOwnedBackup(currentDog.name);say('Backup ready. Restore it from the mode screen.');}catch{setSaveError('Could not create a complete backup yet. Please try again.');}}}><Download size={16}/><span>Backup</span></button></div>}
             <div className="stage-game-dock" hidden={isDogMenuOpen} ref={setGameControlsHost} aria-label="Dog game controls"/>
           </div>
         </section>
