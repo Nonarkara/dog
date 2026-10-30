@@ -437,7 +437,7 @@ export const DEFAULT_DOGS: DogProfile[] = [
     pattern: 'solid', baseColor: '#e2d6bb', secondaryColor: '#f5efdf', maskColor: '#51483b',
     furFluff: 0.4, earShape: 'pricked', tailShape: 'curl',
   }, ['Hachikō-inspired cream Akita coat', 'Broad head, sturdy body and thick curled tail', 'One softly folded ear']),
-  ...LEGACY_DOGS.filter(d => d.id !== expo.id && d.id !== mali.id),
+  // Bangal and Kofi retired from the playable household at the owner’s request.
 ];
 
 export const METAVERSE_NEIGHBORS: MetaverseNeighborDog[] = [
