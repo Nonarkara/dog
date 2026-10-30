@@ -1,6 +1,6 @@
 import { dailyLife } from '../domain/dailyLife';
 import React, { useEffect, useRef, useState } from 'react';
-import { Utensils, Brush, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, Send, Leaf, Cookie, Timer, CircleHelp, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone, X } from 'lucide-react';
+import { Utensils, Brush, Broom, Footprints, HandHeart, Volleyball, Moon, Pill, Sparkles, Send, Leaf, Cookie, Timer, CircleHelp, MessageCircle, Battery, Smile, Heart, Activity, GraduationCap, BookOpen, Trees, Hand, ChevronsDown, Music2, Wind, Bone, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -38,7 +38,7 @@ const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: 
   { action: 'feed', label: 'Feed', icon: Utensils, key: '2' },
   { action: 'play', label: 'Play', icon: Volleyball, key: '3' },
   { action: 'walk', label: 'Walk', icon: Footprints, key: '4' },
-  { action: 'groom', label: 'Groom', icon: Brush, key: '5' },
+  { action: 'groom', label: 'Clean', icon: Broom, key: '5' },
 ];
 
 const GERUND: Record<CareAction, string> = {
@@ -65,6 +65,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   onCommunicate,
   onBed,
 }) => {
+  const [talkOpen,setTalkOpen]=useState(false);
   const [cueText, setCueText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
@@ -121,7 +122,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           // Dynamic clean adaptation if stage has waste
           const currentAction: CareAction = action === 'groom' && poops > 0 ? 'clean' : action;
           const currentLabel = action === 'groom' && poops > 0 ? `Clean (${poops})` : label;
-          const CurrentIcon = action === 'groom' && poops > 0 ? Sparkles : Icon;
+          const CurrentIcon = action === 'groom' && poops > 0 ? Broom : Icon;
           const busy = isInteracting && pendingAction === currentAction;
 
           return (
@@ -162,15 +163,16 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
 <button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} aria-expanded={labelsVisible} aria-controls="control-reference" title="Control labels" onClick={onToggleLabels}><CircleHelp size={20} aria-hidden="true"/></button>
 
+      <button type="button" className="btn-quiet talk-toggle" aria-label="Talk to your dog" aria-expanded={talkOpen} aria-controls="dog-talk" onClick={()=>{setTalkOpen(!talkOpen);if(!talkOpen)requestAnimationFrame(()=>inputRef.current?.focus());}}><MessageCircle size={20}/></button>
       {/* Quiet observation and reward stay beside the cue, without extra chrome. */}
-      <div className="flex items-center gap-1.5 flex-1 min-w-0 order-last basis-full sm:order-none sm:basis-auto">
+      <div className={`command-talk-group ${talkOpen?'talk-open':''}`}>
         <button type="button" className={watching&&!wait?'btn-accent':'btn-quiet'}
           aria-label={calmLabel} title={calmNeed(petState)||`${calmLabel}: watch relaxed body language, then give a small reward`}
           disabled={isInteracting||!!calmNeed(petState)||!!wait}
           onClick={()=>onInteract(watching?'rewardCalm':'settle')}>
-          <span className="inline-flex items-center gap-1"><CalmIcon size={21} aria-hidden="true"/>{wait>0&&<span className="data text-[11px]" aria-hidden="true">{wait}s</span>}</span><span className="sr-only">{calmLabel}</span>
+          <span className="inline-flex items-center gap-1">{wait===0&&<CalmIcon size={21} aria-hidden="true"/>}{wait>0&&<span className="data text-[11px]" aria-hidden="true">{wait}s</span>}</span><span className="sr-only">{calmLabel}</span>
         </button>
-          <>
+          <div id="dog-talk" className="command-speech" hidden={!talkOpen}>
             <label htmlFor="cmd-cue" className="label shrink-0 hidden sm:block">
               Say
             </label>
@@ -198,7 +200,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             >
               <Send size={19} aria-hidden="true"/><span className="sr-only">Say</span>
             </button>
-          </>
+          </div>
       </div>
 
       {/* Bed control */}

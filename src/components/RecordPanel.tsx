@@ -214,10 +214,10 @@ const TOOLS = [
 ];
 
 const PIPELINE_HONESTY =
-  'Reference only. Canine OS runs no reconstruction: there is no mesh generator, no optimiser and no exporter behind it. This is the workflow an operator runs on a machine.';
+  'Reference only. Tama-Dog-Chi runs no reconstruction: there is no mesh generator, no optimiser and no exporter behind it. This is the workflow an operator runs on a machine.';
 
 const TOOLS_HONESTY =
-  'Linked, not connected. Canine OS neither installs nor calls these projects.';
+  'Linked, not connected. Tama-Dog-Chi neither installs nor calls these projects.';
 
 /**
  * PRINT RELEASES THE FRAME.

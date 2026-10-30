@@ -1,3 +1,9 @@
+import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
+import {householdDefaults,playMode,modeKey} from './utils/playMode';
+import {growCompanion,growthStage} from './domain/growth';
+import {sound} from './utils/proceduralAudio';
+import {CareExtras} from './components/CareExtras';
+import {TOUCH_PREFERENCES,gameState,buyFood,discoverTouch,socialize,type TouchPart} from './domain/companionGame';
 import {recordSources} from './utils/recordProvenance';
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
@@ -128,8 +134,11 @@ export const App: React.FC = () => {
     const observer=new MutationObserver(update);observer.observe(el,{childList:true,subtree:true});update();
     return()=>observer.disconnect();
   },[]);
-  const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(DEFAULT_DOGS));
-  const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(DEFAULT_DOGS[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
+  const firstGuide=useFirstPlayTips();
+  const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(householdDefaults()));
+  const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
+  const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
+  const [coachRequest,setCoachRequest]=useState<'fetch'|undefined>();
   const [activeRegion, setActiveRegion] = useState<RegionKey>('care');
 
   // The dog's inner life — trust, arousal, personality, associations, the
@@ -140,7 +149,7 @@ export const App: React.FC = () => {
   const [saveError,setSaveError]=useState<string|null>(null);
   const [legacyWarning,setLegacyWarning]=useState(false);
   const refresh=useCallback(()=>{
-    const latest=loadStoredDogs(DEFAULT_DOGS);setDogsView(latest);
+    const latest=loadStoredDogs(householdDefaults());setDogsView(latest);
     if(!latest.some(dog=>dog.id===activeDogRef.current)){
       activeDogRef.current=latest[0].id;setActiveDogId(latest[0].id);
     }
@@ -267,11 +276,11 @@ export const App: React.FC = () => {
     setNote(null);
   };
 
-  useEffect(()=>{void commitPet(state=>state);},[commitPet]);
+  useEffect(()=>{void commitPet(state=>({...state,game:gameState(state,activeDogId)}));},[commitPet,activeDogId]);
   useEffect(()=>{
     const changed=(event:StorageEvent)=>{
       if(event.key===SAVE_KEY)refresh();
-      else if(['canine_os_pet_states_v1','canine_os_dogs_v1'].includes(event.key??'')&&localStorage.getItem(SAVE_KEY))setLegacyWarning(true);
+      else if([modeKey('canine_os_pet_states_v1'),modeKey('canine_os_dogs_v1')].includes(event.key??'')&&localStorage.getItem(SAVE_KEY))setLegacyWarning(true);
     };
     window.addEventListener('storage',changed);return()=>window.removeEventListener('storage',changed);
   },[refresh]);
@@ -330,7 +339,7 @@ export const App: React.FC = () => {
       if (document.visibilityState !== 'visible' || Date.now() - lastActive > 30_000) return;
       void commitPet(prev=>{
         const now=Date.now(),seconds=Math.max(0,Math.min(SLICE,(now-(prev.lastTogetherAt??now-SLICE*1000))/1000));
-        return seconds?{...prev,together:addTogether(prev.together,seconds,now),lastTogetherAt:now}:prev;
+        return seconds?growCompanion({...prev,together:addTogether(prev.together,seconds,now),lastTogetherAt:now},seconds,now):prev;
       });
     }, SLICE * 1000);
     return () => {
@@ -341,9 +350,12 @@ export const App: React.FC = () => {
 
   // A call shows in the tab title too, so it reaches you in another tab.
   useEffect(() => {
-    const base = 'Canine OS — dog.nonarkara.org';
+    const base = 'Tama-Dog-Chi — dog.nonarkara.org';
     document.title = petState.call ? `● ${currentDog.name} is calling — ${base}` : base;
   }, [petState.call, currentDog.name]);
+
+  const priorSleep=useRef({id:activeDogId,asleep:petState.sleep.asleep});
+  useEffect(()=>{const prev=priorSleep.current;if(prev.id===activeDogId&&prev.asleep&&!petState.sleep.asleep&&gameState(petState,activeDogId).wakeBark&&document.visibilityState==='visible')sound.bark();priorSleep.current={id:activeDogId,asleep:petState.sleep.asleep};},[activeDogId,petState.sleep.asleep,petState.game?.wakeBark]);
 
   /** Say a note once, and then let the content back. */
   const say = (text: string) => {
@@ -363,9 +375,10 @@ export const App: React.FC = () => {
    * exported. So the record follows the model — it is a copy of the truth,
    * written when the truth changes, never a second opinion about it.
    */
-  const handleInteract = async (action: CareAction) => {
+  const handleInteract = async (action: CareAction,part?:TouchPart) => {
     if(isAddDogOpen)return;
     if (interactionBusy.current) return;
+    if(action==='pet')firstGuide.show('pet');
     interactionBusy.current=true;
     const id=activeDogId;
     setIsInteracting(true);setPendingAction(action);
@@ -373,16 +386,20 @@ export const App: React.FC = () => {
     const care=['feed','play','walk','groom'].includes(action)?action as 'feed'|'play'|'walk'|'groom':undefined;
     const next=await commitPet(latest=>{
       if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
-      const result=interact(latest,action,Date.now(),subject);
+      const touched=part?discoverTouch(latest,id,part):latest;
+      const result=interact(touched,action,Date.now(),subject);
       const answer=answerCall(latest,action);
       message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called. Trust +${answer.trustBonus}.`:result.note;
       if(action==='rewardCalm'&&result.state.lastCalmRewardAt===latest.lastCalmRewardAt)trigger=null;
+      if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
+      if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state={...result.state,trust:Math.min(100,result.state.trust+1)};
       if(action==='play'&&(latest.sick||result.state.sleep.asleep))trigger=null;
       return answer.answered?{...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)}:result.state;
     },care);
     if(activeDogRef.current!==id)return;
     if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
     setInteractionTrigger(trigger);say(message);
+    if(action==='walk'&&trigger){setCareExtra(null);setActiveRegion('commons');}
     actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);setInteractionTrigger(null);},2000);
   };
 
@@ -421,7 +438,7 @@ export const App: React.FC = () => {
     if(interactionBusy.current)return;
     interactionBusy.current=true;setIsInteracting(true);
     const id=activeDogId;let message='';
-    const next=await commitPet(latest=>{const result=settleSleep(latest,Date.now(),subject);message=result.note;return result.state;});
+    const next=await commitPet(latest=>{const result=settleSleep({...latest,game:gameState(latest,id)},Date.now(),subject);message=result.note;return result.state;});
     if(activeDogRef.current!==id)return;
     interactionBusy.current=false;setIsInteracting(false);
     if(next)say(message);
@@ -507,7 +524,7 @@ export const App: React.FC = () => {
   const resetToFactoryDefaults = async () => {
     if (window.confirm('Reset all dog profiles to the factory defaults?')) {
       try{await resetProgress();refresh();}catch(error){failedSave(error);return;}
-      selectDog(DEFAULT_DOGS[0].id);
+      selectDog(householdDefaults()[0].id);
       say('Profiles reset to the factory defaults.');
     }
   };
@@ -522,6 +539,7 @@ export const App: React.FC = () => {
   const renderRegion = (key: RegionKey) => {
     switch (key) {
       case 'care':
+        if(careExtra&&!isDogMenuOpen&&!labelsVisible)return <CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>;
         if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
         return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} />;
       case 'coach':
@@ -533,6 +551,7 @@ export const App: React.FC = () => {
               key={activeDogId}
               onPetStateChange={commitPet}
               onPose={performPose}
+              requestedBehaviour={coachRequest}
               busy={isInteracting||isAddDogOpen}
             />
           </Suspense>
@@ -550,7 +569,7 @@ export const App: React.FC = () => {
       case 'commons':
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
-            <CommonsPanel myDog={currentDog} />
+            <CommonsPanel myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onPet={()=>handleInteract('pet')} />
           </Suspense>
         );
     }
@@ -559,14 +578,15 @@ export const App: React.FC = () => {
   const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
-    <div className="cockpit" style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className="cockpit" onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
         <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
-          <span className="hidden sm:inline font-display text-[15px] text-white shrink-0">
-            Dog days
+          <span className="app-brand font-display text-[15px] text-white shrink-0">
+            <a href="/" aria-label="Tama-Dog-Chi modes">Tama-Dog-Chi</a>
           </span>
 
+          {playMode()==='own'&&<span className="owned-growth" title="Game growth: one minute of active attention on each of seven different days.">{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7</span>}
           {/* The chooser uses the existing Care region instead of covering the dog. */}
           <div className="relative shrink-0">
             <button
@@ -585,8 +605,9 @@ export const App: React.FC = () => {
 
           </div>
 
+          <button type="button" className="btn-quiet park-navigation" aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>{setIsDogMenuOpen(false);setLabelsVisible(false);setActiveRegion(activeRegion==='commons'?'care':'commons');}}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
           {/* The facts about the dog you are with. */}
-          <p className="min-w-0 flex-1 truncate text-[12px] text-zinc-400">
+          <p className="header-dog-facts min-w-0 flex-1 truncate text-[12px] text-zinc-400">
             <span className="text-zinc-300">{currentDog.breed}</span>
             <span className="text-zinc-600"> / </span>
             <span className="data">{starterAge?'Age unverified':age.formattedCalendarAge}</span>
@@ -615,9 +636,10 @@ export const App: React.FC = () => {
         aria-busy={!workspaceReady}
         data-study-ready={workspaceReady}
         className={`cockpit-workspace ${
-          isWide ? 'cockpit-workspace--wide' : 'cockpit-workspace--tall'
+          activeRegion==='commons' ? 'cockpit-workspace--park' : isWide ? 'cockpit-workspace--wide' : 'cockpit-workspace--tall'
         }`}
       >
+        {activeRegion==='commons' ? <>{renderRegion('commons')}{firstGuide.tip&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}</> : <>
         {/* The animal. The biggest region on the screen, and the one the
             reader came for. */}
         <section className="panel region-stage" aria-label={`${currentDog.name}, live avatar`}>
@@ -650,7 +672,8 @@ export const App: React.FC = () => {
                     pose={avatarPose}
                     poseRequest={poseRequest}
                     onPoseComplete={completePose}
-                    onPet={() => handleInteract('pet')}
+                    onPet={(part) => handleInteract('pet',part)}
+                    onTeachFetch={()=>{setCareExtra(null);setCoachRequest('fetch');setActiveRegion('coach');}}
                     onClean={() => handleInteract('clean')}
                     controlsHost={gameControlsHost}
                     onCare={handleInteract}
@@ -680,7 +703,8 @@ export const App: React.FC = () => {
             </div>
 
             {/* Feedback has its own row: never place text over the dog. */}
-            <div className="stage-note-slot" data-open={!!stageNote}>
+            <div className={`stage-note-slot ${firstGuide.tip&&!saveError?'stage-note-slot--guide':''}`} data-open={!!stageNote||!!firstGuide.tip}>
+            {firstGuide.tip&&!saveError&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}
             {stageNote && (
               <div className="bar bar--note" role="status" key={stageNote.id}>
                 <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={stageNote.text}>
@@ -704,9 +728,8 @@ export const App: React.FC = () => {
         {isWide ? (
           <>
             {renderRegion('care')}
-            {renderRegion('coach')}
-            {renderRegion('commons')}
-            {renderRegion('record')}
+            <div className="desktop-region-tabs" role="tablist" aria-label="Desktop tools">{(['coach','record'] as const).map(key=><button key={key} type="button" role="tab" aria-label={key==='coach'?'Coach':'Record'} aria-selected={(activeRegion==='record'?'record':'coach')===key} onClick={()=>setActiveRegion(key)}>{key==='coach'?<GraduationCap size={18}/>:<BookOpen size={18}/>}<span>{key==='coach'?'Coach':'Record'}</span></button>)}</div>
+            <div className="desktop-detail">{renderRegion(activeRegion==='record'?'record':'coach')}</div>
           </>
         ) : (
           <>
@@ -723,7 +746,7 @@ export const App: React.FC = () => {
                     title={r.label}
                     aria-selected={active}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => {setIsDogMenuOpen(false);setLabelsVisible(false);setActiveRegion(r.key);}}
+                    onClick={() => {setIsDogMenuOpen(false);setLabelsVisible(false);setCareExtra(null);setActiveRegion(r.key);}}
                     className={`flex-1 min-h-9 px-1 text-[11px] border-hairline-r last:border-hairline-r-0 ${
                       active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
                     }`}
@@ -739,6 +762,7 @@ export const App: React.FC = () => {
           </>
         )}
 
+        </>}
         {/* ---- enroll a dog, as a bar ---------------------------------------
             It lives INSIDE the workspace, so it sits on top of the content
             and directly above the command bar — never over the controls, and
@@ -837,17 +861,17 @@ export const App: React.FC = () => {
       </main>
 
       {/* ---- the controls ---------------------------------------------------- */}
-      <CommandBar
+      {activeRegion!=='commons'&&<CommandBar
         labelsVisible={labelsVisible}
         onToggleLabels={toggleLabels}
         dog={currentDog}
         petState={petState}
         isInteracting={isInteracting||isAddDogOpen}
         pendingAction={pendingAction}
-        onInteract={handleInteract}
+        onInteract={action=>{if(action==='feed'){setCareExtra('food');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}else void handleInteract(action);}}
         onCommunicate={handleCommunicate}
-        onBed={handleBed}
-      />
+        onBed={()=>{setCareExtra('bed');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}
+      />}
     </div>
   );
 };

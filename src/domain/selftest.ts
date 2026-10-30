@@ -1,3 +1,7 @@
+import {growCompanion,growthStage} from './growth';
+import {gameState,buyFood,takeMeal,fetchLearned,discoverTouch,socialize,TOUCH_PREFERENCES} from './companionGame';
+import {DOG_BEHAVIOURS,behaviourPool,chooseBehaviour} from '../components/dogBehaviour';
+import {newIdle,stepIdle,idlePool,idleWeight, type IdleContext} from '../components/fallbackIdle';
 import {recordSources,recordExport} from '../utils/recordProvenance';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
 /**
@@ -231,8 +235,8 @@ const fed = interact(hungry, 'feed').state;
 ok('feeding a hungry dog fills him', fed.needs.hunger > hungry.needs.hunger, `got ${fed.needs.hunger}`);
 const full = createPetState();
 full.needs.hunger = 90;
-const fedWhenFull = interact(full, 'feed').state;
-ok('feeding a full dog lowers the value of food as a reward', fedWhenFull.personality.foodDrive < full.personality.foodDrive);
+const fedWhenFull = interact(full, 'feed',full.updatedAt).state;
+ok('a full belly saves the meal instead of overfeeding or erasing training',fedWhenFull.needs.hunger===full.needs.hunger&&gameState(fedWhenFull).portions===gameState(full).portions&&JSON.stringify(fedWhenFull.behaviours)===JSON.stringify(full.behaviours));
 const petted = interact(createPetState(), 'pet').state;
 ok('petting without a request raises trust', petted.trust > 60);
 
@@ -328,6 +332,17 @@ ok('Mali sterilisation is a supplied fact, not a starter assumption',!recordSour
 const sourceExport=recordExport(sourceExpo);
 ok('source detection and export preserve every original value',JSON.stringify(sourceExpo)===sourceBefore&&sourceExport.vaccinations===sourceExpo.vaccinations&&sourceExport.medicalHistory===sourceExpo.medicalHistory&&sourceExport.microchipId===sourceExpo.microchipId);
 ok('record export carries unverified-source qualification',sourceExport.recordSources.notice.includes('unverified')&&sourceExport.recordSources.starterExamples.fields.includes('microchipId'));
+const idleContext:IdleContext={reduced:false,asleep:false,sick:false,busy:false,standing:true,energy:.8,trust:.9,arousal:.8,fullness:.8};
+let lifeIdle=newIdle(()=>.5);for(let t=0;t<60;t+=.05)lifeIdle=stepIdle(lifeIdle,t,idleContext,()=>.5);
+ok('fallback idle theatre repeats after completed acts and quiet intervals',lifeIdle.starts>=5);
+const bowIdle=stepIdle(newIdle(()=>0),3,idleContext,()=>.99),endedBow=stepIdle(bowIdle,3+bowIdle.dur+.01,idleContext,()=>.99);
+ok('finished bow clears its state and tail override',bowIdle.name==='bow'&&endedBow.name==='none'&&idleWeight(endedBow,6)===0);
+ok('tired or low-trust dogs cannot select playful bow or hop',!idlePool({...idleContext,energy:.1}).includes('bow')&&!idlePool({...idleContext,trust:.2}).includes('hop'));
+let asleepIdle=stepIdle(newIdle(),0,{...idleContext,asleep:true});
+const deferredWake=stepIdle(asleepIdle,1,{...idleContext,busy:true}),freeWake=stepIdle(deferredWake,3,idleContext);
+ok('wake stretch waits until care finishes',deferredWake.name==='none'&&deferredWake.wakePending&&freeWake.name==='stretch');
+ok('reduced motion suppresses waking stretch',stepIdle(asleepIdle,1,{...idleContext,reduced:true}).name==='none');
+ok('training/calm/sickness interrupt active idle motion',stepIdle(bowIdle,3.5,{...idleContext,busy:true}).name==='none'&&stepIdle(bowIdle,3.5,{...idleContext,sick:true}).name==='none');
 console.log('\nTHE PRACTICE FIELD');
 const L: Lesson = { ...newLesson(), stage: 3, skill: 0.5 };
 const clean = scoreTrial(L, { responded: true, cueCount: 1, markDelayMs: 100, treatDelayMs: 800 });
@@ -490,6 +505,43 @@ const brokenRest={...wired,sleep:{...wired.sleep,restlessness:2.2}};
 ok('old over-range restlessness cannot prolong the deadlock',decay(brokenRest,noon+4*60*minute).sleep.asleep);
 ok('waking always keeps restlessness within its 0–1 scale',interact({...wired,sleep:{...wired.sleep,asleep:true,restlessness:.98,fellAsleepAt:noon}},'pet',noon).state.sleep.restlessness<=1);
 ok('quiet recovery never raises an already calm dog’s arousal',decay({...lifeStart,arousal:5},noon+minute).arousal<=5);
+
+console.log('\nHousehold, pantry, personality and everyday behavior');
+ok('only the requested five starters are playable',DEFAULT_DOGS.length===5&&!DEFAULT_DOGS.some(d=>['bangal-2023','companion-dog-2'].includes(d.id)));
+const pantry=createPetState(noon),earned={...pantry,together:{day:'2026-10-30',todaySec:120,totalSec:120,streak:1}};
+const credited={...earned,game:gameState(earned)};
+ok('two active minutes earn six coins exactly once',gameState(earned).coins===24&&gameState(credited).coins===24);
+const bought=buyFood(credited).state;
+ok('buying a pouch exchanges six coins for three meals',gameState(bought).coins===18&&gameState(bought).portions===6);
+ok('insufficient money cannot buy food',buyFood({...pantry,game:{...gameState(pantry),coins:0}}).state.game?.coins===0);
+const hungryPantry={...pantry,needs:{...pantry.needs,hunger:20},game:{...gameState(pantry),coins:0,portions:0}};
+ok('hungry dog always has an emergency meal without money',takeMeal(hungryPantry).allowed);
+ok('ordinary meal consumes one portion',gameState(interact({...pantry,needs:{...pantry.needs,hunger:40}},'feed',noon).state).portions===2);
+ok('starter dog does not catch before fetch practice',!fetchLearned(pantry));
+ok('actual virtual fetch progress enables catching',fetchLearned({...pantry,lessons:{fetch:{...newLesson(),skill:.5}}}));
+const found=discoverTouch(pantry,'oreo-frenchie','back');
+ok('touch discoveries persist per dog without duplicate entries',discoverTouch(found,'oreo-frenchie','back').game?.touchDiscoveries.length===1&&TOUCH_PREFERENCES['oreo-frenchie']!==TOUCH_PREFERENCES['paolo-pug']);
+const hello=socialize(pantry,noon);
+ok('social greeting grows gently and cannot farm repeated frames',hello.personality.sociability>pantry.personality.sociability&&socialize(hello,noon+1000)===hello);
+ok('sleeping dog cannot socialize',socialize({...pantry,sleep:{...pantry.sleep,asleep:true}},noon).game===undefined);
+ok('repertoire has twenty distinct expressions',DOG_BEHAVIOURS.length===20&&new Set(DOG_BEHAVIOURS).size===20);
+ok('sleep has no playful idle candidates',behaviourPool({...pantry,sleep:{...pantry.sleep,asleep:true}}).every(b=>b==='sleeping'));
+ok('low energy never selects zooming or play bow',!behaviourPool({...pantry,needs:{...pantry.needs,energy:10}}).some(b=>['trotting','play-bow'].includes(b)));
+ok('lonely dog seeks contact',behaviourPool({...pantry,call:{reason:'lonely',since:noon}}).includes('paw-screen'));
+ok('random idle choice does not immediately repeat',chooseBehaviour(pantry,'watching',()=>0).kind!=='watching');
+const earlyRiser={...pantry,game:{...gameState(pantry),wakeMinute:360},sleep:{...pantry.sleep,asleep:true,fellAsleepAt:new Date(2026,9,29,22).getTime()},updatedAt:new Date(2026,9,30,5,55).getTime(),needs:{...pantry.needs,energy:90}};
+const lateSleeper={...earlyRiser,game:{...gameState(earlyRiser),wakeMinute:450}};
+ok('individual wake habits separate early and late sleepers',!decay(earlyRiser,new Date(2026,9,30,6,5).getTime()).sleep.asleep&&decay(lateSleeper,new Date(2026,9,30,6,5).getTime()).sleep.asleep);
+
+const puppy={...createPetState(noon),growth:{adoptedAt:noon,seed:'test-owner',careDays:[],day:'2026-10-30',daySeconds:0}};
+const firstDay=growCompanion(puppy,60,noon),sameDay=growCompanion(firstDay,60,noon+1000);
+ok('owned puppy starts smaller with an independent identity',growthStage(puppy).name==='Puppy'&&growthStage(puppy).scale<.7);
+ok('active care earns one growth day, not repeated tapping',firstDay.growth?.careDays.length===1&&sameDay.growth?.careDays.length===1);
+ok('idle absence alone never grows a puppy',growthStage(decay(puppy,noon+24*60*minute)).progress===0);
+let grown:PetState=puppy;for(let day=0;day<7;day++)grown=growCompanion(grown,60,noon+day*24*60*minute);
+ok('seven distinct care days reach full size',growthStage(grown).name==='Adult'&&growthStage(grown).scale===1);
+const petter=interact(pantry,'pet',noon).state,walker=interact(pantry,'walk',noon).state;
+ok('care histories shape different personalities',petter.personality.sociability>walker.personality.sociability&&walker.personality.boldness>petter.personality.boldness);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

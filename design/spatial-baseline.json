@@ -16,6 +16,9 @@
     296,
     297,
     298,
+    329,
+    330,
+    331,
     360,
     390,
     419,
@@ -74,10 +77,10 @@
   },
   "exempt": [],
   "provenance": {
-    "measuredAt": "2026-10-29T23:49:44.014Z",
-    "measurements": 41,
-    "routes": 1,
-    "widths": 41,
+    "measuredAt": "2026-10-30T08:29:18.526Z",
+    "measurements": 132,
+    "routes": 3,
+    "widths": 44,
     "measuredTogether": true,
     "carriedOver": []
   },
@@ -86,7 +89,1065 @@
       "278": {
         "findings": [],
         "firstAction": {
-          "y": 237,
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "279": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "280": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "296": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "297": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "298": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "329": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "330": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "331": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "360": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "390": {
+        "findings": [],
+        "firstAction": {
+          "y": 816,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "419": {
+        "findings": [],
+        "firstAction": {
+          "y": 815,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "420": {
+        "findings": [],
+        "firstAction": {
+          "y": 815,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "421": {
+        "findings": [],
+        "firstAction": {
+          "y": 815,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "480": {
+        "findings": [],
+        "firstAction": {
+          "y": 813,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "499": {
+        "findings": [],
+        "firstAction": {
+          "y": 969,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "500": {
+        "findings": [],
+        "firstAction": {
+          "y": 969,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "501": {
+        "findings": [],
+        "firstAction": {
+          "y": 968,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "519": {
+        "findings": [],
+        "firstAction": {
+          "y": 968,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "520": {
+        "findings": [],
+        "firstAction": {
+          "y": 968,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "521": {
+        "findings": [],
+        "firstAction": {
+          "y": 968,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "599": {
+        "findings": [],
+        "firstAction": {
+          "y": 966,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "600": {
+        "findings": [],
+        "firstAction": {
+          "y": 966,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "601": {
+        "findings": [],
+        "firstAction": {
+          "y": 965,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "617": {
+        "findings": [],
+        "firstAction": {
+          "y": 965,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "618": {
+        "findings": [],
+        "firstAction": {
+          "y": 965,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "619": {
+        "findings": [],
+        "firstAction": {
+          "y": 965,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "639": {
+        "findings": [],
+        "firstAction": {
+          "y": 964,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "640": {
+        "findings": [],
+        "firstAction": {
+          "y": 964,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "641": {
+        "findings": [],
+        "firstAction": {
+          "y": 964,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "767": {
+        "findings": [],
+        "firstAction": {
+          "y": 961,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "768": {
+        "findings": [],
+        "firstAction": {
+          "y": 960,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "769": {
+        "findings": [],
+        "firstAction": {
+          "y": 960,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1023": {
+        "findings": [],
+        "firstAction": {
+          "y": 953,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1024": {
+        "findings": [],
+        "firstAction": {
+          "y": 953,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1025": {
+        "findings": [],
+        "firstAction": {
+          "y": 953,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1279": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1280": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1281": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1440": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1535": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1536": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1537": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "1920": {
+        "findings": [],
+        "firstAction": {
+          "y": 852,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      }
+    },
+    "/?mode=play": {
+      "278": {
+        "findings": [],
+        "firstAction": {
+          "y": 559,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -100,9 +1161,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -110,7 +1171,7 @@
       "279": {
         "findings": [],
         "firstAction": {
-          "y": 238,
+          "y": 559,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -124,9 +1185,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -134,7 +1195,7 @@
       "280": {
         "findings": [],
         "firstAction": {
-          "y": 239,
+          "y": 559,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -148,9 +1209,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -158,7 +1219,7 @@
       "296": {
         "findings": [],
         "firstAction": {
-          "y": 249,
+          "y": 579,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -172,9 +1233,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -182,7 +1243,7 @@
       "297": {
         "findings": [],
         "firstAction": {
-          "y": 250,
+          "y": 579,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -196,9 +1257,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -206,7 +1267,7 @@
       "298": {
         "findings": [],
         "firstAction": {
-          "y": 251,
+          "y": 579,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -220,9 +1281,81 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "329": {
+        "findings": [],
+        "firstAction": {
+          "y": 579,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 17,
+          "ratio": 0.88,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "330": {
+        "findings": [],
+        "firstAction": {
+          "y": 579,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 17,
+          "ratio": 0.88,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "331": {
+        "findings": [],
+        "firstAction": {
+          "y": 579,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 17,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -230,7 +1363,7 @@
       "360": {
         "findings": [],
         "firstAction": {
-          "y": 292,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -244,9 +1377,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -254,7 +1387,7 @@
       "390": {
         "findings": [],
         "firstAction": {
-          "y": 312,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -268,9 +1401,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -278,7 +1411,7 @@
       "419": {
         "findings": [],
         "firstAction": {
-          "y": 331,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -292,9 +1425,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -302,7 +1435,7 @@
       "420": {
         "findings": [],
         "firstAction": {
-          "y": 332,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -316,9 +1449,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -326,7 +1459,7 @@
       "421": {
         "findings": [],
         "firstAction": {
-          "y": 333,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -340,9 +1473,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -350,7 +1483,7 @@
       "480": {
         "findings": [],
         "firstAction": {
-          "y": 372,
+          "y": 617,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -364,9 +1497,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -374,7 +1507,7 @@
       "499": {
         "findings": [],
         "firstAction": {
-          "y": 385,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -388,9 +1521,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -398,7 +1531,7 @@
       "500": {
         "findings": [],
         "firstAction": {
-          "y": 385,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -412,9 +1545,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -422,7 +1555,7 @@
       "501": {
         "findings": [],
         "firstAction": {
-          "y": 386,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -436,9 +1569,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -446,7 +1579,7 @@
       "519": {
         "findings": [],
         "firstAction": {
-          "y": 398,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -460,9 +1593,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -470,7 +1603,7 @@
       "520": {
         "findings": [],
         "firstAction": {
-          "y": 399,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -484,9 +1617,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -494,7 +1627,7 @@
       "521": {
         "findings": [],
         "firstAction": {
-          "y": 399,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -508,9 +1641,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -518,7 +1651,7 @@
       "599": {
         "findings": [],
         "firstAction": {
-          "y": 451,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -532,9 +1665,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -542,7 +1675,7 @@
       "600": {
         "findings": [],
         "firstAction": {
-          "y": 452,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -556,9 +1689,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -566,7 +1699,7 @@
       "601": {
         "findings": [],
         "firstAction": {
-          "y": 453,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -580,9 +1713,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -590,7 +1723,7 @@
       "617": {
         "findings": [],
         "firstAction": {
-          "y": 463,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -604,9 +1737,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -614,7 +1747,7 @@
       "618": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -628,9 +1761,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -638,7 +1771,7 @@
       "619": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 773,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -652,9 +1785,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -662,7 +1795,7 @@
       "639": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -676,9 +1809,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -686,7 +1819,7 @@
       "640": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -700,9 +1833,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -710,7 +1843,7 @@
       "641": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -724,9 +1857,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -734,7 +1867,7 @@
       "767": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -748,9 +1881,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -758,7 +1891,7 @@
       "768": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -772,9 +1905,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -782,7 +1915,7 @@
       "769": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -796,9 +1929,9 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
@@ -806,7 +1939,7 @@
       "1023": {
         "findings": [],
         "firstAction": {
-          "y": 464,
+          "y": 803,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -820,49 +1953,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1024": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "span.text-[10px].text-faint",
-            "metric": 33,
-            "detail": "span.text-[10px].text-faint hides 33px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "span.truncate.text-[11px]",
-            "metric": 36,
-            "detail": "span.truncate.text-[11px] hides 36px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "p.truncate.text-[11px]",
-            "metric": 38,
-            "detail": "p.truncate.text-[11px] hides 38px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 200,
-            "detail": "dd.min-w-0.truncate hides 200px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 154,
-            "detail": "li.truncate.text-[11px] hides 154px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 195,
+          "sel": "button"
         },
         "chrome": {
           "vh": 1000,
@@ -875,49 +1977,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1025": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "span.text-[10px].text-faint",
-            "metric": 33,
-            "detail": "span.text-[10px].text-faint hides 33px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "span.truncate.text-[11px]",
-            "metric": 36,
-            "detail": "span.truncate.text-[11px] hides 36px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "p.truncate.text-[11px]",
-            "metric": 37,
-            "detail": "p.truncate.text-[11px] hides 37px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 200,
-            "detail": "dd.min-w-0.truncate hides 200px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 153,
-            "detail": "li.truncate.text-[11px] hides 153px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 195,
+          "sel": "button"
         },
         "chrome": {
           "vh": 1000,
@@ -930,31 +2001,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1279": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 157,
-            "detail": "dd.min-w-0.truncate hides 157px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 111,
-            "detail": "li.truncate.text-[11px] hides 111px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -967,31 +2025,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1280": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 157,
-            "detail": "dd.min-w-0.truncate hides 157px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 111,
-            "detail": "li.truncate.text-[11px] hides 111px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1004,31 +2049,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1281": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 157,
-            "detail": "dd.min-w-0.truncate hides 157px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 111,
-            "detail": "li.truncate.text-[11px] hides 111px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1041,31 +2073,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1440": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 131,
-            "detail": "dd.min-w-0.truncate hides 131px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 84,
-            "detail": "li.truncate.text-[11px] hides 84px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1078,31 +2097,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1535": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 115,
-            "detail": "dd.min-w-0.truncate hides 115px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 68,
-            "detail": "li.truncate.text-[11px] hides 68px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1115,31 +2121,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1536": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 115,
-            "detail": "dd.min-w-0.truncate hides 115px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 68,
-            "detail": "li.truncate.text-[11px] hides 68px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1152,31 +2145,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1537": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 114,
-            "detail": "dd.min-w-0.truncate hides 114px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 68,
-            "detail": "li.truncate.text-[11px] hides 68px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1189,31 +2169,18 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
         }
       },
       "1920": {
-        "findings": [
-          {
-            "kind": "clip",
-            "sel": "li.truncate.text-[11px]",
-            "metric": 4,
-            "detail": "li.truncate.text-[11px] hides 4px of its own content"
-          },
-          {
-            "kind": "clip",
-            "sel": "dd.min-w-0.truncate",
-            "metric": 51,
-            "detail": "dd.min-w-0.truncate hides 51px of its own content"
-          }
-        ],
+        "findings": [],
         "firstAction": {
-          "y": 59,
-          "sel": "button.btn.min-h-0"
+          "y": 162,
+          "sel": "button"
         },
         "chrome": {
           "vh": 900,
@@ -1226,11 +2193,1069 @@
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 16,
+          "h1": 15,
           "largest": 17,
-          "ratio": 0.94,
+          "ratio": 0.88,
           "peers": 0,
           "share": 0
+        }
+      }
+    },
+    "/?mode=own": {
+      "278": {
+        "findings": [],
+        "firstAction": {
+          "y": 487,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "279": {
+        "findings": [],
+        "firstAction": {
+          "y": 487,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "280": {
+        "findings": [],
+        "firstAction": {
+          "y": 487,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "296": {
+        "findings": [],
+        "firstAction": {
+          "y": 515,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "297": {
+        "findings": [],
+        "firstAction": {
+          "y": 539,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "298": {
+        "findings": [],
+        "firstAction": {
+          "y": 539,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "329": {
+        "findings": [],
+        "firstAction": {
+          "y": 578,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "330": {
+        "findings": [],
+        "firstAction": {
+          "y": 578,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "331": {
+        "findings": [],
+        "firstAction": {
+          "y": 615,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "360": {
+        "findings": [],
+        "firstAction": {
+          "y": 615,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "390": {
+        "findings": [],
+        "firstAction": {
+          "y": 615,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "419": {
+        "findings": [],
+        "firstAction": {
+          "y": 614,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "420": {
+        "findings": [],
+        "firstAction": {
+          "y": 614,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "421": {
+        "findings": [],
+        "firstAction": {
+          "y": 614,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "480": {
+        "findings": [],
+        "firstAction": {
+          "y": 636,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "499": {
+        "findings": [],
+        "firstAction": {
+          "y": 792,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "500": {
+        "findings": [],
+        "firstAction": {
+          "y": 792,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "501": {
+        "findings": [],
+        "firstAction": {
+          "y": 792,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "519": {
+        "findings": [],
+        "firstAction": {
+          "y": 791,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "520": {
+        "findings": [],
+        "firstAction": {
+          "y": 791,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "521": {
+        "findings": [],
+        "firstAction": {
+          "y": 791,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "599": {
+        "findings": [],
+        "firstAction": {
+          "y": 808,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "600": {
+        "findings": [],
+        "firstAction": {
+          "y": 808,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "601": {
+        "findings": [],
+        "firstAction": {
+          "y": 808,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "617": {
+        "findings": [],
+        "firstAction": {
+          "y": 808,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "618": {
+        "findings": [],
+        "firstAction": {
+          "y": 808,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "619": {
+        "findings": [],
+        "firstAction": {
+          "y": 807,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "639": {
+        "findings": [],
+        "firstAction": {
+          "y": 807,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "640": {
+        "findings": [],
+        "firstAction": {
+          "y": 807,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "641": {
+        "findings": [],
+        "firstAction": {
+          "y": 807,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "767": {
+        "findings": [],
+        "firstAction": {
+          "y": 803,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "768": {
+        "findings": [],
+        "firstAction": {
+          "y": 803,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "769": {
+        "findings": [],
+        "firstAction": {
+          "y": 803,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1023": {
+        "findings": [],
+        "firstAction": {
+          "y": 795,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1024": {
+        "findings": [],
+        "firstAction": {
+          "y": 795,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1025": {
+        "findings": [],
+        "firstAction": {
+          "y": 795,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1279": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1280": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1281": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1440": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1535": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1536": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1537": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
+        }
+      },
+      "1920": {
+        "findings": [],
+        "firstAction": {
+          "y": 694,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 900,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.25
         }
       }
     }

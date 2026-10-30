@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { App } from './App';
+import { Entry } from './components/Entry';
 import './index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
@@ -31,7 +31,7 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 flushSync(() => {
   root.render(
     <React.StrictMode>
-      <App />
+      <Entry />
     </React.StrictMode>
   );
 });

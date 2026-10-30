@@ -1,3 +1,5 @@
+import {householdDefaults,modeKey,playMode,readAdoption,OWN_SAVE_KEY} from './playMode';
+import {dayKey} from '../domain/attention';
 import type {PetState} from '../domain/types';
 import type {DogProfile} from '../types/dog';
 import {createPetState,decay,happiness} from '../domain/pet';
@@ -43,15 +45,15 @@ async function exclusive<T>(work:()=>T):Promise<T>{
 function current(){
   try{
   const raw=readSave(); // Reject damaged canonical data instead of overwriting it with defaults.
-  if(raw)return {version:3 as const,revision:raw.revision,dogs:normalizeDogs(raw.dogs,DEFAULT_DOGS,true),pets:normalizePetStates(raw.pets,true)};
+  if(raw)return {version:3 as const,revision:raw.revision,...(playMode()==='own'?{adoption:readAdoption()}:{}),dogs:normalizeDogs(raw.dogs,householdDefaults(),true),pets:normalizePetStates(raw.pets,true)};
   if(!raw){
     for(const [key,array] of [['canine_os_dogs_v1',true],['canine_os_pet_states_v1',false]] as const){
-      const legacy=localStorage.getItem(key);if(legacy===null)continue;
+      const legacy=localStorage.getItem(modeKey(key));if(legacy===null)continue;
       const parsed=JSON.parse(legacy);
       if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)!==array||Object.values(parsed).some(item=>!item||typeof item!=='object'||Array.isArray(item)))throw new Error('Older saved progress needs recovery; no data was replaced.');
     }
   }
-  return {version:3 as const,revision:0,dogs:loadStoredDogs(DEFAULT_DOGS,true),pets:loadStoredPetStates(true)};
+  return {version:3 as const,revision:0,...(playMode()==='own'?{adoption:readAdoption()}:{}),dogs:loadStoredDogs(householdDefaults(),true),pets:loadStoredPetStates(true)};
   }catch(error){throw new Error('Saved progress needs recovery; no data was replaced.',{cause:error});}
 }
 function write(save:ReturnType<typeof current>){
@@ -63,9 +65,11 @@ export function mutatePet(id:string,update:PetMutation,care?:'feed'|'play'|'walk
   return exclusive(()=>{
     const save=current(),now=Date.now();
     if(!save.dogs.some(dog=>dog.id===id))throw new Error('This dog is no longer in the saved record.');
-    const before=decay(save.pets[id]??createPetState(now),now),next=update(before);
+    let initial=save.pets[id];
+    if(!initial){initial=createPetState(now);const adoption=playMode()==='own'?readAdoption():null;if(adoption)initial={...initial,growth:{adoptedAt:adoption.at,seed:adoption.seed,careDays:[],day:dayKey(now),daySeconds:0}};}
+    const before=decay(initial,now),next=update(before);
     save.pets[id]=next;
-    const lastKey=care&&next!==before?({feed:'lastFed',play:'lastPlayed',walk:'lastWalked',groom:'lastGroomed'} as const)[care]:undefined;
+    const lastKey=care&&next!==before&&!(care==='feed'&&next.needs.hunger<=before.needs.hunger)?({feed:'lastFed',play:'lastPlayed',walk:'lastWalked',groom:'lastGroomed'} as const)[care]:undefined;
     save.dogs=save.dogs.map(dog=>dog.id!==id?dog:{...dog,tamagotchi:{...dog.tamagotchi,
       hunger:next.needs.hunger,energy:next.needs.energy,hygiene:next.needs.hygiene,happiness:Math.round(happiness(next)),
       ...(lastKey?{[lastKey]:now}:{})}});
@@ -76,5 +80,25 @@ export function mutateDogs(update:(latest:DogProfile[])=>DogProfile[]):Promise<v
   return exclusive(()=>{const save=current();save.dogs=update(save.dogs);write(save);});
 }
 export function resetProgress():Promise<void>{
-  return exclusive(()=>{const save=current();save.dogs=DEFAULT_DOGS;save.pets[DEFAULT_DOGS[0].id]=createPetState();write(save);});
+  return exclusive(()=>{const save=current();save.dogs=householdDefaults();delete save.pets[save.dogs[0].id];write(save);});
+}
+
+/** Complete owned-pet backup, including adoption identity and learned personality. */
+export function ownedBackup(){
+ const raw=localStorage.getItem(OWN_SAVE_KEY),save=raw?JSON.parse(raw):null,adoption=readAdoption();
+ if(!validSave(save)||!adoption)throw new Error('No complete owned-dog save is available yet.');
+ return validateOwnedBackup(JSON.stringify({format:'tama-dog-chi-owned-v1',adoption,save}));
+}
+export function validateOwnedBackup(raw:string){
+ const data=JSON.parse(raw),a=data?.adoption;
+ if(data?.format!=='tama-dog-chi-owned-v1'||!validSave(data.save)||!a||typeof a.dogId!=='string'||!Number.isFinite(a.at)||typeof a.seed!=='string'||!DEFAULT_DOGS.some(d=>d.id===a.dogId)||!data.save.dogs.some((d:unknown)=>(d as DogProfile).id===a.dogId))throw new Error('This is not a complete Tama-Dog-Chi owned-dog backup.');
+ const pet=data.save.pets[a.dogId],growth=pet?.growth;
+ const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
+ const personality=object(pet)&&object(pet.personality)?pet.personality:null;
+ if(!object(pet)||!personality||!['boldness','sociability','foodDrive','playDrive','sensitivity'].every(k=>Number.isFinite(personality[k]))||!object(growth)||growth.seed!==a.seed||growth.adoptedAt!==a.at||!Array.isArray(growth.careDays)||growth.careDays.length>7||growth.careDays.some((day:unknown)=>typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))||new Set(growth.careDays).size!==growth.careDays.length||typeof growth.day!=='string'||!Number.isFinite(growth.daySeconds)||Number(growth.daySeconds)<0)throw new Error('This backup is missing the adopted dog’s personality or growth record. Your current dog was not changed.');
+ return data as {format:string;adoption:NonNullable<ReturnType<typeof readAdoption>>;save:ReturnType<typeof current>};
+}
+export function restoreOwnedBackup(raw:string):Promise<void>{
+ const data=validateOwnedBackup(raw);
+ return exclusive(()=>{const old=localStorage.getItem(OWN_SAVE_KEY),existing=old?JSON.parse(old):null;localStorage.setItem(OWN_SAVE_KEY,JSON.stringify({...data.save,adoption:data.adoption,revision:Math.max(data.save.revision,validSave(existing)?existing.revision:0)+1}));});
 }

@@ -1,3 +1,4 @@
+import {TrainingTips} from './TrainingTips';
 import type {CommitPet} from '../utils/progressStore';
 /**
  * THE PRACTICE FIELD.
@@ -44,12 +45,14 @@ interface Props {
   onPetStateChange: CommitPet;
   onPose: PerformPose;
   busy?:boolean;
+  requestedBehaviour?:BehaviourName;
 }
 
 const CHIP = 'min-h-0 h-[24px] px-1 py-0 text-[10px] leading-none';
 
-export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy }) => {
-  const [name, setName] = useState<BehaviourName>('sit');
+export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour }) => {
+  const [name, setName] = useState<BehaviourName>(requestedBehaviour??'sit');
+  useEffect(()=>{if(requestedBehaviour)setName(requestedBehaviour);},[requestedBehaviour]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [status, setStatus] = useState('');
   const [result, setResult] = useState<{ verdict: string; tip: string; score: number; advice: string | null } | null>(null);
@@ -303,14 +306,15 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden border-hairline-t px-2 py-1.5">
-        <p className="label">With the real {dog.name}</p>
+      <details className="practice-real-notes border-hairline-t px-2 py-1.5">
+        <summary className="label">With the real {dog.name} · notes</summary>
         <p className="mt-1 text-[11px] leading-snug text-zinc-300">{real.lure}</p>
         <p className="mt-1 text-[11px] leading-snug text-zinc-400">Common mistake: {real.mistake}</p>
         <p className="mt-1 text-[10px] leading-snug text-faint">
           Reward-based method: Pryor, Don&apos;t Shoot the Dog · Dunbar, lure-reward · AVSAB 2021
         </p>
-      </div>
+      </details>
+      <TrainingTips state={petState}/>
     </div>
   );
 };

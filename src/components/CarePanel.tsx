@@ -1,6 +1,9 @@
+import {ownedBackup} from '../utils/progressStore';
+import {playMode} from '../utils/playMode';
+import {growthStage} from '../domain/growth';
 import {recordSources} from '../utils/recordProvenance';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
-import React from 'react';
+import React, {useRef,useState} from 'react';
 import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -10,6 +13,7 @@ import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
 interface CarePanelProps {
   dog: DogProfile;
   petState: PetState;
+  detailView?:boolean;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -54,7 +58,9 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false }) => {
+  const details=useRef<HTMLDialogElement>(null);
+  const [backupNote,setBackupNote]=useState('');
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -103,12 +109,13 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
   };
 
   return (
-    <section className="panel region-care h-full" aria-label="Care">
+    <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''}`} aria-label="Care">
       <header className="panel-head">
         <h2 className="label text-zinc-300">Care</h2>
-        <span className="truncate text-[11px] text-zinc-500">
+        <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}
         </span>
+        {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
       </header>
 
       <div className="panel-body care-body @container">
@@ -119,12 +126,13 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
               ? m.value > 75 || m.value < 20
               : m.value < LOW_THRESHOLD;
             const value = Math.round(m.value);
+            const warningLabel=m.inverted&&m.value>75?'Wired':m.lowMeans;
             return (
               <div key={m.key} className="care-meter care-meter-reading min-w-0">
                 <div className="care-meter-symbols">
                   <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
                   {isLow && (
-                    <span className="label text-rose-400 truncate">{m.lowMeans}</span>
+                    <span className="label text-rose-400 truncate">{warningLabel}</span>
                   )}
                 </div>
                 <div className="care-meter-value flex items-baseline gap-1">
@@ -140,7 +148,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
                   aria-valuenow={value}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-label={`${m.label}, ${value} percent${isLow ? `, ${m.lowMeans}` : ''}`}
+                  aria-label={`${m.label}, ${value} percent${isLow ? `, ${warningLabel}` : ''}`}
                   className="h-1 w-full overflow-hidden bg-zinc-900"
                 >
                   <div
@@ -169,12 +177,13 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
             <span>{temperament(petState)}</span>
             {isSick ? <span>Sick</span> : poops > 0 ? <span>{poops} mess</span> : null}
           </p>
-          <p className="data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
+          <p className="care-together data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
             Today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
             Total {minutes(petState.together?.totalSec ?? 0)}
           </p>
         </div>
 
+        {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7 care days · your {dog.name}</p><p>One minute of active attention on a new day helps your puppy grow.</p><button type="button" className="btn-quiet" onClick={()=>{try{const data=ownedBackup(),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=`Tama-Dog-Chi-${dog.name}-backup.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
         {/* THE CARE LOG */}
         <div className="care-history border-hairline-t">
           <p className="label">Last</p>
@@ -201,6 +210,10 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState }) => {
           </p>
         </div>
       </div>
+      {!detailView&&<dialog ref={details} className="care-details-dialog" aria-label={`${dog.name} care details`} onClick={e=>{if(e.target===e.currentTarget)details.current?.close();}}>
+        <button type="button" className="btn-quiet care-details-close" onClick={()=>details.current?.close()}>Close ×</button>
+        <CarePanel dog={dog} petState={petState} detailView/>
+      </dialog>}
     </section>
   );
 };

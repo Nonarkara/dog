@@ -44,6 +44,7 @@ import type {
 } from './types';
 
 export type { Observation, ObservationTag };
+import {gameState,takeMeal} from './companionGame';
 import { dailyLife, advanceDailyLife } from './dailyLife';
 import {calmInteraction,calmNeed} from './calm';
 
@@ -364,7 +365,10 @@ function decayStep(state:PetState,now:number):PetState {
     },
   };
   // Morning waking and a restored daytime nap are natural, without manual-wake penalties.
-  if(asleep&&!isNightHour(now)&&next.needs.energy>=65&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=60*60_000){
+  const morning=new Date(now),minute=morning.getHours()*60+morning.getMinutes();
+  const fell=sleep.fellAsleepAt===null?null:new Date(sleep.fellAsleepAt),nightSleep=fell&&(fell.getHours()>=20||fell.getHours()<6);
+  const mayWake=nightSleep?minute>=gameState(state).wakeMinute&&minute<20*60:!isNightHour(now);
+  if(asleep&&mayWake&&next.needs.energy>=65&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=60*60_000){
     next.sleep={...next.sleep,asleep:false,wokenAt:now};
   }
   if(next.calmSince!==undefined&&(calmNeed(next)||next.arousal>55))next.calmSince=undefined;
@@ -387,12 +391,13 @@ function decayStep(state:PetState,now:number):PetState {
  */
 export function readiness(state: PetState): number {
   if (state.sick) return 0; // A sick dog cannot perform or focus on training
-  // `hunger` is FULLNESS: 100 is a full belly. A hungry dog is a dog that will
-  // not work, so a full belly adds to readiness and an empty one subtracts.
+  // `hunger` is FULLNESS. Basic nutrition supports learning; food motivation
+  // eases after a large meal. Neither starvation nor withholding earns a bonus.
   const body = (state.needs.energy / 100) * 0.6 + (state.needs.hunger / 100) * 0.4;
   const bond = 0.7 + 0.3 * (state.trust / 100);
   const arousalBand = 1 - Math.abs(state.arousal - 55) / 100; // too flat or too wired
-  return clamp(body * bond * clamp(arousalBand) * 1.25);
+  const appetite=state.needs.hunger>85?.9:1;
+  return clamp(body * bond * clamp(arousalBand) * 1.25*appetite);
 }
 
 /** The chance the pet performs a behaviour when cued, right now. */
@@ -434,9 +439,9 @@ export function pronouns(subject: Subject | undefined): Pronouns {
  * THE FOUR THINGS YOU CAN DO, AND WHAT THEY COST.
  *
  * Every interaction moves the state, and every one of them can be mistimed.
- * Feeding a pet that is not hungry teaches it that food arrives on demand —
- * it lowers the drive and raises the begging. That is not a punishment the
- * app inflicts; it is a property of the contingency, and the pet shows it.
+ * Meals meet bodily needs. A full belly can reduce the value of food as a
+ * reward, but regular meals never erase learned skills. Numerical trait
+ * changes below are authored game pacing, not a biological measurement.
  */
 export function interact(
   state: PetState,
@@ -481,6 +486,8 @@ export function interact(
     case 'pet': {
       next.life={...dailyLife(next),boredom:Math.max(0,dailyLife(base).boredom-25)};
       next.trust = clamp(base.trust + 4);
+      next.personality.sociability=clampTrait(base.personality.sociability+.015);
+      next.personality.sensitivity=clampTrait(base.personality.sensitivity-.005);
       next.arousal = clamp(base.arousal - 6);
       note =
         base.trust > 70
@@ -489,22 +496,24 @@ export function interact(
       break;
     }
     case 'feed': {
+      const meal=takeMeal(base);if(!meal.allowed)return {state:meal.state,note:meal.note};
+      next.game=meal.state.game;
       // `hunger` here is FULLNESS: 100 is a full belly, 30 an empty one.
-      if (base.needs.hunger < 62) {
+      if (base.needs.hunger < 75) {
         // Fed when he asked. The food is worth something, and worth more.
         next.needs.hunger = clamp(base.needs.hunger + 26);
         next.personality.foodDrive = clampTrait(base.personality.foodDrive + 0.04);
         next.arousal = clamp(base.arousal + 10);
         note =
           base.personality.foodDrive > 0.45
-            ? 'Fed while hungry, and gone at once. Food is worth something, and it is worth more now.'
-            : 'Fed while hungry. Good. Food is worth something, and it is worth more now.';
+            ? 'Fed while hungry, and gone at once. Regular meals keep the body well. Tiny training treats reward a specific action.'
+            : 'Fed while hungry. Good. Regular meals keep the body well. Tiny training treats reward a specific action.';
       } else {
         // Fed when he did not ask. The food loses its value as a reward.
         next.personality.foodDrive = clampTrait(base.personality.foodDrive - 0.08);
         next.arousal = clamp(base.arousal + 8);
         next.weightKg = (base.weightKg ?? 24.8) + 0.15;
-        note = 'Already full. Use tiny training portions from the daily food allowance.';
+        note = 'Nearly full. Save extra food for later; tiny training portions come from the daily allowance.';
       }
       break;
     }
@@ -529,6 +538,7 @@ export function interact(
       break;
     }
     case 'groom': {
+      next.personality.sensitivity=clampTrait(base.personality.sensitivity-.01);
       next.life={...dailyLife(next),peeCount:0};
       next.needs.hygiene = clamp(base.needs.hygiene + 30);
       next.trust = clamp(base.trust + 3);
@@ -568,6 +578,7 @@ export function interact(
       break;
     }
     case 'walk': {
+      next.personality.boldness=clampTrait(base.personality.boldness+.015);
       if (base.sick) {
         note = `${name} is sick and shivering. ${p.subjCap} cannot go on a walk — rest and medicine needed.`;
         break;

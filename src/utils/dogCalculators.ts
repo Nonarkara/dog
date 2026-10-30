@@ -1,3 +1,4 @@
+import {modeKey} from './playMode';
 import { DogProfile, TamagotchiStats } from '../types/dog';
 import type { PetState, Behaviour, BehaviourName, Schedule } from '../domain/types';
 import { createPetState, decay } from '../domain/pet';
@@ -101,10 +102,10 @@ export function getVaccineStatus(dueDateStr: string, now: Date = new Date()): {
   };
 }
 
-const STORAGE_KEY = 'canine_os_dogs_v1';
-const ACTIVE_DOG_KEY = 'canine_os_active_dog_id';
-const PET_STATE_KEY = 'canine_os_pet_states_v1';
-const SCHEMA_KEY = 'canine_os_schema';
+const STORAGE_KEY = modeKey('canine_os_dogs_v1');
+const ACTIVE_DOG_KEY = modeKey('canine_os_active_dog_id');
+const PET_STATE_KEY = modeKey('canine_os_pet_states_v1');
+const SCHEMA_KEY = modeKey('canine_os_schema');
 
 /**
  * THE SCHEMA VERSION.
@@ -326,7 +327,7 @@ export function normalizeDogs(parsed:unknown[],fallback:DogProfile[],strict=fals
 export function loadStoredDogs(fallback: DogProfile[],strict=false): DogProfile[] {
   try {
     const canonical=readSave();
-    if(canonical)return normalizeDogs(canonical.dogs,fallback,strict);
+    if(canonical)return normalizeDogs(canonical.dogs,fallback,strict).filter(d=>!['bangal-2023','companion-dog-2'].includes(d.id));
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
@@ -334,7 +335,7 @@ export function loadStoredDogs(fallback: DogProfile[],strict=false): DogProfile[
 
     const dogs=normalizeDogs(parsed,fallback,strict);
     if(readSchemaVersion()!==SCHEMA_VERSION)writeSchemaVersion();
-    return dogs;
+    return dogs.filter(d=>!['bangal-2023','companion-dog-2'].includes(d.id));
   } catch (e) {
     if(strict)throw e;
     console.warn('Failed to load dogs from localStorage, using fallback', e);

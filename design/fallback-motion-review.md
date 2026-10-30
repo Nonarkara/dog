@@ -1,0 +1,5 @@
+# Review of GLM fallback animation,62ae83c
+
+Scope: verify and repair the additive procedural3D fallback motion. The five primary illustrated dogs remain unchanged. Confirmed source findings: idle acts never reset to none after duration, preventing subsequent acts and retaining bow tail intensity; the bow pool has no energy gate. Additional source paths to verify: waking stretch overrides the earlier cancellation/reduced-motion gate; ear twitches ignore reduced motion; waking during care loses the stretch rather than deferring it. Wag spooling should integrate angular phase instead of multiplying elapsed time by a changing frequency.
+
+Use a bounded state machine for expiry, quiet intervals, mood eligibility and deferred waking. Sleep, sickness, calm practice, petting, training, play and explicit poses own the body. Reduced motion suppresses all new idle/twitch loops. Preserve geometry and the authored illustrated renderer. Verify model invariants and actual rendered fallback wake/cancellation/reduced-motion frames, then review pixels and ship any correction with evidence.

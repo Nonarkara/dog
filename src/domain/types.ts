@@ -220,6 +220,8 @@ export interface SleepState {
 }
 
 export interface PetState {
+  growth?:import('./growth').Growth;
+  game?:import('./companionGame').CompanionGame;
   updatedAt: number;
   needs: Record<NeedKey, number>;
   /** The ledger of consistency: 0..100. */

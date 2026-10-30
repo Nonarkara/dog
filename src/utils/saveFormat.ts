@@ -1,4 +1,5 @@
-export const SAVE_KEY='canine_os_save_v3';
+import {modeKey} from './playMode';
+export const SAVE_KEY=modeKey('canine_os_save_v3');
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 function validPet(value:unknown):boolean{
   if(!object(value)||!object(value.needs)||!object(value.behaviours))return false;

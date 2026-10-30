@@ -1,3 +1,6 @@
+import {growthStage} from '../domain/growth';
+import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
+import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
 import React, { useEffect, useRef, useState } from 'react';
 import {createPortal} from 'react-dom';
 import * as THREE from 'three';
@@ -8,7 +11,7 @@ import type { Interaction } from '../domain/pet';
 import type { AvatarPose, AvatarInteractionTrigger } from './DogAvatar3D';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { artPoseFor, landmarksFor, poseAnchors, type ArtPose } from './illustratedRig';
-import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles} from 'lucide-react';
+import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles,Broom} from 'lucide-react';
 import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
@@ -20,7 +23,8 @@ interface Props extends PerformanceProps {
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
   onCare?: (action: Interaction) => void;
   onBed?: () => void;
-  onPet?: () => void; onClean?: () => void; onMiniGameComplete?: (won: boolean,kind?:'catch'|'find-treat') => void;
+  onTeachFetch?:()=>void;
+  onPet?: (part?:TouchPart) => void; onClean?: () => void; onMiniGameComplete?: (won: boolean,kind?:'catch'|'find-treat') => void;
   fallback: React.ReactNode;
 }
 export const ILLUSTRATIONS: Record<string, string> = {
@@ -36,10 +40,10 @@ const VERTEX = `
   uniform vec2 morphFrom[8],morphTo[8];
   uniform float morphAmount;
   uniform vec2 profile;
-  uniform vec4 motion, more, temperament, fun;
+  uniform vec4 motion, more, temperament, fun, lifeAct;
   uniform vec2 gaze, headPivot, tailPivot;
   uniform vec4 feet, eyes;
-  uniform float legStart, resting, settling;
+  uniform float legStart, resting, settling, puppy;
   float band(float x,float c,float r){return 1.-smoothstep(r*.45,r,abs(x-c));}
   vec2 turn(vec2 p,vec2 pivot,float a){float s=sin(a),c=cos(a);return pivot+mat2(c,-s,s,c)*(p-pivot);}
   void main(){
@@ -68,11 +72,16 @@ const VERTEX = `
     float bow=motion.w*.035*(1.-reduced);
     p.y+=bow*head;
     float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
-    vec2 headPosition=turn(p,headPivot,angle);
+    vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
     headPosition+=vec2(motion.x*.012,more.z*.012+temperament.z*.015);
     p=mix(p,headPosition,head);
     float muzzle=band(original.x,headPivot.x-.12,.095)*band(original.y,headPivot.y-.015,.06);
     p.y+=motion.z*abs(sin(time*16.))*.007*muzzle;
+    p.y+=lifeAct.x*.026*muzzle*(1.-reduced);
+    float ears=band(original.y,.13,.10)*head;
+    p.x+=lifeAct.y*sin(time*17.)*.012*ears*(1.-reduced);
+    p.x+=lifeAct.z*sin(time*18.)*.018*nearBack*(1.-reduced);
+    p.x+=lifeAct.w*sin(time*19.)*.008*torso*(1.-reduced);
     float tail=band(original.x,tailPivot.x,.105)*band(original.y,tailPivot.y,.12);
     vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),sin(time*(motion.x>0.1?13.:3.+temperament.y*5.))*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
     p=mix(p,tailPosition,tail);
@@ -120,6 +129,10 @@ function IllustratedStage(props: Props & {url:string}) {
   const funTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const cheerTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [cheer,setCheer]=useState<{id:number;text:string}|null>(null);
+  const [fetchConfused,setFetchConfused]=useState(false);
+  const [touchMessage,setTouchMessage]=useState('');
+  const touchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const touchRef=useRef('');
   const [ambient,setAmbient]=useState('watching');
   const [toileting,setToileting]=useState(false);
   const toiletUntil=useRef(0),lastPee=useRef(dailyLife(props.petState).lastPeedAt);
@@ -161,11 +174,12 @@ function IllustratedStage(props: Props & {url:string}) {
     const action=props.interactionTrigger;
     if(!action||!ready||failed)return;
     closeFinding();
+    if(action!=='play')setFetchConfused(false);
     if(action==='settle'||action==='scold'||action==='rewardCalm')closeGame();
     if(action!=='pet'||fun.current?.kind==='highfive')stopFun();
     if(action!=='pet')clearCheer();
     if(action==='pet'||action==='groom'||action==='communicate')sound.happyYip();
-    if(action==='pet'){reaction.current.pets++;if(reaction.current.pets%3===0&&fun.current?.kind!=='wiggle')runTrick('wiggle',true);else if(!fun.current)showCheer(`${dog.name} loves that!`);}
+    if(action==='pet'){reaction.current.pets++;if(reaction.current.pets%3===0&&fun.current?.kind!=='wiggle')runTrick('wiggle',true);else if(!fun.current)showCheer(touchRef.current||`${dog.name} loves that!`);}
     if(action==='groom')showCheer('Fresh and fluffy!');
     if(action==='feed')sound.eatCrunch();
     if(action==='rewardCalm')sound.eatCrunch();
@@ -173,6 +187,8 @@ function IllustratedStage(props: Props & {url:string}) {
     if(action==='clean')sound.sweepClean();
     if(action==='medicine')sound.medicineChime();
     if(action==='play'){
+      if(!fetchLearned(latest.current.petState)){setFetchConfused(true);reaction.current.aimX=.4;showCheer('…? What do I do with this ball?');sound.ballBounce();return;}
+      setFetchConfused(false);
       if(gameTimer.current)clearTimeout(gameTimer.current);
       leap.current={direction:0,started:0};
       setGame({round:1,score:0,target:Math.random()<.5?'left':'right',busy:false,result:''});
@@ -184,16 +200,16 @@ function IllustratedStage(props: Props & {url:string}) {
 
   useEffect(()=>()=>{if(gameTimer.current)clearTimeout(gameTimer.current);},[]);
 
-  const pet=(message=`${dog.name} loves that!`)=>{
+  const pet=(message=`${dog.name} loves that!`,part?:TouchPart)=>{
     const now=performance.now();reaction.current.petUntil=now+1800;
-    if(now-reaction.current.lastPet>2300){reaction.current.lastPet=now;latest.current.onPet?.();showCheer(message);}
+    if(now-reaction.current.lastPet>2300){reaction.current.lastPet=now;latest.current.onPet?.(part);showCheer(message);}
   };
   const closeGame=()=>{
     if(gameTimer.current)clearTimeout(gameTimer.current);
     gameRef.current=null;setGame(null);leap.current={direction:0,started:0};
   };
   useEffect(()=>{if(failed){closeGame();closeFinding();stopFun();}},[failed]);
-  useEffect(()=>{if(props.petState.sick||props.petState.sleep?.asleep){closeGame();closeFinding();stopFun();clearCheer();}else if(props.pose&&props.pose!=='stand'){closeGame();closeFinding();stopFun();}},[props.petState.sick,props.petState.sleep?.asleep,props.pose]);
+  useEffect(()=>{if(props.petState.sick||props.petState.sleep?.asleep){setFetchConfused(false);closeGame();closeFinding();stopFun();clearCheer();}else if(props.pose&&props.pose!=='stand'){closeGame();closeFinding();stopFun();}},[props.petState.sick,props.petState.sleep?.asleep,props.pose]);
   const choose=(direction:'left'|'right')=>{
     const current=gameRef.current;if(!current||current.busy)return;
     const hit=current.target===direction,score=current.score+(hit?1:0);
@@ -223,7 +239,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);camera.position.z=3;
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     const rig=landmarksFor(dog.id,'stand');
-    const uniforms={fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
+    const uniforms={puppy:{value:0},fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},lifeAct:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
     renderer.info.autoReset=false;
     const material=new THREE.ShaderMaterial({vertexShader:VERTEX,fragmentShader:FRAGMENT,uniforms,transparent:true,depthTest:false,depthWrite:false});
     const geometry=new THREE.PlaneGeometry(2,2,96,96);
@@ -272,17 +288,24 @@ function IllustratedStage(props: Props & {url:string}) {
       if(x<0||x>1||y<0||y>1||!pixels)return false;
       return pixels[(Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW)))*4+3]>24;
     };
+    const petAt=(event:PointerEvent)=>{
+      const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
+      const part=touchPart(x,y),favorite=TOUCH_PREFERENCES[dog.id]??'chest';
+      const message=part===favorite?`${dog.name} melts into those ${part} scratches!`:`A gentle ${part} stroke… try another spot?`;
+      touchRef.current=message;pet(message,part);setTouchMessage(message);if(touchTimer.current)clearTimeout(touchTimer.current);touchTimer.current=setTimeout(()=>setTouchMessage(''),2200);
+      if(part===favorite)reaction.current.petUntil=performance.now()+2400;
+    };
     let stroking=false;
     const down=(event:PointerEvent)=>{if(hit(event)){
-      stroking=true;canvas.setPointerCapture(event.pointerId);pet();
+      stroking=true;canvas.setPointerCapture(event.pointerId);petAt(event);
       const q=point(event),x=(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,y=(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2;
       if(x<uniforms.headPivot.value.x+.05&&y<uniforms.headPivot.value.y){runTrick('tilt',true);showCheer('Boop!');}
-    }};
-    const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))pet();};
+    }else{const parent=canvas.closest('.illustrated-stage');const button=parent?.querySelector<HTMLButtonElement>('.dog-daily-status button');if(button){const b=button.getBoundingClientRect();if(event.clientX>=b.left&&event.clientX<=b.right&&event.clientY>=b.top&&event.clientY<=b.bottom)button.click();}}};
+    const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))petAt(event);};
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching';let driftX=0,nextGreeting=performance.now()+18000;
+    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextGreeting=performance.now()+18000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       const interval=reduced.matches?1000/6:1000/30;
@@ -299,22 +322,28 @@ function IllustratedStage(props: Props & {url:string}) {
       const free=p.petState.calmSince===undefined&&!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
       // Keep the household's earlier spontaneous greetings alongside daily life.
       if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(personality.idle);}
-      const phase=(t*personality.pace)%44;
-      let idle=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':mood==='tired'?'tired':mood==='bored'?(phase<22?'bored':'sighing'):phase<5?'watching':phase<8?'sniffing':phase<14?'wandering':phase<19?'sitting':phase<22?'stretching':phase<27?'watching':phase<33?'wandering':phase<36?'sniffing':phase<41?'resting':p.petState.needs.energy>55?'trotting':'watching'):'watching';
-      if(reduced.matches&&['wandering','trotting','stretching','sniffing'].includes(idle))idle='watching';
+      if(wasSleeping&&!asleep)wakePending=true;wasSleeping=asleep;
+      if(asleep||p.petState.sick)wakePending=false;
+      if(free&&!asleep&&!p.petState.sick&&wakePending){wakePending=false;wakeStarted=t;}
+      if(free&&t>=dailyUntil){const act=chooseBehaviour(p.petState,dailyAct);dailyAct=act.kind;dailyUntil=t+act.duration/personality.pace;}
+      let idle:string=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':t-wakeStarted<2.3?'stretching':t-wakeStarted<4.6?'yawning':dailyAct):'watching';
+      if(reduced.matches&&!['sleeping','sick','resting','sitting'].includes(idle))idle='watching';
+      const actEase=Math.min(1,Math.max(0,Math.min(dailyUntil-t,1)))*(!free||asleep||p.petState.sick||reduced.matches?0:1);
+      uniforms.lifeAct.value.lerp(new THREE.Vector4(idle==='yawning'?actEase:0,idle==='ear-twitch'?actEase:0,idle==='scratch'?actEase:0,idle==='shake'?actEase:0),1-Math.exp(-dt*5));
       if(ambientLabel!==idle){ambientLabel=idle;setAmbient(idle);}
       const strolling=free&&!reduced.matches&&(idle==='wandering'||idle==='trotting'||idle==='toilet');
       const sniffing=free&&(idle==='sniffing'||idle==='toilet');
       const kind=activeFun?.kind,zoomies=kind==='zoomies',wiggling=kind==='wiggle';
       const petting=now<reaction.current.petUntil||action==='pet'||wiggling;
-      uniforms.fun.value.lerp(new THREE.Vector4(wiggling?personality.wag:0,zoomies?1:0,kind==='tilt'?1:0,personality.pace),1-Math.exp(-dt*9));
+      uniforms.fun.value.lerp(new THREE.Vector4(wiggling||idle==='tail-wag'?personality.wag:0,zoomies?1:0,kind==='tilt'||idle==='head-tilt'?1:0,personality.pace),1-Math.exp(-dt*9));
       const play=!!gameRef.current||action==='play';
-      const target=new THREE.Vector4(petting?1:0,(action==='walk'&&!p.petState.sick)||zoomies||strolling?(idle==='trotting'?1.6:1):0,action==='feed'?1:0,play||idle==='stretching'?1:0);
+      const target=new THREE.Vector4(petting?1:0,(action==='walk'&&!p.petState.sick)||zoomies||strolling?(idle==='trotting'?1.6:1):0,action==='feed'?1:0,play||idle==='stretching'||idle==='play-bow'?1:0);
       uniforms.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*3));
       uniforms.motion.value.lerp(target,1-Math.exp(-dt*10));
-      uniforms.more.value.lerp(new THREE.Vector4(action==='groom'?1:0,action==='communicate'||action==='medicine'||sniffing?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
+      uniforms.more.value.lerp(new THREE.Vector4(action==='groom'||idle==='shake'?1:0,action==='communicate'||action==='medicine'||sniffing||idle==='nose-nudge'?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
       uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),.15);
-      const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'||action==='rewardCalm'?'feed':p.petState.calmSince!==undefined?'down':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'?'paw':kind==='bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
+      if(idle==='looking')uniforms.gaze.value.lerp(new THREE.Vector2(Math.sin(t*.9)*.8,Math.sin(t*.6)*.3),.07);
+      const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'||action==='rewardCalm'?'feed':p.petState.calmSince!==undefined?'down':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'||idle==='paw-screen'?'paw':kind==='bow'||idle==='play-bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
       desiredPose=requested;
       const complete=reduced.matches||now-poseChangedAt>=transitionDuration;
       let step=desiredPose;
@@ -345,12 +374,13 @@ function IllustratedStage(props: Props & {url:string}) {
       outgoing.visible=transition<1&&eased<.5;skin.visible=!outgoing.visible;
       uniforms.settling.value=transition<1?Math.sin(transition*Math.PI)*.5:0;
       outgoingUniforms.settling.value=uniforms.settling.value;
-      outgoingUniforms.fun.value.copy(uniforms.fun.value);outgoingUniforms.motion.value.copy(uniforms.motion.value);outgoingUniforms.more.value.copy(uniforms.more.value);outgoingUniforms.temperament.value.copy(uniforms.temperament.value);outgoingUniforms.gaze.value.copy(uniforms.gaze.value);
+      outgoingUniforms.fun.value.copy(uniforms.fun.value);outgoingUniforms.motion.value.copy(uniforms.motion.value);outgoingUniforms.more.value.copy(uniforms.more.value);outgoingUniforms.lifeAct.value.copy(uniforms.lifeAct.value);outgoingUniforms.temperament.value.copy(uniforms.temperament.value);outgoingUniforms.gaze.value.copy(uniforms.gaze.value);
       uniforms.reduced.value=reduced.matches?1:0;uniforms.time.value=reduced.matches?0:t;
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
       const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*personality.pace:0;
-      const size=(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
+      const growth=growthStage(p.petState);uniforms.puppy.value=1-growth.progress;outgoingUniforms.puppy.value=uniforms.puppy.value;
+      const size=growth.scale*(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
       skin.scale.set((lesson?.facing??(zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1))*size,size,1);
       const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
@@ -373,11 +403,11 @@ function IllustratedStage(props: Props & {url:string}) {
       times.push(now);while(times.length&&now-times[0]>3000)times.shift();
       canvas.dataset.frames=String(++renders);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.drawCalls=String(renderer.info.render.calls);
       canvas.dataset.fps=times.length>2?((times.length-1)*1000/(now-times[0])).toFixed(1):'0';
-      canvas.dataset.mood=mood;canvas.dataset.behaviour=toilet?'toileting':idle;canvas.dataset.travelX=driftX.toFixed(3);canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);
+      canvas.dataset.growth=growth.name;canvas.dataset.growthScale=growth.scale.toFixed(3);canvas.dataset.touchResponse=touchRef.current;canvas.dataset.dailyWeight=uniforms.lifeAct.value.length().toFixed(3);canvas.dataset.mood=mood;canvas.dataset.behaviour=toilet?'toileting':idle;canvas.dataset.travelX=driftX.toFixed(3);canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
-    return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
+    return()=>{disposed=true;if(touchTimer.current)clearTimeout(touchTimer.current);cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
   },[dog.id,url,failed]);
 
   if(failed||!url)return <>{fallback}</>;
@@ -389,25 +419,27 @@ function IllustratedStage(props: Props & {url:string}) {
     bored:{Icon:Bone,text:'Bored… play with me?',action:'play' as const},
     hungry:{Icon:Utensils,text:'A little hungry · feed',action:'feed' as const},
     tired:{Icon:Battery,text:'Sleepy paws · bed time',action:undefined},
-    dirty:{Icon:Sparkles,text:'A little cleanup?',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as 'clean'|'groom'},
+    dirty:{Icon:Broom,text:'A little cleanup?',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as 'clean'|'groom'},
     content:{Icon:Heart,text:'',action:undefined},
   }[mood];
-  const ambientText:Record<string,string>={watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
+  const ambientText:Record<string,string>={looking:'What was that?',yawning:'A little yawn…','ear-twitch':'Did I hear you?','head-tilt':'Hmm?','tail-wag':'Happy you’re here',shake:'Shake it off!',scratch:'An itchy spot…','paw-screen':'Are you there?','nose-nudge':'Hello, you.','play-bow':'Come play!',watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
   return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
-    <div ref={mount} className="w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
+    <div ref={mount} className="dog-art-layer w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
     {!ready&&<p data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center label">Loading {dog.name}’s illustration</p>}
     {game&&dock(<div className="catch-hud flex items-center justify-between text-[11px]">
       <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
       <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
     </div>)}
-    {game?.busy&&<span key={game.round} className={`illustration-ball illustration-ball--${game.target}`} role="img" aria-label={`Ball toward ${game.target}`}/> }
+    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop… ?</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
+    {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
     {finding&&dock(<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>)}
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
     {!game&&!finding&&!cheer&&mood!=='content'&&<div className={`dog-daily-status dog-daily-status--${mood}`} role="status">{needs.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(needs.action!)}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:<span><needs.Icon size={16} aria-hidden="true"/>{needs.text}</span>}</div>}
-    {!game&&!finding&&!cheer&&!trick&&<span className="dog-ambient-caption" aria-live="off">{toileting?'Oops…':ambientText[ambient]}</span>}
+    {!game&&!finding&&!cheer&&!trick&&<span className="dog-ambient-caption" aria-live="off">{touchMessage|| (toileting?'Oops…':ambientText[ambient])}</span>}
     {toileting&&!asleep&&!props.petState.sick&&<span className="dog-pee-drops" aria-label="Having a wee"><Droplets size={20}/></span>}
+    {asleep&&<svg className="dog-blanket" viewBox="0 0 300 90" aria-label="Tucked into a blanket"><path d="M12 25 Q80 8 142 24 Q216 5 286 30 L280 82 L18 82 Z" fill="var(--bg-elevated)" stroke="var(--border-strong)" strokeWidth="2"/><path d="M14 33 Q90 17 147 34 Q218 16 284 38 M58 39 L64 76 M234 39 L230 76" fill="none" stroke="var(--border-dim)" strokeWidth="2"/></svg>}
     {asleep&&<span className="absolute top-[22%] left-[30%] data text-zinc-400" aria-label="Sleeping">z z</span>}
 
     {Array.from({length:Math.min(3,props.petState.poopCount||0)},(_,i)=><button key={i} className="illustration-mess" style={{left:`${65+i*9}%`}} onClick={()=>latest.current.onClean?.()} aria-label="Clean mess"><svg viewBox="0 0 40 36" width="30" height="28"><path d="M6 32Q-2 23 12 21Q3 12 19 11Q13 5 23 2Q22 11 27 14Q36 16 29 22Q44 26 34 32Z" fill="#786049" stroke="#33291f" strokeWidth="2"/></svg></button>)}

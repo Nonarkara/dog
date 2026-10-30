@@ -1,4 +1,4 @@
-# Expo — Dog-Tamagotchi
+# Tama-Dog-Chi
 
 Live production system: [dog.nonarkara.org](https://dog.nonarkara.org)
 
@@ -10,7 +10,13 @@ Live production system: [dog.nonarkara.org](https://dog.nonarkara.org)
 
 ## Overview
 
-Expo is a local-first digital Tamagotchi built around real dogs — featuring Expo and Mali (Thai Bangkaews), Oreo, Paolo and Hachiku, with the older companions retained. It is the kind of digital pet I would have built for myself if I'd had programming skills back when I queued at Loft in Siam Center for one of three Tamagotchis a day at 390 baht.
+The no-scroll entry offers **Play** (the existing household sandbox) and **Own a dog** (a separate browser save). Adopt one of the five as a puppy; a minute of active attention on each of seven different days grows it into an adult. Care changes its own personality. Complete owned-dog backups include adoption identity, growth and training, and can be restored from entry. No account or cookies are needed; a browser profile is one owner.
+
+The dog owns half the desktop width and at least half the phone's working view. Care is a compact six-reading console; history lives in a complete details view. Commons is a dedicated world with zoom buttons, wheel/pinch zoom, direct petting, walking and gentle social encounters. Roster and local simulated chat open on request.
+
+First-use tips explain each main action below the dog and remember what you have already seen. The broom cleans; the pantry starts with food and paw coins, earns coins from active attention, and provides an emergency bowl when a hungry dog runs out. Fetch needs virtual practice before the catch game unlocks. Each dog has its own favorite touch region and wake habit. Wake barking is opt-in while the app is open, not a reliable lock-screen alarm. Sourced humane-training tips distinguish normal appetite from deliberately withholding food. See [implementation decisions and verification](design/handwritten-play-space.md).
+
+Tama-Dog-Chi is a local-first digital pet built around Expo and Mali (Thai Bangkaews), Oreo, Paolo and Hachiku. Bangal and Kofi are retired from the playable household; their existing saved records are retained. It is the kind of digital pet I would have built for myself if I'd had programming skills back when I queued at Loft in Siam Center for one of three Tamagotchis a day at 390 baht.
 
 It fulfills four core objectives:
 
@@ -75,12 +81,12 @@ Also in the household: **Mali** (Expo’s sister, a shorter, broader female Bang
 ## Architecture & Technical Stack
 
 - **Frontend**: React 19 + TypeScript + Vite.
-- **Dog stage**: Five photo-informed illustrated companions, alpha WebP art, an articulated Three.js image mesh, and a 30 fps scheduler. Each has authored standing, sitting, lying, lifted-paw, feeding, affection and sleeping artwork, with registered opaque transitions and staged settling. Hidden tabs pause; reduced-motion mode lowers the render rate and removes looping movement. Customized coats and the older companions retain the procedural 3D renderer; imported models retain their existing path. See [the animation implementation](design/illustrated-animation.md).
+- **Dog stage**: Five photo-informed illustrated companions, alpha WebP art, an articulated Three.js image mesh, and a 30 fps scheduler. Each has authored standing, sitting, lying, lifted-paw, feeding, affection and sleeping artwork, with registered opaque transitions and staged settling. Hidden tabs pause; reduced-motion mode lowers the render rate and removes looping movement. Customized coats and newly enrolled dogs retain the procedural 3D renderer; imported models retain their existing path. See [the animation implementation](design/illustrated-animation.md).
 - **Audio Synthesis**: Zero-latency procedural Web Audio synthesizer for woofs, barks, eating crunches, ball bounces, and happy yips without MP3 latency.
-- **Game design**: Five light personality palettes consulted from Palette’s Wada source combinations; icon-led care, navigation and meters, with a touch-accessible label legend. Josefin Sans display, Source Sans 3 body and JetBrains Mono for data. The dog remains the visual focus; no decorative gradients or card effects. See [palette provenance](design/personality-palettes.md).
+- **Game design**: Five light personality palettes consulted from Palette’s Wada source combinations; icon-led care, navigation and meters, with a touch-accessible label legend. Owner-supplied Non Architecture handwriting: uppercase labels and mixed-case reading, with a Thai fallback. The dog remains the visual focus; no decorative gradients or card effects. See [palette provenance](design/personality-palettes.md).
 - **Psychology Model**: Operant conditioning (marker timing, continuous/fixed/variable ratio schedules, diminishing returns, shaping, readiness-to-advance coach) and classical conditioning (cue-outcome pairing with expiry) — self-tested in `src/domain/selftest.ts`.
 - **One model, one number**: needs decay is owned by the domain (`decay()`), applied on load and on a timer. Happiness is *computed* from the other five numbers, never stored twice. The record mirrors the model; it does not keep a second opinion.
-- **Storage**: One atomic, versioned LocalStorage save holds records and pet progress. A brief IndexedDB mutex serializes writers across tabs; actions always read the latest saved dog. Older saves migrate once and remain available for recovery. Old running tabs cannot overwrite the new format and should be reloaded before play continues there. [Concurrency method and verification](design/concurrent-progress.md).
+- **Storage**: Separate atomic, versioned LocalStorage saves hold Play and Own records and progress. A brief IndexedDB mutex serializes writers across tabs; actions always read the latest saved dog. Older saves migrate once and remain available for recovery. Old running tabs cannot overwrite the new format and should be reloaded before play continues there. [Concurrency method and verification](design/concurrent-progress.md).
 - **Photogrammetry & 3D Pipeline**: The app runs **no** reconstruction. The Pipeline and Tools regions are an honest reference: the open-source workflow an operator runs on a machine, stage by stage. Built-in drag-and-drop `.glb` / `.gltf` model importer attaches a custom model to the record.
 - **Deployment**: Cloudflare Workers with Static Assets binding deployed to custom domain `dog.nonarkara.org`.
 

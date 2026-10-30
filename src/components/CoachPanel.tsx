@@ -47,6 +47,7 @@ export interface CoachPanelProps {
   /** The practice field moves the dog on the stage. */
   onPose?: PerformPose;
   busy?:boolean;
+  requestedBehaviour?:BehaviourName;
 }
 
 /** Where a rep is in its life. */
@@ -90,10 +91,11 @@ const clock = (iso: string): string => {
 const signed = (value: number): string =>
   `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)}`;
 
-export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange, onPose,busy }) => {
+export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour }) => {
   /** PRACTICE trains the dog on the stage; LOG records reps with the real one. */
   const [mode, setMode] = useState<'practice' | 'log'>('practice');
-  const [behaviourName, setBehaviourName] = useState<BehaviourName>('sit');
+  const [behaviourName, setBehaviourName] = useState<BehaviourName>(requestedBehaviour??'sit');
+  useEffect(()=>{if(requestedBehaviour)setBehaviourName(requestedBehaviour);},[requestedBehaviour]);
   const [cueText, setCueText] = useState('');
   const [phase, setPhase] = useState<RepPhase>('idle');
   const [real, setReal] = useState(true);
@@ -369,7 +371,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
       </div>
 
       {mode === 'practice' ? (
-        <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (async () => null)} busy={busy}/>
+        <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (async () => null)} requestedBehaviour={requestedBehaviour} busy={busy}/>
       ) : (
       <div className="panel-body coach-log">
         {/* ---- all eight behaviours ----------------------------------------- */}

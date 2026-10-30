@@ -1,8 +1,10 @@
+import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { MessageSquare, TriangleAlert, Upload, X } from 'lucide-react';
+import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown } from 'lucide-react';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
-import { METAVERSE_NEIGHBORS } from '../data/defaultDogs';
+import type {PetState} from '../domain/types';
+import { DEFAULT_DOGS, METAVERSE_NEIGHBORS } from '../data/defaultDogs';
 import { sound } from '../utils/proceduralAudio';
 
 /**
@@ -26,6 +28,9 @@ import { sound } from '../utils/proceduralAudio';
 
 export interface CommonsPanelProps {
   myDog: DogProfile;
+  onPet?: () => void;
+  petState?:PetState;
+  onSocialize?:()=>void;
 }
 
 /* ------------------------------------------------------------------ types */
@@ -76,6 +81,7 @@ interface NeighborEntry {
 interface SceneApi {
   spawnNeighbor: (nbr: MetaverseNeighborDog) => void;
   removeNeighbor: (id: string) => void;
+  pet: (id: string) => void;
 }
 
 /* ------------------------------------------------------------- seed lines */
@@ -219,7 +225,18 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize }) => {
+  const heartRef=useRef<HTMLDivElement>(null);
+  const stateRef=useRef(petState);stateRef.current=petState;
+  const socialRef=useRef(onSocialize);socialRef.current=onSocialize;
+  const [drawer,setDrawer]=useState<'dogs'|'chat'|null>(null);
+  const [zoom,setZoom]=useState(9);
+  const zoomRef=useRef(9);
+  const petCallback=useRef(onPet);petCallback.current=onPet;
+  const focusRef=useRef<string|null>(null);
+  const petTimes=useRef(new Map<string,number>());
+  const lastPet=useRef(-Infinity);
+  const changeZoom=(distance:number)=>{const next=Math.max(4,Math.min(28,distance));zoomRef.current=next;setZoom(next);};
   const mountRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
@@ -399,9 +416,25 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
     const haloMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.6, 16), haloMat);
     halo.rotation.x = Math.PI / 2;
-    halo.position.set(0, 2.2, 0);
+    halo.position.set(0, .025, 0);
     myDogGroup.add(halo);
 
+    const artFiles:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
+    const textures:THREE.Texture[]=[];let disposed=false;
+    let ownArt:THREE.Sprite|null=null;
+    const artFile=artFiles[myDog.id];
+    const starter=DEFAULT_DOGS.find(d=>d.id===myDog.id);
+    const originalCoat=starter&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>starter.avatarConfig[k]===myDog.avatarConfig[k]);
+    if(artFile&&originalCoat&&!myDog.avatarConfig.customModelUrl){
+      new THREE.TextureLoader().load(`/dogs/${artFile}.webp`,texture=>{
+        if(disposed){texture.dispose();return;}
+        texture.colorSpace=THREE.SRGBColorSpace;textures.push(texture);
+        ownArt=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.15}));
+        ownArt.scale.set(3.3,3.3,1);ownArt.position.set(0,1.45,0);
+        myDogGroup.children.forEach(child=>{if(child!==halo)child.visible=false;});
+        myDogGroup.add(ownArt);
+      });
+    }
     /* ---------------------------------------------------- neighbour spawning */
 
     const disposeObject = (obj: THREE.Object3D) => {
@@ -478,36 +511,34 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       spawnedRef.current.add(v.id);
     });
 
-    sceneApiRef.current = { spawnNeighbor, removeNeighbor };
+    const petDog=(id:string)=>{
+      setSelectedId(id);focusRef.current=id;
+      if(id===`you-${myDog.id}`&&(stateRef.current?.sick||stateRef.current?.sleep.asleep)){setNote(`${myDog.name} is resting. Gentle company for now.`);return;}
+      const now=performance.now();if(now-lastPet.current<900)return;
+      lastPet.current=now;petTimes.current.set(id,now);sound.happyYip();
+      if(id===`you-${myDog.id}`)petCallback.current?.();
+    };
+    sceneApiRef.current = { spawnNeighbor, removeNeighbor, pet:petDog };
 
     /* ---------------------------------------------------------- the pointer */
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
-    const handleCanvasClick = (e: MouseEvent) => {
+    const handleCanvasClick = (e: MouseEvent, stroke=false) => {
       const rect = gl.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
 
-      // A neighbour: select it.
-      for (const nbr of neighborMeshesRef.current) {
-        if (raycaster.intersectObjects(nbr.group.children, true).length > 0) {
-          setSelectedId(nbr.data.id);
-          sound.bark();
-          return;
-        }
-      }
+      const targets=[{id:`you-${myDog.id}`,group:myDogGroup},...neighborMeshesRef.current.map(n=>({id:n.data.id,group:n.group}))];
+      const closest=targets.flatMap(target=>raycaster.intersectObject(target.group,true).filter(hit=>hit.object.visible).map(hit=>({id:target.id,distance:hit.distance}))).sort((a,b)=>a.distance-b.distance)[0];
+      if(closest){petDog(closest.id);return;}
 
-      // Your own dog: select it.
-      if (raycaster.intersectObject(myDogGroup, true).length > 0) {
-        setSelectedId(`you-${myDog.id}`);
-        sound.bark();
-        return;
-      }
-
+      if(stroke)return;
+      if(stateRef.current?.sleep.asleep||stateRef.current?.sick){setNote(`${myDog.name} is resting. Walk after a nap or recovery.`);return;}
+      focusRef.current=null;
       // The ground: run there.
       const groundHits = raycaster.intersectObject(ground);
       if (groundHits.length > 0) {
@@ -518,7 +549,23 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       }
     };
 
-    gl.domElement.addEventListener('click', handleCanvasClick);
+    // Pinch and wheel change camera distance; a stroke pets the dog under the pointer.
+    const pointers=new Map<number,{x:number;y:number}>();let pinchDistance=0,suppressClick=false,pinching=false;
+    const down=(e:PointerEvent)=>{if(!pointers.size){suppressClick=false;pinching=false;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gl.domElement.setPointerCapture(e.pointerId);if(pointers.size>1){suppressClick=true;pinching=true;}};
+    const move=(e:PointerEvent)=>{
+      if(!pointers.has(e.pointerId))return;
+      const old=pointers.get(e.pointerId)!;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pointers.size===2){const [a,b]=[...pointers.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinchDistance)changeZoom(zoomRef.current*pinchDistance/d);pinchDistance=d;}
+      else if(!pinching&&Math.hypot(old.x-e.clientX,old.y-e.clientY)>2){suppressClick=true;handleCanvasClick(e,true);}
+    };
+    const up=(e:PointerEvent)=>{pointers.delete(e.pointerId);pinchDistance=0;};
+    const click=(e:MouseEvent)=>{if(!suppressClick)handleCanvasClick(e);suppressClick=false;};
+    const wheel=(e:WheelEvent)=>{e.preventDefault();changeZoom(zoomRef.current*Math.exp(e.deltaY*.001));};
+    gl.domElement.style.touchAction='none';
+    gl.domElement.addEventListener('click',click);
+    gl.domElement.addEventListener('pointerdown',down);gl.domElement.addEventListener('pointermove',move);
+    gl.domElement.addEventListener('pointerup',up);gl.domElement.addEventListener('pointercancel',up);
+    gl.domElement.addEventListener('wheel',wheel,{passive:false});
 
     const handleContextLost = (e: Event) => {
       e.preventDefault();
@@ -554,7 +601,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
 
     /* ------------------------------------------------------------- the loop */
 
-    const clock = new THREE.Clock();
+    const clock = new THREE.Clock();let lastSocial=-Infinity;
 
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
@@ -562,7 +609,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       const elapsed = clock.getElapsedTime();
 
       let manualMove = false;
-      const speed = 7.0 * delta;
+      const resting=!!stateRef.current?.sleep.asleep||!!stateRef.current?.sick;
+      const speed = resting?0:7.0 * delta;
       if (keysPressed['w'] || keysPressed['arrowup']) {
         myDogPos.current.z -= speed;
         myDogPos.current.targetZ = myDogPos.current.z;
@@ -602,19 +650,30 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       myDogGroup.rotation.y = myDogPos.current.angle;
 
       const isMoving =
-        Math.abs(myDogPos.current.targetX - myDogPos.current.x) > 0.1 || manualMove;
+        !resting&&(Math.hypot(myDogPos.current.targetX-myDogPos.current.x,myDogPos.current.targetZ-myDogPos.current.z)>.1||manualMove);
       dogBody.position.y = isMoving ? 0.65 + Math.abs(Math.sin(elapsed * 12)) * 0.1 : 0.65;
 
-      camera.position.x += (myDogPos.current.x - camera.position.x) * 0.05;
-      camera.position.z += (myDogPos.current.z + 18 - camera.position.z) * 0.05;
-      camera.lookAt(myDogPos.current.x, 0.8, myDogPos.current.z);
+      const focus=neighborMeshesRef.current.find(n=>n.data.id===focusRef.current)?.group.position??myDogGroup.position;
+      const distance=zoomRef.current;
+      camera.position.x += (focus.x - camera.position.x) * .07;
+      camera.position.y += (distance*.68 - camera.position.y) * .07;
+      camera.position.z += (focus.z + distance - camera.position.z) * .07;
+      camera.lookAt(focus.x, .8, focus.z);
+      const ownPet=Math.max(0,1-(performance.now()-(petTimes.current.get(`you-${myDog.id}`)??-Infinity))/1800);
+      myDogGroup.scale.setScalar((stateRef.current?growthStage(stateRef.current).scale:1)*(1+Math.sin(ownPet*Math.PI*4)*ownPet*.035));
+      halo.visible=ownPet>0||selectedIdRef.current===`you-${myDog.id}`;
+      gl.domElement.dataset.zoom=distance.toFixed(2);gl.domElement.dataset.lastPet=String(lastPet.current);
+      gl.domElement.dataset.petDog=focusRef.current??'';
+      const screen=myDogGroup.position.clone().add(new THREE.Vector3(0,1,0)).project(camera);
+      gl.domElement.dataset.dogX=String((screen.x+1)*container.clientWidth/2);gl.domElement.dataset.dogY=String((1-screen.y)*container.clientHeight/2);
 
+      if(ownArt)ownArt.position.y=1.45+(isMoving?Math.abs(Math.sin(elapsed*9))*.08:Math.sin(elapsed*2)*.015);
       halo.rotation.z = elapsed * 1.5;
 
       const selected = selectedIdRef.current;
       neighborMeshesRef.current.forEach((nbr, i) => {
         if (nbr.data.action !== 'sitting') {
-          nbr.group.position.addScaledVector(nbr.dir, nbr.data.speed);
+          nbr.group.position.addScaledVector(nbr.dir, nbr.data.speed*delta*60);
           if (Math.abs(nbr.group.position.x) > 26) nbr.dir.x = -nbr.dir.x;
           if (Math.abs(nbr.group.position.z) > 26) nbr.dir.z = -nbr.dir.z;
           nbr.group.rotation.y = Math.atan2(nbr.dir.x, nbr.dir.z);
@@ -623,6 +682,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
 
         // The beacon is the selection: amber for the dog in hand, neutral for
         // the rest. One accent, one meaning.
+        const affection=Math.max(0,1-(performance.now()-(petTimes.current.get(nbr.data.id)??-Infinity))/1800);
+        nbr.group.scale.setScalar(1+Math.sin(affection*Math.PI*4)*affection*.06);
         const isSelected = nbr.data.id === selected;
         const wanted = isSelected ? 0xf59e0b : 0x71717a;
         if (nbr.beaconMat.color.getHex() !== wanted) nbr.beaconMat.color.setHex(wanted);
@@ -630,6 +691,10 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
         if (nbr.beacon.scale.x !== scale) nbr.beacon.scale.setScalar(scale);
       });
 
+      const closestNeighbor=neighborMeshesRef.current.find(n=>n.group.position.distanceTo(myDogGroup.position)<2.4);
+      if(!resting&&closestNeighbor&&elapsed-lastSocial>30){lastSocial=elapsed;socialRef.current?.();setNote(`${myDog.name} and ${closestNeighbor.data.name} share a gentle sniff. Social practice, at their pace.`);}
+      const affection=Math.max(0,1-(performance.now()-(petTimes.current.get(focusRef.current??'')??-Infinity))/1800);
+      if(heartRef.current){const pos=focus.clone().add(new THREE.Vector3(0,2.8+(.8-affection)*.8,0)).project(camera);heartRef.current.style.left=`${(pos.x+1)*50}%`;heartRef.current.style.top=`${(1-pos.y)*50}%`;heartRef.current.style.opacity=String(affection);}
       gl.render(scene, camera);
     };
 
@@ -661,7 +726,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       resizeObserver.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      gl.domElement.removeEventListener('click', handleCanvasClick);
+      gl.domElement.removeEventListener('click',click);
+      gl.domElement.removeEventListener('pointerdown',down);gl.domElement.removeEventListener('pointermove',move);gl.domElement.removeEventListener('pointerup',up);gl.domElement.removeEventListener('pointercancel',up);gl.domElement.removeEventListener('wheel',wheel);
       gl.domElement.removeEventListener('webglcontextlost', handleContextLost);
 
       sceneApiRef.current = null;
@@ -677,6 +743,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
       });
       scene.clear();
 
+      disposed=true;textures.forEach(texture=>texture.dispose());
       gl.dispose();
       if (gl.domElement.parentElement === container) {
         container.removeChild(gl.domElement);
@@ -825,11 +892,11 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
     <section className="panel region-commons h-full" aria-label="Commons">
       {/* ---- the head: what this region is, and its two controls -------- */}
       <header className="panel-head">
-        <h2 className="label text-zinc-300 truncate">Commons</h2>
+        <h2 className="label text-zinc-300 truncate">Commons · local</h2>
         <div className="flex items-center gap-1.5 min-w-0">
           <label className="btn btn-quiet min-h-0 px-1.5 py-1 text-[10px] cursor-pointer shrink-0">
             <Upload size={11} aria-hidden="true" />
-            Import visitor
+            Import
             <input
               type="file"
               accept=".json,application/json"
@@ -844,17 +911,17 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
             className="btn btn-quiet min-h-0 px-1.5 py-1 text-[10px] shrink-0"
             aria-label="Clear the visitors from the park"
           >
-            Clear visitors
+            Clear
           </button>
         </div>
       </header>
 
-      <div className="panel-body">
+      <div className="panel-body park-body">
         {/* ---- 1. THE PARK ------------------------------------------------
             The scene holds a fixed aspect ratio, so the panel's height is
             decided before the WebGL context exists. It can shrink; it can
             never grow the region. */}
-        <div className="relative w-full aspect-[16/10] max-h-[45%] min-h-[100px] overflow-hidden bg-black border-hairline-b">
+        <div className="park-world relative w-full overflow-hidden border-hairline-b">
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" />
 
           {webglError && (
@@ -868,21 +935,18 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
 
           {/* One readout rule across the top edge — the only overlay chrome. */}
           {!webglError && (
-            <div className="absolute top-0 left-0 right-0 bg-black/90 border-hairline-b px-2 py-1 flex items-center gap-2 overflow-hidden pointer-events-none whitespace-nowrap">
-              <span className="label">Dogs in scene</span>
-              <span className="data text-[11px] text-zinc-200">{sceneCount}</span>
-              <span className="h-3 w-px bg-zinc-700 shrink-0" aria-hidden="true" />
-              <span className="label shrink-0">With</span>
-              <span className="font-display text-[11px] text-accent truncate">{myDog.name}</span>
-              <span className="label truncate ml-auto">
-                click a dog to select, WASD to run
-              </span>
-            </div>
+            <p className="park-help" title="WASD or arrow keys to walk. Pinch or use the camera buttons to zoom.">Tap a dog to pet · ground to walk</p>
           )}
 
+          <div ref={heartRef} className="park-affection" aria-hidden="true"><Heart size={25} fill="currentColor"/></div>
+          <div className="park-camera" role="group" aria-label="Park camera">
+            <button type="button" aria-label="Zoom in" disabled={zoom<=4} onClick={()=>changeZoom(zoomRef.current/1.3)}><ZoomIn size={20}/></button>
+            <button type="button" aria-label="Zoom out" disabled={zoom>=28} onClick={()=>changeZoom(zoomRef.current*1.3)}><ZoomOut size={20}/></button>
+            <button type="button" aria-label="Find my dog" onClick={()=>{focusRef.current=null;changeZoom(9);setSelectedId(myDogRowId);}}><LocateFixed size={20}/></button>
+          </div>
           {/* The dog in hand, as a slim bar over the stage it describes. */}
           {selectedRow && (
-            <div className="bar" role="status" aria-live="polite">
+            <div className="bar park-selected" role="status" aria-live="polite">
               <span className="label shrink-0">
                 {selectedRow.kind === 'you'
                   ? 'Your dog'
@@ -896,6 +960,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
               <span className="text-[11px] text-zinc-400 truncate min-w-0 flex-1">
                 {selectedRow.breed} / {selectedRow.tribe}
               </span>
+              <button type="button" className="btn-quiet" aria-label={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button>
               <button
                 onClick={() => setSelectedId(null)}
                 aria-label={`Close the details for ${selectedRow.name}`}
@@ -907,11 +972,16 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
           )}
         </div>
 
+        <div className="park-drawers" role="group" aria-label="Park details">
+          <button type="button" aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/>{sceneCount} dogs<ChevronDown size={14}/></button>
+          <span className="park-local-note">Pinch to zoom</span>
+          <button type="button" aria-expanded={drawer==='chat'} aria-controls="park-chat" onClick={()=>setDrawer(drawer==='chat'?null:'chat')}><MessageSquare size={18}/>Chat<ChevronDown size={14}/></button>
+        </div>
         {/* ---- 2. WHO IS HERE --------------------------------------------
             One compact line per dog. It is not a scroll container: the law
             allows exactly one of those, and the chat log is the one that
             earns it. */}
-        <div className="min-h-0 overflow-hidden border-hairline-b">
+        <div id="park-roster" className="park-roster" hidden={drawer!=='dogs'}>
           <ul className="min-h-0 overflow-hidden">
             {rows.map((row) => {
               const isSelected = row.id === selectedId;
@@ -925,6 +995,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
                   <button
                     onClick={() => {
                       setSelectedId(isSelected ? null : row.id);
+                      focusRef.current=row.id;
                       sound.bark();
                     }}
                     aria-pressed={isSelected}
@@ -972,7 +1043,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
         {/* ---- 4. THE PARK COMMS ------------------------------------------
             The one place in this panel where a list is honestly longer than
             the space it was given. */}
-        <div className="panel-scroll px-2 py-1.5">
+        <div id="park-chat" hidden={drawer!=='chat'} className="park-chat panel-scroll px-2 py-1.5">
           {chatLog.map((message, index) => (
             <div
               key={index}
@@ -996,7 +1067,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog }) => {
         </div>
 
         {/* ---- 5. SAY SOMETHING ------------------------------------------- */}
-        <form
+        <form hidden={drawer!=='chat'}
           onSubmit={(e) => {
             e.preventDefault();
             broadcast();

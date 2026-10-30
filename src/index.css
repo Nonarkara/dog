@@ -24,9 +24,9 @@
    --color-faint  → text-faint / border-faint
    ------------------------------------------------------------------------- */
 @theme inline {
-  --font-display: 'Josefin Sans', sans-serif;
-  --font-body: 'Source Sans 3', 'IBM Plex Sans Thai', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Non Architecture', 'IBM Plex Sans Thai', sans-serif;
+  --font-body: 'Non Architecture', 'IBM Plex Sans Thai', sans-serif;
+  --font-mono: 'Non Architecture', 'IBM Plex Sans Thai', sans-serif;
 
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-hover);
@@ -750,3 +750,167 @@
    history together, rather than clipping the controls above a tiny list. */
 .region-coach .coach-log {overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
 .coach-log>.panel-scroll {flex:0 0 auto;overflow:visible;}
+
+/* Owner's handwriting: caps for navigation, mixed case for the dog's diary. */
+html {font-synthesis:none;}
+.cockpit {font-size:15px;line-height:1.45;}
+.cockpit button,.cockpit input,.cockpit select,.cockpit textarea {font-family:var(--font-body);}
+.cockpit .label {font-size:12px;letter-spacing:.065em;line-height:1.5;text-transform:uppercase;font-weight:400;}
+.cockpit :is(.font-semibold,.font-bold,h1,h2,h3) {font-weight:400;}
+.cockpit :is(.text-\[10px\],.text-\[11px\],.text-\[12px\],.text-xs) {font-size:14px;line-height:1.45;}
+.cockpit .data {font-variant-numeric:tabular-nums;}
+.park-navigation {display:inline-flex;align-items:center;gap:5px;min-height:36px;flex:none;}
+.park-navigation span {font-size:14px;}
+/* Text is scenery. The opaque dog is painted after it and owns its pixels. */
+.illustrated-stage {isolation:isolate;}
+.dog-art-layer {position:absolute;inset:0;z-index:2;}
+.illustrated-stage :is(.dog-daily-status,.dog-cheer,.dog-ambient-caption) {z-index:1;}
+.illustrated-stage .dog-daily-status {pointer-events:none;}
+.illustrated-stage :is(.dog-toys,.paw-target,.dog-clean-target) {z-index:4;}
+.cockpit-workspace--tall {grid-template-rows: minmax(0,50dvh) auto minmax(0,1fr);gap:4px;padding:4px;}
+.cockpit-workspace--tall .region-stage>.panel-body {max-height:none;overflow:hidden;}
+.cockpit-workspace--tall .stage-frame {height:100%;max-height:none;aspect-ratio:auto;flex:1 1 0%;}
+.cockpit-workspace--wide {grid-template-rows:auto minmax(0,1fr);}
+.cockpit-workspace--wide .region-care {grid-column:6/13;grid-row:1;}
+.cockpit-workspace--wide .region-coach {grid-column:6/9;grid-row:2;}
+.cockpit-workspace--wide .region-record {grid-column:9/13;grid-row:2;}
+.command-bar {gap:4px;padding:4px;position:relative;}
+.command-bar.icon-commands>div:first-child {gap:4px;}
+.command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent) {width:34px;min-width:34px;min-height:34px;height:34px;padding:3px;}
+.command-talk-group {display:contents;}
+.command-speech {display:flex;gap:6px;align-items:center;flex:1;min-width:0;}
+.command-speech[hidden] {display:none;}
+@media(max-width:639px){
+ .command-speech {order:10;flex-basis:100%;}
+ .command-bar {justify-content:space-between;}
+ .region-care .care-body {padding:5px;gap:3px;}
+ .region-care .care-meter-grid {gap:3px 10px;}
+ .region-care .care-history {gap:2px 6px;}
+}
+/* The world is a destination; people and chat are optional, bounded drawers. */
+.cockpit-workspace--park {display:flex;padding:4px;}
+.cockpit-workspace--park>.region-commons {flex:1;}
+.park-body {overflow:hidden;}
+.park-world {flex:1 1 0%;min-height:60dvh;background:var(--stage-ground);}
+.park-camera {position:absolute;right:8px;top:44px;display:flex;flex-direction:column;gap:6px;}
+.park-camera button {display:grid;place-items:center;width:44px;height:44px;background:var(--bg-surface);border:1px solid var(--border-strong);}
+.park-camera button:disabled {opacity:.4;}
+.park-selected {position:absolute;left:6px;right:6px;bottom:6px;inset-block-start:auto;width:auto;padding:4px 6px;}
+.park-drawers {display:flex;align-items:center;gap:8px;flex:none;padding:4px 8px;}
+.park-drawers button {display:inline-flex;align-items:center;gap:6px;min-height:32px;}
+.park-local-note {margin:auto;font-size:12px;color:var(--text-faint);}
+.park-roster {overflow:auto;max-height:18dvh;flex:none;}
+.park-roster ul {overflow:visible;}
+.park-roster button {min-height:32px;}
+.park-chat {max-height:14dvh;flex:1 1 auto;}
+.park-body [hidden] {display:none!important;}
+@media(max-height:650px){.park-world {min-height:52dvh;}.park-roster {max-height:16dvh;}}
+/* Compact care keeps the next action beside its meters. History opens as a
+   complete reading surface when the available panel is genuinely shorter. */
+.cockpit-workspace--tall .region-frame {container-type:size;container-name:care-space;}
+.care-details-toggle {display:none;}
+.care-details-dialog {margin:auto;width:min(94vw,640px);max-height:90dvh;padding:8px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-strong);}
+.care-details-dialog::backdrop {background:rgba(40,38,30,.25);}
+.care-details-dialog .care-detail-view {height:auto;border:0;}
+.care-details-dialog .care-body {flex:none;overflow:visible;}
+.care-details-close {display:block;margin-left:auto;min-height:32px;padding:2px 6px;}
+@container care-space (max-height:265px){
+ .region-care:not(.care-detail-view)>.care-body .care-summary,
+ .region-care:not(.care-detail-view)>.care-body .care-together,
+ .region-care:not(.care-detail-view)>.care-body>.care-history {display:none;}
+ .region-care:not(.care-detail-view)>.care-body>.care-details-toggle {display:block;align-self:flex-start;min-height:32px;padding:1px 4px;font-size:14px;}
+ .region-care:not(.care-detail-view)>.care-body {gap:3px;}
+}
+/* A tennis ball is felt and a curved white seam, not an orange dot. */
+.illustration-ball {background:#c8d36a;border:1px solid #727b3b;overflow:hidden;z-index:3;}
+.illustration-ball::before,.illustration-ball::after {content:'';position:absolute;top:-3px;width:12px;height:26px;border:2px solid #fff8e5;border-radius:50%;}
+.illustration-ball::before {left:-9px;}.illustration-ball::after {right:-9px;}
+.fetch-first {display:flex;align-items:center;gap:6px;padding:3px 6px;flex-wrap:wrap;font-size:14px;}
+.fetch-first>span {flex:1;min-width:140px;}
+.fetch-first button {min-height:32px;}
+.dog-blanket {position:absolute;bottom:9%;left:21%;width:58%;height:20%;z-index:3;pointer-events:none;}
+.care-extras-body {padding:6px 8px;gap:6px;font-size:14px;}
+.care-extras-body p {max-width:65ch;}
+.pantry-balance,.care-extra-actions,.wake-bark {display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pantry-balance span {margin-right:6px;}
+.care-extra-actions button {display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:3px 6px;}
+.care-extra-actions label {display:flex;align-items:center;gap:6px;}
+.care-extra-actions input {padding:2px 4px;min-height:32px;width:100px;}
+.wake-bark {min-height:32px;}
+.park-help {position:absolute;top:0;left:0;right:0;padding:5px 8px;background:var(--bg-surface);font-size:14px;pointer-events:none;}
+.park-affection {position:absolute;transform:translate(-50%,-50%);pointer-events:none;color:var(--accent);opacity:0;}
+@media(max-width:639px){.header-dog-facts {display:none;}.cockpit>header>div {gap:6px;}.park-navigation span {display:none;}.park-navigation {margin-left:auto;}}
+@media(max-width:330px){.app-brand {font-size:12px;}}
+/* Care is an instrument strip, never a stretched information box. */
+.care-console:not(.care-detail-view) {height:auto;flex:none;}
+.care-console:not(.care-detail-view) .care-identity,
+.care-console:not(.care-detail-view)>.care-body>.care-history,
+.care-console:not(.care-detail-view)>.care-body .care-summary,
+.care-console:not(.care-detail-view)>.care-body .care-together,
+.care-console:not(.care-detail-view)>.care-body .care-now>.label {display:none;}
+.care-console:not(.care-detail-view)>.panel-head {padding:1px 6px;}
+.care-console:not(.care-detail-view) .care-details-toggle {display:block;font-size:12px;min-height:28px;padding:1px 4px;}
+.care-console:not(.care-detail-view)>.care-body {flex:none;padding:5px 6px;gap:4px;}
+.care-console:not(.care-detail-view) .care-now {padding-top:3px;}
+.cockpit-workspace--tall:has(>.region-frame>.care-console) {grid-template-rows:minmax(0,1fr) auto auto;}
+.cockpit-workspace--tall:has(>.region-frame>.care-console)>.region-frame {container-type:normal;}
+.cockpit-workspace--wide {grid-template-rows:auto auto minmax(0,1fr);}
+.cockpit-workspace--wide .region-stage {grid-column:1/7;grid-row:1/4;}
+.cockpit-workspace--wide .region-care {grid-column:7/13;grid-row:1;}
+.desktop-region-tabs {grid-column:7/13;grid-row:2;display:flex;gap:4px;}
+.desktop-region-tabs button {display:flex;align-items:center;gap:6px;min-height:32px;padding:2px 8px;}
+.desktop-region-tabs button[aria-selected=true] {color:var(--accent);border-bottom:2px solid currentColor;}
+.desktop-detail {grid-column:7/13;grid-row:3;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+.desktop-detail>.region-coach {height:auto;flex:none;max-height:100%;}
+.desktop-detail>.region-record {flex:1;}
+.desktop-detail>.region-coach .panel-body {flex:none;}
+/* Entry is a choice, not a landing-page essay. */
+.entry {padding:clamp(12px,3vw,32px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;}
+.entry-head {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.entry-head h1 {font-size:clamp(22px,4vw,32px);line-height:1.35;}
+.entry-dog {min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.entry-dog img {max-height:calc(100% - 28px);width:auto;max-width:100%;object-fit:contain;}
+.entry-dog>span {font-size:15px;text-align:center;}
+.entry-choices {width:min(100%,600px);margin:auto;display:flex;flex-direction:column;gap:10px;}
+.entry-choice {display:flex;gap:12px;align-items:center;padding:10px 6px;border-top:1px solid var(--border-strong);color:var(--text-main);text-align:left;text-decoration:none;}
+.entry-choice>span {flex:1;font-size:22px;line-height:1.3;}
+.entry-choice small {display:block;font-size:15px;line-height:1.6;}
+.entry-note {font-size:12px;line-height:1.6;color:var(--text-muted);}
+.adoption-dogs {display:flex;gap:5px;justify-content:space-between;flex-wrap:wrap;}
+.adoption-dogs button {min-height:32px;padding:3px 6px;font-size:15px;}
+.adoption-dogs button[aria-pressed=true] {background:var(--accent);color:var(--accent-ink);}
+.entry-loading {display:grid;place-items:center;height:100dvh;font-family:var(--font-body);background:var(--bg-main);color:var(--text-main);}
+.owned-growth {font-size:12px;white-space:nowrap;}
+.training-tip {display:flex;align-items:center;gap:6px;padding:3px 8px;font-size:12px;line-height:1.45;flex:none;border-top:1px solid var(--border-dim);}
+.training-tip>span {flex:1;}
+.training-tip>button {min-width:32px;min-height:32px;}
+.training-literature {font-size:15px;line-height:1.65;}
+.training-literature p {margin-top:10px;max-width:65ch;}
+.training-literature h2 {font-size:22px;}
+.training-literature a {text-decoration:underline;text-underline-offset:3px;}
+.practice-real-notes {flex:none;font-size:14px;max-height:180px;overflow:auto;}
+.practice-real-notes summary {cursor:pointer;min-height:28px;}
+.illustration-ball--untrained {animation:ball-drop 900ms ease-out both;}
+@keyframes ball-drop {0%{left:53%;top:20%;}70%{left:55%;top:82%;}85%{left:56%;top:75%;}100%{left:57%;top:84%;}}
+@media(prefers-reduced-motion:reduce){.illustration-ball--untrained {animation:none;left:57%;top:84%;}}
+@media(max-width:639px){.cockpit:has(.owned-growth) .app-brand {font-size:12px;}.cockpit:has(.owned-growth)>header>div {gap:3px;}}
+.entry-footer {display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.entry-restore {display:inline-flex;align-items:center;gap:5px;font-size:12px;min-height:32px;cursor:pointer;}
+.restore-confirm {font-size:14px;line-height:1.5;}
+.restore-confirm button {min-height:32px;margin-right:12px;text-decoration:underline;}
+.owned-diary {font-size:14px;line-height:1.5;border-top:1px solid var(--border-dim);padding-top:5px;}
+.owned-diary button {min-height:32px;text-decoration:underline;}
+.entry-head h1 {font-size:22px;}
+.entry-choice {border:0;border-top:1px solid var(--border-strong);background:transparent;}
+@media(max-width:330px){.adoption-dogs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-content:start;}.adoption-dogs button {padding:3px;}}
+@media(max-width:330px){.cockpit:has(.owned-growth) .app-brand a {font-size:0;}.cockpit:has(.owned-growth) .app-brand a::before {content:'Modes';font-size:12px;}}
+/* First-round guidance belongs below the animal, never over its head or paws. */
+.first-play-tip {display:flex;align-items:center;gap:6px;flex:none;padding:4px 6px;border-top:1px solid var(--border-dim);background:var(--bg-surface);color:var(--text-main);font-size:14px;line-height:1.4;}
+.first-play-tip>svg {flex:none;color:var(--accent);}
+.first-play-tip p {flex:1;min-width:0;max-width:65ch;}
+.first-play-tip p>span {display:block;}
+.first-play-tip button {flex:none;min-width:32px;min-height:32px;padding:3px;}
+.stage-note-slot.stage-note-slot--guide {height:auto;flex:none;overflow:visible;}
+.stage-note-slot--guide .first-play-tip {width:100%;}
+.cockpit-workspace--park {flex-direction:column;}
+.cockpit-workspace--park:has(>.first-play-tip) .park-world {min-height:52dvh;}
