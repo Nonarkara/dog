@@ -66,3 +66,13 @@ The current research question is whether to use illustrated 2D animation or actu
 ## Owner decision and implementation
 
 Resolved: the owner selected illustrated 2D animation for the MVP. The implementation and artwork provenance are recorded in [illustrated-animation.md](illustrated-animation.md). Local Flux supplied a style study; final photo-informed illustrations and authored poses were refined with the built-in reference-image editor. Runtime movement uses an image mesh and a 30 fps display scheduler, rather than independently generated display frames.
+
+## In-between turn frames: tried and stopped (2026-10-31)
+
+Goal: replace the blurry RIFE in-betweens in Expo's turn (atlas frames between the hand-drawn keys, e.g. 54 and 70) with clean drawings. Three local Flux approaches, seed 7306, all rejected by the owner after side-by-side review:
+
+1. **Schnell image-to-image on the blurry frame** cleaned the blur but changed his identity (orange cheeks, human-like eyes).
+2. **Kontext (dev) on the blurry frame, then with the hand-drawn neighbours as a three-panel guide** kept his face and colours, but copied the nearest neighbour instead of drawing the halfway pose. The turn would still jump.
+3. **Kontext asked to rotate a clean key by about 20°** either returned the key unchanged or turned him the wrong way (flipped to face left).
+
+Conclusion: Flux draws a convincing Expo but cannot be steered to a precise body angle, which is what a turn needs. Owner decision: stop, keep the current 60 fps animation. The real fix, if ever wanted, is extra hand-drawn angles between the keys so RIFE only blends small gaps. Do not retry Flux for this without a new technique (for example a pose-conditioned model).
