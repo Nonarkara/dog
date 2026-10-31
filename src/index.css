@@ -1058,3 +1058,12 @@ html {font-synthesis:none;}
 /* MSH B4: Record docks under Coach on desktop; the column has a job, no tab row. */
 .desktop-detail {grid-row:2;gap:4px;}
 .desktop-detail>.region-record {flex:1 1 0%;min-height:0;}
+/* Re-audit: on a phone the record gets whole words, one column, and a visible "there is more". */
+@media (max-width:639px){
+ .record-tab-count {display:none;} /* the count stays in the tab's aria-label */
+ .cockpit .record-tab-label {font-size:12px;letter-spacing:-.01em;}
+ .record-identity {grid-template-columns:minmax(0,1fr);height:auto;}
+}
+/* A fading last line says the record scrolls where overlay scrollbars never show. */
+.record-scroll {mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);padding-bottom:20px;}
+@media print {.record-scroll {mask-image:none;padding-bottom:0;}}

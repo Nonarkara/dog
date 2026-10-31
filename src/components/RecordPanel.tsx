@@ -533,7 +533,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
   /* ---- the record's own sections ------------------------------------------ */
 
   const identityPanel = (
-    <div className={`grid h-full grid-cols-2 gap-x-3 ${PRINT_AUTO}`}>
+    <div className={`record-identity grid h-full grid-cols-2 gap-x-3 ${PRINT_AUTO}`}>
       {/* Facts and measurements: written down, line against line. */}
       <div className="min-w-0 pr-1">
         <div className="border-hairline-b pb-1">
@@ -1015,8 +1015,8 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                     : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
                 }`}
               >
-                <span className="truncate">{tab.label}</span>
-                <span className="data shrink-0 text-[9px] text-zinc-500">{count}</span>
+                <span className="record-tab-label truncate">{tab.label}</span>
+                <span className="record-tab-count data shrink-0 text-[11px] text-zinc-500">{count}</span>
               </button>
             );
           })}
@@ -1062,7 +1062,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
                 // clip: up to 465px of photos and doses were simply not
                 // there, with nothing to say so. A scrollbar says so.
                 activeTab === tab.key
-                  ? `min-h-0 flex-1 overflow-y-auto ${PRINT_AUTO}`
+                  ? `record-scroll min-h-0 flex-1 overflow-y-auto ${PRINT_AUTO}`
                   : 'print-only'
               }
             >
