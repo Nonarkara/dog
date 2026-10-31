@@ -745,8 +745,8 @@ export const App: React.FC = () => {
         {isWide ? (
           <>
             {renderRegion('care')}
-            <div className="desktop-region-tabs" role="tablist" aria-label="Desktop tools">{(['coach','record'] as const).map(key=><button key={key} type="button" role="tab" aria-label={key==='coach'?'Coach':'Record'} aria-selected={(activeRegion==='record'?'record':'coach')===key} onClick={()=>setActiveRegion(key)}>{key==='coach'?<GraduationCap size={18}/>:<BookOpen size={18}/>}<span>{key==='coach'?'Coach':'Record'}</span></button>)}</div>
-            <div className="desktop-detail">{renderRegion(activeRegion==='record'?'record':'coach')}</div>
+            {/* MSH: the column under Coach was empty, so Record lives there; no tabs needed. */}
+            <div className="desktop-detail">{renderRegion('coach')}{renderRegion('record')}</div>
           </>
         ) : (
           <>

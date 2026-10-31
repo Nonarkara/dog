@@ -1055,3 +1055,6 @@ html {font-synthesis:none;}
 [data-practice-behaviour] {overflow-y:auto!important;}
 [data-practice-behaviour]>div:first-child {gap:2px;}
 [data-practice-behaviour]>div:first-child>button {padding:0 3px;}
+/* MSH B4: Record docks under Coach on desktop; the column has a job, no tab row. */
+.desktop-detail {grid-row:2;gap:4px;}
+.desktop-detail>.region-record {flex:1 1 0%;min-height:0;}

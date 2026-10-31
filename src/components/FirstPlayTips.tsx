@@ -12,7 +12,7 @@ const TIPS={
  wake:{title:'A little morning woof',text:'Opt in to wake-up barking. Keep the app open with sound allowed; this is not a lock-screen alarm.'},
  talk:{title:'Words become familiar',text:'Pair a short word with care. Repeating it patiently gives it meaning to this dog.'},
  calm:{title:'Reward relaxation',text:'Meet needs first, offer quiet time, then watch the body soften before giving a reward.'},
- coach:{title:'Watch, mark, reward',text:'Cue once, wait for the dog’s movement, mark that moment, then give the promised treat.'},
+ coach:{title:'Short and kind',text:'Three to five minutes, end on a win. No response? Make it easier instead of repeating the cue.'},
  record:{title:'Your dog’s notebook',text:'Identity, health notes and photos live here. Starter health examples are marked, not verified facts.'},
  care:{title:'Read the dog',text:'Six symbols show needs and mood. Follow the next-action sentence; History opens the full details.'},
  park:{title:'Your little universe',text:'Pet a dog or tap a place to walk. Pinch to come closer.'},

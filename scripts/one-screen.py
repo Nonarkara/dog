@@ -51,8 +51,6 @@ DEFAULT_VIEWPORTS = ["390x844", "1024x768", "1440x900"]
 # region, and each one has to fit on its own.
 RECORD_TABS = ["identity", "vaccines", "parasites", "history", "photos"]
 
-# The regions the cockpit offers on a screen that can only show one at a time.
-REGION_LABELS = ["Care", "Coach", "Commons", "Record"]
 
 PROBE = """
 () => {
@@ -252,7 +250,8 @@ def open_record(page):
         return True
     except Exception:  # noqa: BLE001
         pass
-    for label in REGION_LABELS:
+    # Record only: clicking Commons opens the park and hides the tab bar.
+    for label in ["Record"]:
         try:
             tab = page.get_by_role("tab", name=label, exact=True)
             if tab.count() == 0:
@@ -443,8 +442,31 @@ def run(url, viewports, out_path):
                 warnings.append(line)
                 print("  SCROLLS " + line, flush=True)
 
+            # ---- on a one-region screen, every region must fit on its own ----
+            # (An audit found this sweep ran only at desktop width, where all
+            # regions are visible at once. A narrow pass that measures only
+            # Care has not measured Coach.)
+            for label in ["Coach"]:
+                tab = page.get_by_role("tab", name=label, exact=True)
+                if tab.count() == 0 or not tab.first.is_visible():
+                    continue
+                tab.first.click(timeout=5000)
+                page.wait_for_timeout(600)
+                rf = measure(page)
+                bad = [r for r in rf["regions"] if r["overflow"] > 2]
+                problems = [f"{r['cls'][:30]} needs {r['overflow']}px more" for r in bad]
+                problems += [f"{c['tag']}.{c['cls']} hides {c['hidden']}px" for c in rf["clipped"]]
+                problems += [f"{o['a']} and {o['b']} overlap" for o in rf["overlaps"]]
+                for p_ in problems:
+                    failures.append(f"{width}x{height} ({label}): {p_}")
+                print(f"  REGION {label}: {'fits' if not problems else '; '.join(problems)}", flush=True)
+
             # ---- sweep the record's five tabs -----------------------------
-            if open_record(page):
+            if not open_record(page):
+                line = f"{width}x{height}: the record could not be opened, so its tabs went unmeasured"
+                failures.append(line)
+                print("  TAB FAILED " + line, flush=True)
+            else:
                 for tab in RECORD_TABS:
                     selector = f"#record-tab-{tab}"
                     if page.locator(selector).count() == 0:
