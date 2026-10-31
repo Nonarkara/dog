@@ -1019,3 +1019,39 @@ html {font-synthesis:none;}
 .stage-away {position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;background:var(--stage-ground);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--text-main);}
 .stage-away p {margin:0;max-width:34ch;}
 .stage-away button {min-height:40px;padding:0 16px;}
+
+/* ---- MSH: the dog is the hero; the instruments are its caption ----------
+   Owner, 2026-10-31: care and coach were boxes far bigger than their words.
+   Desktop gives the stage two thirds; every control below is label + padding. */
+.cockpit-workspace--wide .region-stage {grid-column:1/9;}
+.cockpit-workspace--wide .region-care,.desktop-region-tabs,.desktop-detail {grid-column:9/13;}
+.cockpit main>[role=tablist]>[role=tab],.cockpit .desktop-region-tabs>[role=tab] {min-height:32px;padding-block:2px;}
+.cockpit main>[role=tablist]>[role=tab] svg {width:18px;height:18px;}
+/* Six meters in one row whenever they fit: icon, number, bar. The bar says "percent". */
+@container dog-care (min-width:340px){.care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 8px;}}
+.care-console:not(.care-detail-view) .care-meter-value .text-faint {display:none;}
+.care-console:not(.care-detail-view) .care-meter-value>.data {font-size:15px;}
+.care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:15px;height:15px;}
+.care-console:not(.care-detail-view) .care-meter {grid-template-columns:16px minmax(0,1fr);}
+.care-console:not(.care-detail-view) .care-meter-symbols>.label {font-size:11px;line-height:1.2;}
+.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.35;}
+/* Coach: one row of commands, label-sized actions, no stretched slabs. */
+.region-coach>.panel-head {padding:1px 6px;}
+.region-coach>.panel-head button {min-height:24px;padding:0 6px;font-size:11px;}
+[data-practice-behaviour]>div:first-child {flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:3px 6px;}
+[data-practice-behaviour]>div:first-child>button {flex:none;font-size:12px;padding:0 5px;}
+[data-practice-behaviour]>div {padding:3px 6px;}
+[data-practice-behaviour] p {font-size:13px;line-height:1.35;}
+[data-practice-behaviour] .btn.flex-1 {flex:none;min-height:32px;padding:0 12px;font-size:13px;}
+[data-practice-behaviour] .btn {min-height:32px;padding:0 10px;font-size:13px;}
+.practice-real-notes {padding:2px 6px;}
+.practice-real-notes summary {min-height:24px;font-size:11px;}
+.training-tip {padding:1px 6px;font-size:13px;}
+.training-tip>button {min-width:28px;min-height:28px;padding:2px;}
+/* The first-time tip is one or two lines under the dog, not a third panel. */
+.stage-note-slot .first-play-tip {font-size:13px;line-height:1.35;padding:2px 6px;}
+.stage-note-slot .first-play-tip .label {display:none;}
+.stage-note-slot .first-play-tip button {min-width:28px;min-height:28px;}
+[data-practice-behaviour] {overflow-y:auto!important;}
+[data-practice-behaviour]>div:first-child {gap:2px;}
+[data-practice-behaviour]>div:first-child>button {padding:0 3px;}

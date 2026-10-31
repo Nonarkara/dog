@@ -259,7 +259,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
             ? unavailable
             : phase === 'result' && result
               ? result.verdict
-              : status || 'Cue once, wait, mark the moment, treat. Space bar does all four.'}
+              : status || 'Cue once, wait, mark, treat. Space does all four.'}
         </p>
         <div className="mt-1.5 flex gap-1.5 flex-wrap">
           {phase === 'result' ? (
