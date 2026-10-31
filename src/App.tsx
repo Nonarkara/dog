@@ -143,6 +143,7 @@ export const App: React.FC = () => {
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
   const [coachRequest,setCoachRequest]=useState<'fetch'|undefined>();
+  const [petPulse,setPetPulse]=useState(0);
   // A live park invite (?park=<room>) opens straight into the park.
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
@@ -391,7 +392,7 @@ export const App: React.FC = () => {
   const handleInteract = async (action: CareAction,part?:TouchPart) => {
     if(isAddDogOpen)return;
     if (interactionBusy.current) return;
-    if(action==='pet')firstGuide.show('pet');
+    if(action==='pet'){firstGuide.show('pet');setPetPulse(n=>n+1);}
     interactionBusy.current=true;
     const id=activeDogId;
     setIsInteracting(true);setPendingAction(action);
@@ -570,6 +571,7 @@ export const App: React.FC = () => {
               onPetStateChange={commitPet}
               onPose={performPose}
               requestedBehaviour={coachRequest}
+              petPulse={petPulse}
               busy={isInteracting||isAddDogOpen}
             />
           </Suspense>

@@ -24,6 +24,7 @@ import { coax, maybeRunAway, COAX_PETS, RETURN_TRUST } from './runaway';
 import { chooseActivity, type Activity } from './parkPersonality';
 import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
+import { captureOf, isUnlocked, lockedBehind, offerChance, pair, wrongMark, withCapture, LEARNED } from './capture';
 import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
 
 let failures = 0;
@@ -595,6 +596,23 @@ for (let i = 0; i < COAX_PETS; i++) ({ state: coaxing, home } = coax(coaxing, t0
 ok('a few gentle pets bring him home', home && !coaxing.away);
 ok('he comes home trusting you less', coaxing.trust <= RETURN_TRUST);
 ok('nothing in neglect ends a dog', !JSON.stringify(neglected).match(/dead|died|death/i));
+
+// ---- capturing: Sit first, and you have to be watching ----
+const fresh = createPetState(t0);
+ok('a new dog knows no words', captureOf(fresh, 'sit').association === 0);
+ok('only Sit is open at first', isUnlocked(fresh, 'sit') && !isUnlocked(fresh, 'down') && !isUnlocked(fresh, 'fetch'));
+ok('Down waits behind Sit', lockedBehind(fresh, 'down') === 'sit');
+ok('an untrained dog rarely offers the sit', offerChance(0) < 0.2);
+ok('a trained dog nearly always does', offerChance(1) > 0.9);
+ok('a mark plus a pet beats a mark alone', pair(captureOf(fresh, 'sit'), true).association > pair(captureOf(fresh, 'sit'), false).association);
+ok('a mark at the wrong moment costs', wrongMark({ association: 0.5, pairings: 3 }).association < 0.5);
+ok('a wrong mark never goes below nothing', wrongMark({ association: 0, pairings: 0 }).association === 0);
+let sitting = captureOf(fresh, 'sit'), reps = 0;
+while (sitting.association < LEARNED) { sitting = pair(sitting, true); reps++; }
+ok('Sit is learned in a handful of good pairings', reps >= 4 && reps <= 6, `${reps} reps`);
+const sat = withCapture(fresh, 'sit', sitting);
+ok('learning Sit opens Down, and only Down', isUnlocked(sat, 'down') && !isUnlocked(sat, 'paw'));
+ok('an old save keeps a skill it already had', captureOf({ ...fresh, lessons: { down: { ...newLesson(), stage: 2 } } }, 'down').association >= LEARNED);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

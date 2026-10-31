@@ -1067,3 +1067,22 @@ html {font-synthesis:none;}
 /* A fading last line says the record scrolls where overlay scrollbars never show. */
 .record-scroll {mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);padding-bottom:20px;}
 @media print {.record-scroll {mask-image:none;padding-bottom:0;}}
+/* Capturing: the first word. */
+.capture-game {display:flex;flex-direction:column;gap:4px;padding:4px 6px;border-top:1px solid var(--border);}
+.capture-progress {display:flex;align-items:baseline;gap:8px;}
+.capture-progress .data {margin-left:auto;font-size:12px;}
+.capture-stars i {font-style:normal;color:var(--border-strong);}
+.capture-stars i[data-on=true] {color:var(--accent);}
+.capture-status {font-size:13px;line-height:1.35;min-height:2.7em;}
+.capture-actions {display:flex;gap:6px;flex-wrap:wrap;}
+.capture-actions .btn {min-height:32px;padding:0 12px;font-size:13px;}
+.capture-now {animation:capture-pulse .5s ease-out infinite alternate;}
+@keyframes capture-pulse {to {transform:scale(1.06);}}
+.think-bubble {position:absolute;left:50%;top:14%;z-index:6;transform:translateX(-50%);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--bg-surface);border:1.5px solid var(--text-primary,currentColor);font-size:24px;line-height:1;pointer-events:none;animation:bubble-in .18s ease-out;}
+@keyframes bubble-in {from {opacity:0;transform:translate(-50%,6px) scale(.9);}}
+@media (prefers-reduced-motion:reduce){.capture-now,.think-bubble {animation:none;}}
+.capture-proof {align-self:flex-start;margin:0 6px 4px;min-height:28px;padding:0 10px;font-size:12px;}
+.capture-stars i {color:var(--accent);opacity:.22;}
+.capture-stars i[data-on=true] {opacity:1;}
+.think-bubble {border-radius:50%!important;} /* a true circle, the one shape the house allows round */
+[data-practice-behaviour]>div:first-child>button:disabled {opacity:.4;text-decoration:none;}

@@ -244,6 +244,8 @@ export interface PetState {
   lastCueAt?: number;
   /** Practice-field progress per behaviour, with the dog on the stage. */
   lessons?: Record<string, import('./lesson').Lesson>;
+  /** Capturing: how strongly each word predicts the pet, Sit first. */
+  capture?: Partial<Record<BehaviourName, import('./capture').Capture>>;
   /** Time spent with him: today, in total, and the run of days. */
   together?: import('./attention').Together;
   /** He is asking for you, and why. */

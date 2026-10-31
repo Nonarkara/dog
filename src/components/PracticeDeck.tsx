@@ -36,6 +36,8 @@ import {
 import type {PerformPose} from './trainingMotion';
 import {calmNeed} from '../domain/calm';
 import { sound } from '../utils/proceduralAudio';
+import {isLearned,lockedBehind} from '../domain/capture';
+import {CaptureGame} from './CaptureGame';
 
 type Phase = 'ready' | 'waiting' | 'marked' | 'result' | 'saving';
 
@@ -46,17 +48,20 @@ interface Props {
   onPose: PerformPose;
   busy?:boolean;
   requestedBehaviour?:BehaviourName;
+  petPulse?:number;
 }
 
 const CHIP = 'min-h-0 h-[24px] px-1 py-0 text-[10px] leading-none';
 
-export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour }) => {
-  const [name, setName] = useState<BehaviourName>(requestedBehaviour??'sit');
-  useEffect(()=>{if(requestedBehaviour)setName(requestedBehaviour);},[requestedBehaviour]);
+export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour,petPulse=0 }) => {
+  const [name, setName] = useState<BehaviourName>(requestedBehaviour&&!lockedBehind(petState,requestedBehaviour)?requestedBehaviour:'sit');
+  useEffect(()=>{if(requestedBehaviour&&!lockedBehind(stateRef.current,requestedBehaviour))setName(requestedBehaviour);},[requestedBehaviour]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [status, setStatus] = useState('');
   const [result, setResult] = useState<{ verdict: string; tip: string; score: number; advice: string | null } | null>(null);
   const [cueCount, setCueCount] = useState(0);
+  const [proofing,setProofing]=useState(false);
+  useEffect(()=>setProofing(false),[name]);
 
   const stateRef = useRef(petState);
   const saving=useRef(false),epoch=useRef(0),mounted=useRef(true);
@@ -211,6 +216,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if(document.querySelector('.dog-chooser,.control-reference'))return;
+      if(!proofing)return;
       if (e.key !== ' ' || (e.target as HTMLElement)?.closest('input, textarea, select, button, a, [role="button"], [role="tab"], [role="option"]')) return;
       e.preventDefault();
       if(saving.current)return;
@@ -228,19 +234,25 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-practice-phase={phase} data-practice-behaviour={name}>
       <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
-        {BEHAVIOURS.map((b) => (
+        {BEHAVIOURS.map((b) => {
+          const behind=lockedBehind(petState,b.name);
+          return (
           <button
             key={b.name}
             type="button"
             onClick={() => setName(b.name)}
+            disabled={!!behind}
+            title={behind?`Opens after ${BEHAVIOURS.find(x=>x.name===behind)?.label}`:isLearned(petState,b.name)?'Learned':'Learning'}
             aria-pressed={b.name === name}
             className={`btn ${CHIP} ${b.name === name ? 'btn-accent' : 'btn-quiet border-hairline'}`}
           >
-            {b.label}
+            {!behind&&isLearned(petState,b.name)?'✓ ':''}{b.label}
           </button>
-        ))}
+        );})}
       </div>
 
+      {!proofing?<><CaptureGame dogName={dog.name} name={name} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose} petPulse={petPulse} unavailable={asleep?`${dog.name} is asleep.`:calmNeed(petState,'training')}/>{isLearned(petState,name)&&<button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(true)} title="Lure, signal, word, then distance, duration and distraction">Proof it →</button>}</>:<>
+      <button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(false)}>← Catch game</button>
       <div className="shrink-0 border-hairline-t px-2 py-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <span className="label">
@@ -305,11 +317,15 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           </p>
         )}
       </div>
+      </>}
 
       <details className="practice-real-notes border-hairline-t px-2 py-1.5">
         <summary className="label">Try this with your real dog · guide</summary>
         <p className="mt-1 text-[11px] leading-snug text-zinc-300">{real.lure}</p>
         <p className="mt-1 text-[11px] leading-snug text-zinc-400">Common mistake: {real.mistake}</p>
+        <p className="mt-1 text-[10px] leading-snug text-faint">
+          Catching a behaviour he offers is capturing (Skinner); the word becoming a promise of your touch is Pavlov.
+        </p>
         <p className="mt-1 text-[10px] leading-snug text-faint">
           Reward-based method: Pryor, Don&apos;t Shoot the Dog · Dunbar, lure-reward · AVSAB 2021
         </p>
