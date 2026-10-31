@@ -258,10 +258,10 @@ function IllustratedStage(props: Props & {url:string}) {
     const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextGreeting=performance.now()+18000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
-      const interval=reduced.matches?1000/6:1000/30;
+      const interval=reduced.matches?1000/6:1000/60;
       if(!next)next=now;
       if(now+.5<next)return;
-      const dt=last?Math.min((now-last)/1000,.1):1/30;last=now;next+=interval;
+      const dt=last?Math.min((now-last)/1000,.1):1/60;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
       if(!uniforms.art.value)return;if(pendingResize)resize();
       uniforms.art.value=textures.get(shownPose)||uniforms.art.value;uniforms.artTile.value.set(1,1,0,0);uniforms.locomotion.value=0;uniforms.running.value=0;hitAtlasFrame=-1;
@@ -292,8 +292,8 @@ function IllustratedStage(props: Props & {url:string}) {
       uniforms.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*3));
       uniforms.motion.value.lerp(target,1-Math.exp(-dt*10));
       uniforms.more.value.lerp(new THREE.Vector4(action==='groom'||idle==='shake'?1:0,action==='communicate'||action==='medicine'||sniffing||idle==='nose-nudge'?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
-      uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),.15);
-      if(idle==='looking')uniforms.gaze.value.lerp(new THREE.Vector2(Math.sin(t*.9)*.8,Math.sin(t*.6)*.3),.07);
+      uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),1-Math.exp(-dt*4.9));
+      if(idle==='looking')uniforms.gaze.value.lerp(new THREE.Vector2(Math.sin(t*.9)*.8,Math.sin(t*.6)*.3),1-Math.exp(-dt*2.2));
       const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'||action==='rewardCalm'?'feed':p.petState.calmSince!==undefined?'down':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'||idle==='paw-screen'?'paw':kind==='bow'||idle==='play-bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
       desiredPose=requested;
       const complete=reduced.matches||now-poseChangedAt>=transitionDuration;

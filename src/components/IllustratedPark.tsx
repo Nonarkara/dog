@@ -87,6 +87,8 @@ export function IllustratedPark(props:Props){
    if(own)a.bubble=hungerBubble();
    raster(source).then(r=>{if(disposed||!actors.has(id))return;a.baseRaster=r;if(!a.poseRaster||a.requestedPose==='stand')a.poseRaster=r;if(!a.raster||a.requestedPose==='stand'){a.raster=r;material.uniforms.art.value=r.texture;}if(own)setReady(true);}).catch(()=>{if(!disposed&&own){setReady(true);latest.current.onError('The dog illustration could not load. Please try again.');}});
    if(motionFile)raster(`/dogs/motion/${motionFile}-motion${own&&renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,true).then(atlas=>{if(disposed||!actors.has(id))return;atlas.texture.generateMipmaps=false;atlas.texture.minFilter=THREE.LinearFilter;
+     // Upload the motion sheet to the GPU now, while the dog stands still, not on his first step (a 120 ms hitch mid-walk).
+     renderer.initTexture(atlas.texture);
     const tileSize=atlas.w/10;a.motionFrames=Array.from({length:MOTION_LAYOUT.frames},(_,index)=>{const box=frameArt(motionFile,index).box;return {...atlas,w:tileSize,h:tileSize,left:box[0],right:box[0]+box[2],top:box[1],bottom:MOTION_FLOOR,pixelWidth:atlas.w,originX:(index%10)*tileSize,originY:Math.floor(index/10)*tileSize,tile:new THREE.Vector4(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12)};});}).catch(()=>{/* Optional gait art never removes the available dog or blocks care. */});
   };
   const original=DEFAULT_DOGS.find(d=>d.id===props.dogId),authored=original&&!props.appearance.avatarConfig.customModelUrl&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>original.avatarConfig[k]===props.appearance.avatarConfig[k]);
@@ -181,7 +183,7 @@ export function IllustratedPark(props:Props){
    choose(a,now);
   };
   let ambientZoom=props.zoom,lastIntentKey='',lastIntentAt=-Infinity;
-  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=1000/(latest.current.ambient?30:60);if(next<now-1000/60)next=now+1000/60;
+  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=1000/60;if(next<now-1000/60)next=now+1000/60;
    if(pendingResize)resize();{const tall=height>width*1.15;roamX=tall?210:400;roamTop=-240;roamBottom=tall?620:380;}const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
    const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
    let dx=0,dy=0;if(!resting){if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;}if(keys.size&&!dx&&!dy)stopKeyboard();if(dx||dy){own.tx=Math.max(-420*unit,Math.min(420*unit,own.x+dx*50));own.ty=Math.max(-280*unit,Math.min(400*unit,own.y+dy*50));}
@@ -232,6 +234,10 @@ export function IllustratedPark(props:Props){
      const index=side?(running?Math.floor(a.stride*32)%32:32+Math.floor(a.stride*16)%16):depth?(Math.sin(a.heading)>0?80:96)+Math.floor(a.stride*16)%16:48+turnIndex;
      a.motionFrame=index;a.raster=a.motionFrames[index];a.facing=side?view.facing:1;
      const from=sourceRig(a.motionFile!,index),gait=gaitRig(from,a.stride,0,a.heading,index===56||index===72,a.w/.80);
+     // IN-BETWEENS: a walk has 16 drawings, about 8 a second. Between two drawings the
+     // legs are warped from this drawing's joints toward the next one's, so the stride
+     // moves every frame instead of in stop-motion steps.
+     {const cycle=side?(running?32:16):depth?16:0;if(cycle){const f=a.stride*cycle,t=f-Math.floor(f),base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){gait.points[j][0]+=(next[j][0]-from[j][0])*t;gait.points[j][1]+=(next[j][1]-from[j][1])*t;}}}
      a.strideSize=(running?.46:depth?.30:.30)*a.w/.80;motionPoints=gait.points;contactFlags=frameArt(a.motionFile!,index).feet.map(point=>point[1]>.883);
      u.running.value=running?1:0;u.runNeck.value.set(...runNeckFor(index));
      if(petting){motionPoints[0][0]+=.006;motionPoints[0][1]+=.003;}
