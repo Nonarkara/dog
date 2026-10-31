@@ -1098,3 +1098,5 @@ html {font-synthesis:none;}
 .meter-delta[data-up=false] {color:#9a2a22;}
 @keyframes delta-rise {0% {opacity:0;transform:translateY(6px);} 12% {opacity:1;transform:none;} 78% {opacity:1;} 100% {opacity:0;transform:translateY(-8px);}}
 @media (prefers-reduced-motion:reduce){.meter-delta {animation:none;}}
+/* A one-line note rides the floor strip below the paws, so the stage keeps its size. */
+.stage-note-slot:not(.stage-note-slot--guide) {position:absolute;left:0;right:0;bottom:0;z-index:5;}

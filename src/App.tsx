@@ -722,7 +722,9 @@ export const App: React.FC = () => {
               </Suspense>
             </div>
 
-            {/* Feedback has its own row: never place text over the dog. */}
+            {/* Feedback never covers the dog. A one-line note sits on the floor below his paws
+                so the stage never resizes (a resize jumped the dog and flashed the canvas
+                on every interaction); a multi-line first-play tip still takes its own row. */}
             <div className={`stage-note-slot ${firstGuide.tip&&!saveError?'stage-note-slot--guide':''}`} data-open={!!stageNote||!!firstGuide.tip}>
             {firstGuide.tip&&!saveError&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}
             {stageNote && (
