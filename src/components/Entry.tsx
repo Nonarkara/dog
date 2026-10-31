@@ -17,8 +17,8 @@ export function Entry(){
  const failed=new URLSearchParams(location.search).get('signin')==='failed';
  const signIn=(provider:string)=>location.assign(`/api/auth/${provider}/start?back=${encodeURIComponent(`/?mode=own${invite}`)}`);
  const [choosing,setChoosing]=useState(mode==='own'&&!adoption),[selected,setSelected]=useState(adoption?.dogId??'oreo-frenchie'),[artReady,setArtReady]=useState(false),[error,setError]=useState(''),[restore,setRestore]=useState<{raw:string;name:string}|null>(null);
- if(mode==='own'&&!synced)return <main className="entry-loading" data-workspace-loading="true">Fetching your dog…</main>;
- if(mode==='play'||mode==='own'&&owned)return <Suspense fallback={<main className="entry-loading" data-study-ready="false" data-workspace-loading="true">Opening Tama-Dog-Chi…</main>}><App/></Suspense>;
+ if(mode==='own'&&!synced)return <main className="entry-loading" data-workspace-loading="true" aria-label="Fetching your dog"><span className="region-skeleton" aria-hidden="true"><i/><i/><i/></span></main>;
+ if(mode==='play'||mode==='own'&&owned)return <Suspense fallback={<main className="entry-loading" data-study-ready="false" data-workspace-loading="true" aria-label="Opening Tama-Dog-Chi"><span className="region-skeleton" aria-hidden="true"><i/><i/><i/></span></main>}><App/></Suspense>;
  const dog=DEFAULT_DOGS.find(d=>d.id===selected)!;
  const adopt=()=>{try{localStorage.setItem(ADOPTION_KEY,JSON.stringify({dogId:dog.id,at:Date.now(),seed:crypto.randomUUID(),name:cleanDogName(dogName)||dog.name}));location.assign(`/?mode=own${invite}`);}catch{setError('This browser could not save your puppy. Allow browser storage and try again.');}};
  return <main className="entry cockpit" style={dogTheme(selected)} data-study-ready="true">

@@ -1019,3 +1019,60 @@ html {font-synthesis:none;}
 .stage-away {position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;background:var(--stage-ground);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--text-main);}
 .stage-away p {margin:0;max-width:34ch;}
 .stage-away button {min-height:40px;padding:0 16px;}
+
+/* The page is the window. A phone column pinned in a white corner is a desk
+   with the lights off. Cream covers the canvas; the cockpit takes the width. */
+html,body,#root {width:100%;max-width:none;background:var(--bg-main);}
+#root {min-height:100%;display:flex;flex-direction:column;}
+.cockpit {width:100%;max-width:none;flex:1 1 auto;}
+.visually-hidden,.sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.region-skeleton {flex:1 1 auto;min-height:160px;height:100%;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:16px;background:var(--bg-surface);}
+.region-skeleton i,.entry-loading .region-skeleton i {display:block;height:10px;background:var(--border-dim);opacity:.55;}
+.region-skeleton i:nth-child(1) {width:46%;}
+.region-skeleton i:nth-child(2) {width:72%;}
+.region-skeleton i:nth-child(3) {width:38%;}
+.entry-loading {width:100%;}
+.entry-loading .region-skeleton {width:min(420px,80%);height:180px;flex:none;background:transparent;}
+
+/* One line. A second bar is how the stage gets shoved off the phone. */
+.first-play-tip p {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.first-play-tip p .label {display:inline;margin-right:6px;}
+
+/* Pantry and bedtime sit on the stage. They do not take a row from the dog or the meters. */
+.region-stage {position:relative;}
+.care-sheet {position:absolute;z-index:8;left:8px;right:52px;bottom:8px;max-height:46%;height:auto;overflow:auto;background:var(--bg-surface);border:1px solid var(--border-strong);}
+.care-sheet.panel {flex:none;}
+.care-head-actions {display:inline-flex;align-items:center;gap:2px;margin-left:auto;}
+.care-meter {position:relative;}
+.meter-delta {position:absolute;top:-2px;right:0;z-index:1;font-family:var(--font-body);font-size:13px;line-height:1;color:var(--accent);background:var(--bg-surface);padding:1px 3px;}
+.meter-delta[data-down="true"] {color:#9b3347;}
+
+.practice-actions {align-items:stretch;}
+.practice-mark {min-height:48px;flex:1.6 1 148px;font-size:16px;white-space:nowrap;padding:8px 14px;}
+.mark-cue {display:flex;align-items:center;gap:8px;min-height:22px;margin-top:6px;font-size:14px;line-height:1.3;}
+.mark-cue span {flex:none;}
+.mark-cue i {flex:1;height:6px;background:var(--border-dim);position:relative;overflow:hidden;}
+.mark-cue i::after {content:'';position:absolute;inset:0 auto 0 0;width:28%;background:var(--border-strong);}
+.mark-cue--ready {color:var(--accent);}
+.mark-cue--ready i::after {width:100%;background:var(--accent);}
+
+@keyframes mess-appear {from {transform:translateY(8px) scale(.6);opacity:0;} to {transform:none;opacity:1;}}
+.illustration-mess,.illustration-puddle {animation:mess-appear .45s ease-out both;}
+
+@media (min-width:768px) {
+  .cockpit {font-size:18px;}
+  .cockpit .label {font-size:14px;letter-spacing:.04em;}
+  .cockpit :is(.text-\[10px\],.text-\[11px\],.text-\[12px\],.text-xs) {font-size:16px;}
+  .care-meter-value > .data {font-size:26px;}
+  .care-now > p:not(.label) {font-size:16px;}
+  .dog-ambient-caption,.dog-pet-hint,.growth-caption,.first-play-tip {font-size:16px;}
+  .command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent) {width:46px;min-width:46px;min-height:46px;height:46px;}
+  .entry {grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);grid-template-rows:auto minmax(0,1fr);align-items:stretch;}
+  .entry-head {grid-column:1 / -1;}
+  .entry-dog {grid-column:1;grid-row:2;}
+  .entry-choices {grid-column:2;grid-row:2;width:min(100%,520px);margin:0;justify-content:center;}
+  .entry-dog img {max-height:min(68dvh,calc(100% - 28px));}
+}
+@media (prefers-reduced-motion:reduce) {
+  .illustration-mess,.illustration-puddle,.mark-cue i::after {animation:none;}
+}

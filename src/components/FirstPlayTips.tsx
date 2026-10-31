@@ -7,7 +7,7 @@ const TIPS={
  feed:{title:'Meals and rewards',text:'Keep regular meals. Use tiny training rewards from the daily allowance; never skip meals to force learning.'},
  coins:{title:'Your pantry',text:'Active time together earns paw coins. Six coins buy three meals; hungry dogs have an emergency bowl.'},
  play:{title:'A ball is a learned game',text:'New dogs watch it drop. Teach Fetch first, then help them catch left or right.'},
- walk:{title:'A sniff walk',text:'Tap the ground to explore. Gentle greetings build your dog’s social confidence.'},
+ walk:{title:'A sniff walk',text:'A short loop at home. It eases the bladder and the fidgets. The park is the trees in the header.'},
  bed:{title:'Goodnight together',text:'Tuck your dog in when you settle down. Each dog has a wake habit; rest restores energy.'},
  wake:{title:'A little morning woof',text:'Opt in to wake-up barking. Keep the app open with sound allowed; this is not a lock-screen alarm.'},
  talk:{title:'Words become familiar',text:'Pair a short word with care. Repeating it patiently gives it meaning to this dog.'},
@@ -37,7 +37,7 @@ export function useFirstPlayTips(){
   if(element.getAttribute('role')==='tab'&&['Care','Coach','Record','Commons'].includes(label)){show(({Care:'care',Coach:'coach',Record:'record',Commons:'park'} as const)[label as 'Care'|'Coach'|'Record'|'Commons']);return;}
   if(/Open Commons park/.test(label)){show('park');return;}
   if(/Zoom in|Zoom out|Find my dog/.test(label)){show('zoom');return;}
-  if(/Yes!.*mark/.test(label)){show('marker');return;}
+  if(/Yes!.*mark|Yes, mark the moment/.test(label)){show('marker');return;}
   if(label==='Treat'){show('treat');return;}
   if(/Teach fetch|^Lure$/.test(label)){show('coach');return;}
   if(/3 meals/.test(label)){show('coins');return;}
@@ -52,4 +52,4 @@ export function useFirstPlayTips(){
  };
  return {tip,show,capture,close:()=>setTip(null)};
 }
-export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const close=useRef(onClose);close.current=onClose;useEffect(()=>{if(!['park','zoom','walk'].includes(tip))return;const timer=setTimeout(()=>close.current(),16000);return()=>clearTimeout(timer);},[tip]);const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span><span>{t.text}</span></p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}
+export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const close=useRef(onClose);close.current=onClose;useEffect(()=>{const timer=setTimeout(()=>close.current(),5600);return()=>clearTimeout(timer);},[tip]);const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span> {t.text}</p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}

@@ -27,6 +27,27 @@ class SoundFX {
     }catch{/* Audio may be unavailable; visual marker feedback still works. */}
   }
 
+  /** A short whimper when a need crosses the line. Quieter than a bark. */
+  whine() {
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(540, now);
+      osc.frequency.exponentialRampToValueAtTime(280, now + 0.28);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.04, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.34);
+    } catch { /* Visual need still shows if audio is blocked. */ }
+  }
+
   bark() {
     try {
       this.init();

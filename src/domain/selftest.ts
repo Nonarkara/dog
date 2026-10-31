@@ -14,7 +14,7 @@ import {DEFAULT_DOGS} from '../data/defaultDogs';
  *   node --experimental-strip-types src/domain/selftest.ts
  */
 
-import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate } from './pet';
+import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate, describeAbsence, NEGLECT_HYGIENE_FLOOR } from './pet';
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
 import { dailyLife, dailyMood } from './dailyLife';
@@ -537,6 +537,9 @@ ok('sleeping dog cannot socialize',socialize({...pantry,sleep:{...pantry.sleep,a
 ok('repertoire has twenty distinct expressions',DOG_BEHAVIOURS.length===20&&new Set(DOG_BEHAVIOURS).size===20);
 ok('sleep has no playful idle candidates',behaviourPool({...pantry,sleep:{...pantry.sleep,asleep:true}}).every(b=>b==='sleeping'));
 ok('low energy never selects zooming or play bow',!behaviourPool({...pantry,needs:{...pantry.needs,energy:10}}).some(b=>['trotting','play-bow'].includes(b)));
+ok('low energy settles into a visible nap',behaviourPool({...pantry,needs:{...pantry.needs,energy:10}}).includes('sleeping'));
+ok('an itchy coat offers a scratch',behaviourPool({...pantry,needs:{...pantry.needs,hygiene:40,energy:80,hunger:70}}).includes('scratch'));
+ok('a comfortable dog wags',behaviourPool({...pantry,trust:70,needs:{...pantry.needs,energy:80,hunger:80,hygiene:90}}).includes('tail-wag'));
 ok('lonely dog seeks contact',behaviourPool({...pantry,call:{reason:'lonely',since:noon}}).includes('paw-screen'));
 ok('random idle choice does not immediately repeat',chooseBehaviour(pantry,'watching',()=>0).kind!=='watching');
 const earlyRiser={...pantry,game:{...gameState(pantry),wakeMinute:360},sleep:{...pantry.sleep,asleep:true,fellAsleepAt:new Date(2026,9,29,22).getTime()},updatedAt:new Date(2026,9,30,5,55).getTime(),needs:{...pantry.needs,energy:90}};
@@ -595,6 +598,14 @@ for (let i = 0; i < COAX_PETS; i++) ({ state: coaxing, home } = coax(coaxing, t0
 ok('a few gentle pets bring him home', home && !coaxing.away);
 ok('he comes home trusting you less', coaxing.trust <= RETURN_TRUST);
 ok('nothing in neglect ends a dog', !JSON.stringify(neglected).match(/dead|died|death/i));
+ok('a long absence does not wipe hygiene to zero', neglected.needs.hygiene >= NEGLECT_HYGIENE_FLOOR);
+ok('a long absence does not stack six messes', (neglected.poopCount ?? 0) + dailyLife(neglected).peeCount <= 4);
+const eightHours = decay(createPetState(t0), t0 + 8 * 3_600_000);
+const awayLine = describeAbsence(createPetState(t0), eightHours);
+ok('eight hours still has a coat', eightHours.needs.hygiene >= NEGLECT_HYGIENE_FLOOR);
+ok('a long gap explains itself', !!awayLine && /While you were away/.test(awayLine) && /Feed first|Clean the stage|medicine|sleep|company|slipped out/.test(awayLine));
+ok('a short gap stays quiet', describeAbsence(createPetState(t0), decay(createPetState(t0), t0 + 10 * 60_000)) === null);
+ok('running away is said in the return line', /slipped out/.test(describeAbsence({ ...createPetState(t0), trust: 70 }, neglected) || ''));
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {
