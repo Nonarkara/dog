@@ -45,7 +45,7 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
   /** He tries things. Sometimes the right thing. */
   const offer=async(id:number)=>{
     const learned=captureOf(petState,name).association>=LEARNED;
-    for(let i=0;i<9&&run.current===id;i++){
+    for(let i=0;i<(learned?1:9)&&run.current===id;i++){
       await pause(learned&&i===0?250:1100+Math.random()*1300);
       if(run.current!==id)return;
       const hit=learned&&i===0?true:Math.random()<offerChance(captureOf(petState,name).association);
@@ -63,7 +63,7 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
         doingAt.current=false;doneAt.current=Date.now();setDoing(false);setBubble(null);
       }
     }
-    if(run.current===id){setPhase('ready');setBubble(null);void onPose('stand');setStatus(`${dogName} lost interest. Say “${word}” to try again.`);}
+    if(run.current===id){setPhase('ready');setBubble(null);void onPose('stand');setStatus(learned?`He knows “${word}”. Say it again any time.`:`${dogName} lost interest. Say “${word}” to try again.`);}
   };
 
   const cue=()=>{
@@ -103,7 +103,7 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
     setStatus(`Yes! Now stroke ${dogName} to reward him.`);
     const id=run.current;
     window.setTimeout(()=>{if(run.current!==id)return;run.current++;setPhase('ready');setDoing(false);doingAt.current=false;setBubble(null);
-      void commit(s=>withCapture(s,name,pair(captureOf(s,name),false)),`No pet came — the word meant less. Pet him right after next time.`);},PET_WINDOW_MS);
+      void commit(s=>withCapture(s,name,pair(captureOf(s,name),false)),`You said it, but no stroke came — that one didn't count. Stroke him right after.`);},PET_WINDOW_MS);
   };
 
   // A stroke on the stage within the window completes the pairing.
@@ -120,9 +120,9 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
       <div className="capture-progress" aria-label={`${word}: ${stars} of 5`}>
         <span className="label">Teach “{word}”</span>
         <span className="capture-stars" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} data-on={i<stars}>★</i>)}</span>
-        <span className="data">{c.pairings} catches</span>
+        <span className="data">{c.association>=LEARNED?'Learned ✓':`${stars}/5 to learn`}</span>
       </div>
-      <p className="capture-status" aria-live="polite">{unavailable??(status||`Say “${word}”, watch ${dogName}, and the moment he does it say “${word}!” again and stroke him.`)}</p>
+      <p className="capture-status" aria-live="polite">{unavailable??(status||`Say “${word}”, then watch ${dogName}. The moment he does it, press “${word}!” and stroke him. Too early counts as a miss.`)}</p>
       <div className="capture-actions">
         <button type="button" className={`btn ${phase==='ready'?'btn-accent':'btn-quiet border-hairline'}`} onClick={cue} disabled={!!unavailable||phase!=='ready'}>Say “{word}”</button>
         <button type="button" className={`btn ${doing?'btn-accent capture-now':'btn-quiet border-hairline'}`} onClick={mark} disabled={phase!=='offering'}>“{word}!”</button>

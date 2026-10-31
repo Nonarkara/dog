@@ -42,7 +42,8 @@ export const offerChance=(association:number)=>.12+.83*clamp01(association);
 
 /** A mark while he does it, followed (or not) by a pet. */
 export function pair(c:Capture,petted:boolean):Capture{
-  return {association:clamp01(c.association+(petted?PAIR_WITH_PET:PAIR_NO_PET)),pairings:c.pairings+1};
+  // Only a mark *and* a pet is a catch; a mark alone nudges the word a little.
+  return {association:clamp01(c.association+(petted?PAIR_WITH_PET:PAIR_NO_PET)),pairings:c.pairings+(petted?1:0)};
 }
 /** A mark at the wrong moment teaches the wrong thing, a little. */
 export const wrongMark=(c:Capture):Capture=>({...c,association:clamp01(c.association-WRONG_MARK)});

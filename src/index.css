@@ -1100,3 +1100,21 @@ html {font-synthesis:none;}
 @media (prefers-reduced-motion:reduce){.meter-delta {animation:none;}}
 /* A one-line note rides the floor strip below the paws, so the stage keeps its size. */
 .stage-note-slot:not(.stage-note-slot--guide) {position:absolute;left:0;right:0;bottom:0;z-index:5;}
+/* Three cups on the stage floor, in front of him. */
+.cups-row {position:absolute;left:50%;top:calc(var(--dog-floor,88%) - var(--cup-h));--cup-w:clamp(56px,9vw,84px);--cup-h:calc(var(--cup-w)*.875);width:calc(var(--cup-w)*3 + 40px);transform:translateX(-50%);height:var(--cup-h);z-index:4;pointer-events:none;}
+.cockpit .stage-cup {position:absolute;top:0;left:calc(var(--slot)*(var(--cup-w) + 20px));width:var(--cup-w);height:var(--cup-h);padding:0;background:transparent;border:0;color:var(--text-main);pointer-events:auto;transition:left .42s ease-in-out;}
+.cockpit .stage-cup:disabled {opacity:1;cursor:default;}
+.stage-cup-shell {position:absolute;inset:0;width:100%;height:100%;transition:transform .22s ease-out;}
+.stage-cup[data-lifted=true] .stage-cup-shell {transform:translateY(-38%) rotate(-6deg);}
+.stage-cup[data-tapped=true] .stage-cup-shell {animation:cup-tap .5s ease-out;}
+@keyframes cup-tap {30% {transform:rotate(-7deg);} 60% {transform:rotate(5deg);}}
+.stage-cup-bone {position:absolute;left:28%;bottom:4%;width:44%;height:44%;color:var(--accent);}
+.stage-cup-paw {position:absolute;left:50%;top:-30%;width:40%;height:40%;transform:translateX(-50%);color:var(--text-main);animation:bubble-in .18s ease-out;}
+.cups-row[data-phase=hide] .stage-cup:hover .stage-cup-shell {transform:translateY(-6px);}
+@media (prefers-reduced-motion:reduce){.cockpit .stage-cup,.stage-cup-shell {transition:none;animation:none;}}
+.cups-row {--cup-w:clamp(64px,12vw,112px);top:calc(var(--dog-floor,88%) - var(--cup-h)*.45);width:calc(var(--cup-w)*3 + 2*var(--cup-gap));--cup-gap:clamp(18px,4vw,44px);}
+.cockpit .stage-cup {left:calc(var(--slot)*(var(--cup-w) + var(--cup-gap)));}
+.stage-cup-bone {left:18%;bottom:2%;width:64%;height:64%;}
+/* Play-test: the bubble sat on his ear; it floats above the head, the care floats sit top-left. */
+.think-bubble {top:2%;}
+.meter-deltas {left:8px;top:8px;transform:none;flex-direction:column;align-items:flex-start;max-width:60%;}

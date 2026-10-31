@@ -24,6 +24,7 @@ import { coax, maybeRunAway, COAX_PETS, RETURN_TRUST } from './runaway';
 import { chooseActivity, type Activity } from './parkPersonality';
 import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
+import { noseAccuracy, pickCup } from './nose';
 import { captureOf, isUnlocked, lockedBehind, offerChance, pair, wrongMark, withCapture, LEARNED } from './capture';
 import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
 
@@ -604,6 +605,7 @@ ok('only Sit is open at first', isUnlocked(fresh, 'sit') && !isUnlocked(fresh, '
 ok('Down waits behind Sit', lockedBehind(fresh, 'down') === 'sit');
 ok('an untrained dog rarely offers the sit', offerChance(0) < 0.2);
 ok('a trained dog nearly always does', offerChance(1) > 0.9);
+ok('a mark without a pet is not a catch', pair(captureOf(fresh, 'sit'), false).pairings === 0);
 ok('a mark plus a pet beats a mark alone', pair(captureOf(fresh, 'sit'), true).association > pair(captureOf(fresh, 'sit'), false).association);
 ok('a mark at the wrong moment costs', wrongMark({ association: 0.5, pairings: 3 }).association < 0.5);
 ok('a wrong mark never goes below nothing', wrongMark({ association: 0, pairings: 0 }).association === 0);
@@ -613,6 +615,13 @@ ok('Sit is learned in a handful of good pairings', reps >= 4 && reps <= 6, `${re
 const sat = withCapture(fresh, 'sit', sitting);
 ok('learning Sit opens Down, and only Down', isUnlocked(sat, 'down') && !isUnlocked(sat, 'paw'));
 ok('an old save keeps a skill it already had', captureOf({ ...fresh, lessons: { down: { ...newLesson(), stage: 2 } } }, 'down').association >= LEARNED);
+
+// ---- three cups ----
+ok('a new nose beats chance, barely', noseAccuracy(0) > 1/3 && noseAccuracy(0) < .5);
+ok('a practised nose is good, never perfect', noseAccuracy(1) > .8 && noseAccuracy(1) < 1);
+ok('a sure nose picks the bone', pickCup(1, [0, 1, 2], 1, () => 0) === 1);
+ok('a miss picks a cup without the bone', pickCup(1, [0, 1, 2], 0, () => .99) !== 1);
+ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

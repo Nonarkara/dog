@@ -93,10 +93,10 @@ function IllustratedStage(props: Props & {url:string}) {
     const p=latest.current;if(!readyRef.current||p.petState.sick||p.petState.sleep?.asleep||p.pose&&p.pose!=='stand')return;
     if(!fromGame&&(!canPlay()||gameRef.current||findingRef.current))return;
     if(funTimer.current)clearTimeout(funTimer.current);if(!fromGame)setFetchConfused(false);
-    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?3100:kind==='turn'?1600:2400)};
+    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?3100:kind==='turn'?1600:kind==='away'?60000:kind==='back'?600:2400)};
     fun.current=next;setTrick(next);
     const text=kind==='highfive'?'Tap my paw!':kind==='bow'?'Come on, let’s play!':kind==='zoomies'?(dog.id==='paolo-pug'?'Tiny pug zoomies!':'Zoomies!'):kind==='tilt'?'Did you say… treat?':kind==='come'?'Let me have a sniff!':kind==='turn'?'A little look around.':personality.greeting;
-    if(!findingRef.current)showCheer(text);
+    if(!findingRef.current&&kind!=='away'&&kind!=='back')showCheer(text);
     funTimer.current=setTimeout(()=>{fun.current=null;setTrick(null);},next.until-now);
   };
   const highFive=()=>{
@@ -338,12 +338,15 @@ function IllustratedStage(props: Props & {url:string}) {
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
       skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
-      const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&(zoomies||strolling||kind==='come'||kind==='turn');
+      const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&(zoomies||strolling||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
       canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';
       if(movement&&atlas){
         const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;motionPhase+=Math.min(.1,Math.abs(delta))/.66;
         let index:number,face=1,scale=1;
         if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/1.6*32));
+        // Three cups: turn until his back is to you (frame 24 of the turn), hold, then turn home.
+        else if(kind==='away')index=MOTION_LAYOUT.turnStart+Math.min(24,Math.floor(elapsed/1.2*24));
+        else if(kind==='back')index=elapsed>=.5?MOTION_LAYOUT.turnStart:MOTION_LAYOUT.turnStart+24+Math.min(7,Math.floor(elapsed/.5*8));
         else if(kind==='come'){
           const approach=Math.min(1,elapsed/1.5);scale=.90+.10*approach;
           index=elapsed<1.5?MOTION_LAYOUT.towardStart+Math.floor(elapsed*22)%16:elapsed<2.2?56:48+Math.round(8*(1-Math.min(1,(elapsed-2.2)/.7)));
@@ -412,7 +415,12 @@ function IllustratedStage(props: Props & {url:string}) {
     </div>)}
     {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop…</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
     {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
-    {finding&&dock(<TreatGame key={dog.id} name={dog.name} onClose={closeFinding} onReact={(cup,hit)=>{reaction.current.aimX=(cup-1)*.8;runTrick(hit?'wiggle':'tilt',true);}} onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>)}
+    {finding&&<TreatGame key={dog.id} name={dog.name} nose={props.petState.noseSkill??0} host={props.controlsHost}
+      onTurn={away=>runTrick(away?'away':'back',true)}
+      onLook={x=>{reaction.current.aimX=x;reaction.current.aimY=.5;}}
+      onReact={hit=>runTrick(hit?'wiggle':'tilt',true)}
+      onClose={()=>{closeFinding();stopFun();}}
+      onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>}
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind},{kind:'come',label:'Come closer',Icon:Footprints},{kind:'turn',label:'Turn around',Icon:RotateCw}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()||((kind==='come'||kind==='turn')&&!motionReady)} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}

@@ -18,7 +18,7 @@ const TIPS={
  park:{title:'Your little universe',text:'Pet a dog or tap a place to walk. Pinch to come closer.'},
  dogs:{title:'Meet the pack',text:'Each dog keeps separate care, training and personality. Switching dogs never transfers progress.'},
  tricks:{title:'A little invitation',text:'Try a gesture and watch the response. Let a tired or unwell dog rest instead.'},
- nose:{title:'Clever nose',text:'Watch where the treat goes, then choose a cup. Sniffing games ease boredom.'},
+ nose:{title:'Three cups',text:'He turns away while you hide the bone. Then watch his nose work — it gets better with practice.'},
  marker:{title:'That exact moment',text:'Your marker promises a reward. Follow it with a treat, even if your timing wasn’t perfect.'},
  treat:{title:'Keep your promise',text:'Deliver a small reward promptly after the marker. Start new skills with consistent rewards.'},
  zoom:{title:'Come closer',text:'Zoom changes the camera, not the dog. Find my dog brings your companion back into view.'},

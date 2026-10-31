@@ -1,4 +1,4 @@
-export type Trick='highfive'|'bow'|'wiggle'|'zoomies'|'tilt'|'come'|'turn';
+export type Trick='highfive'|'bow'|'wiggle'|'zoomies'|'tilt'|'come'|'turn'|'away'|'back';
 export interface PlayPersonality {pace:number;bounce:number;wag:number;greeting:string;idle:Trick;}
 export const PLAY_PERSONALITIES:Record<string,PlayPersonality>={
  'expo-2021':{pace:.85,bounce:.75,wag:.85,greeting:'A very dignified wiggle.',idle:'tilt'},
