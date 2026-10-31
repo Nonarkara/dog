@@ -54,6 +54,8 @@ export const MARKER_WINDOW_MS = 500;
 
 /** A pet that has not been cared for drifts. One point per hour. */
 const DECAY_PER_HOUR = { hunger: 1.6, energy: 1.1, hygiene: 0.7 } as const;
+/** Time decay can make a coat dirty. It does not erase it to zero while he is still home. */
+export const NEGLECT_HYGIENE_FLOOR = 12;
 
 /** How fast trust is lost when a cue stops meaning anything. */
 const TRUST_DECAY_PER_DAY = 4;
@@ -313,6 +315,39 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
   return maybeRunAway(next,now);
 }
 
+/**
+ * WHAT CHANGED WHILE THE TAB WAS CLOSED.
+ *
+ * A Tamagotchi that comes back at zero, with a stage full of mess and no
+ * sentence, feels broken. This is the sentence: how long, what fell, what
+ * to do next. A short gap stays quiet — the meters already show that.
+ */
+export function describeAbsence(before: PetState, after: PetState): string | null {
+  const ms = after.updatedAt - before.updatedAt;
+  if (!Number.isFinite(ms) || ms < 30 * 60_000) return null;
+  const hours = ms / 3_600_000;
+  const span = hours >= 36 ? `${Math.max(1, Math.round(hours / 24))} days` : hours >= 1 ? `${Math.round(hours)} h` : `${Math.round(ms / 60_000)} min`;
+  const bits: string[] = [];
+  const fell = (label: string, from: number, to: number) => {
+    const d = Math.round(from - to);
+    if (d >= 1) bits.push(`${label} −${d}`);
+    else if (d <= -1) bits.push(`${label} +${-d}`);
+  };
+  fell('fullness', before.needs.hunger, after.needs.hunger);
+  fell('energy', before.needs.energy, after.needs.energy);
+  fell('hygiene', before.needs.hygiene, after.needs.hygiene);
+  const mess = (s: PetState) => (s.poopCount ?? 0) + dailyLife(s).peeCount;
+  const added = Math.max(0, mess(after) - mess(before));
+  if (added) bits.push(`${added} mess${added > 1 ? 'es' : ''}`);
+  let next = 'A little company is enough.';
+  if (after.away) next = 'He slipped out instead of fading. Find him in the park — a few gentle pets bring him home.';
+  else if (after.sick) next = 'Give the game medicine, then let them rest.';
+  else if (after.needs.hunger < 35) next = 'Feed first.';
+  else if (mess(after) > 0) next = 'Clean the stage.';
+  else if (after.needs.energy < 30) next = 'Let them sleep.';
+  return `While you were away (${span}): ${bits.length ? bits.join(', ') : 'nothing drastic'}. ${next}`;
+}
+
 function decayStep(state:PetState,now:number):PetState {
   const hours = Math.max(0, (now - state.updatedAt) / 3_600_000);
   const factor = Math.min(hours, 72); // nobody is away for a month
@@ -324,7 +359,7 @@ function decayStep(state:PetState,now:number):PetState {
   const daily=advanceDailyLife(state,factor*60,now);
   const mess=(state.poopCount??0)+dailyLife(state).peeCount;
   const poopAcc=1+mess*1.5;
-  const nextHygiene=clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor);
+  const nextHygiene=Math.max(NEGLECT_HYGIENE_FLOOR,clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor));
   let isSick=state.sick??false,sickSince=state.sickSince;
   if(!isSick&&((daily.poopCount+daily.life.peeCount>=2&&nextHygiene<25)||daily.life.lowFullnessMinutes>=180)){
     isSick=true;sickSince=now;

@@ -14,6 +14,9 @@ interface CarePanelProps {
   dog: DogProfile;
   petState: PetState;
   detailView?:boolean;
+  /** Signed point changes from the last care tap. Cleared by the parent. */
+  deltas?: Partial<Record<MeterKey, number>>;
+  onPantry?: () => void;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -58,7 +61,7 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, deltas, onPantry }) => {
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const isSick = petState.sick ?? false;
@@ -115,7 +118,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}
         </span>
-        {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
+        {!detailView&&<span className="care-head-actions">{onPantry&&<button type="button" className="care-details-toggle btn-quiet" onClick={onPantry}>Pantry</button>}<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button></span>}
       </header>
 
       <div className="panel-body care-body @container">
@@ -127,8 +130,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
               : m.value < LOW_THRESHOLD;
             const value = Math.round(m.value);
             const warningLabel=m.inverted&&m.value>75?'Wired':m.lowMeans;
+            const delta = deltas?.[m.key];
+            const shown = typeof delta === 'number' && Number.isFinite(delta) && Math.abs(Math.round(delta)) >= 1 ? Math.round(delta) : 0;
             return (
               <div key={m.key} className="care-meter care-meter-reading min-w-0">
+                {shown !== 0 && <span className="meter-delta" data-down={shown < 0} aria-label={`${m.label} ${shown > 0 ? 'up' : 'down'} ${Math.abs(shown)}`}>{shown > 0 ? `+${shown}` : `−${Math.abs(shown)}`}</span>}
                 <div className="care-meter-symbols">
                   <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
                   {isLow && (

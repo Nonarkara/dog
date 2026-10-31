@@ -24,10 +24,11 @@ export function advanceDailyLife(state:PetState,minutes:number,now:number){
   const fedMinutes=state.needs.hunger>30?Math.min(elapsed,Math.max(0,(state.needs.hunger-30)/1.6*60)):0;
   const digestion=life.digestionMinutes+fedMinutes*(state.sleep?.asleep ? .4 : 1),poops=Math.floor((digestion+1e-8)/90);
   const lowMinutes=state.needs.hunger<10?elapsed:Math.max(0,elapsed-(state.needs.hunger-10)/1.6*60);
+  // Two puddles and two piles is a messy home. Six, with no warning, is a punishment.
   return {life:{...life,bladder:bound(bladder-pees*100),boredom:bound(life.boredom+elapsed*(state.sleep?.asleep?-.25:100/30)),
     digestionMinutes:Math.max(0,digestion-poops*90),lowFullnessMinutes:lowMinutes>0?life.lowFullnessMinutes+lowMinutes:0,
-    peeCount:Math.min(3,life.peeCount+pees),lastPeedAt:pees?now:life.lastPeedAt},
-    poopCount:Math.min(3,(state.poopCount??0)+poops),lastPoopedAt:poops?now:state.lastPoopedAt};
+    peeCount:Math.min(2,life.peeCount+pees),lastPeedAt:pees?now:life.lastPeedAt},
+    poopCount:Math.min(2,(state.poopCount??0)+poops),lastPoopedAt:poops?now:state.lastPoopedAt};
 }
 export type DailyMood='sleeping'|'sick'|'toilet'|'bored'|'hungry'|'tired'|'dirty'|'content';
 export function dailyMood(state:PetState):DailyMood {

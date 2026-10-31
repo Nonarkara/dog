@@ -26,6 +26,7 @@ import {
   saveActiveDogId,
   calculateDogAge,
   loadPetState,
+  loadStoredPetStates,
 } from './utils/dogCalculators';
 import {mutatePet,mutateDogs,resetProgress,type PetMutation,type DogMutation} from './utils/progressStore';
 import {SAVE_KEY} from './utils/saveFormat';
@@ -40,6 +41,8 @@ import {
   decay,
   settleSleep,
   willSettle,
+  happiness,
+  describeAbsence,
 } from './domain/pet';
 
 /**
@@ -61,6 +64,8 @@ import {
  * There is no page to scroll to, because there is no second page.
  */
 
+const loadCoach = () => import('./components/CoachPanel').then(m => ({ default: m.CoachPanel }));
+const loadRecord = () => import('./components/RecordPanel').then(m => ({ default: m.RecordPanel }));
 const IllustratedDog = lazy(() => import('./components/IllustratedDog').then(m => ({ default: m.IllustratedDog })));
 
 const DogAvatar3D = lazy(() =>
@@ -74,12 +79,8 @@ const RiggedAvatar = lazy(() =>
 const CommonsPanel = lazy(() =>
   import('./components/CommonsPanel').then((m) => ({ default: m.CommonsPanel }))
 );
-const CoachPanel = lazy(() =>
-  import('./components/CoachPanel').then((m) => ({ default: m.CoachPanel }))
-);
-const RecordPanel = lazy(() =>
-  import('./components/RecordPanel').then((m) => ({ default: m.RecordPanel }))
-);
+const CoachPanel = lazy(loadCoach);
+const RecordPanel = lazy(loadRecord);
 
 /** Coat starting points for a new dog; every colour can then be changed. */
 const COAT_PRESETS: { label: string; coat: { pattern: CoatPattern; base: string; light: string; dark: string; point: string } }[] = [
@@ -111,14 +112,14 @@ const NOTE_TTL_MS = 7000;
  * not, the frame is the truth.
  */
 function useWide(): boolean {
-  // The dashboard needs WIDTH and HEIGHT. Five regions side by side is a
-  // dashboard; five regions in a 768px-tall window are five letterboxes,
-  // each one scrolling to show what it was built to show. So the switch is
-  // made on the space the frame was actually given, not on the width alone.
+  // A desk is a width. The old gate also demanded 820px of height, so a
+  // 1280×800 window — shorter once the browser chrome is counted — stayed on
+  // the phone column, pinned in the corner of a blank page. The wide frame
+  // is the stage on the left and care on the right, and it fits a short desk.
   const read = () =>
     typeof window === 'undefined'
       ? true
-      : window.innerWidth >= 1024 && window.innerHeight >= 820;
+      : window.innerWidth >= 768;
   const [wide, setWide] = useState(read);
   useEffect(() => {
     const onResize = () => setWide(read());
@@ -139,6 +140,10 @@ export const App: React.FC = () => {
     return()=>observer.disconnect();
   },[]);
   const firstGuide=useFirstPlayTips();
+  useEffect(()=>{void loadCoach();void loadRecord();},[]);
+  const [meterDeltas,setMeterDeltas]=useState<Partial<Record<'fullness'|'energy'|'hygiene'|'happiness'|'trust'|'arousal',number>>|null>(null);
+  const deltaTimer=useRef<number|null>(null);
+  const toldAbsence=useRef('');
   const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(householdDefaults()));
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
@@ -362,9 +367,13 @@ export const App: React.FC = () => {
   }, [commitPet]);
 
   // A call shows in the tab title too, so it reaches you in another tab.
+  const heardCall = useRef('');
   useEffect(() => {
     const base = 'Tama-Dog-Chi — dog.nonarkara.org';
     document.title = petState.call ? `● ${currentDog.name} is calling — ${base}` : base;
+    const key = petState.call ? `${petState.call.reason}:${petState.call.since}` : '';
+    if (key && key !== heardCall.current) sound.whine();
+    heardCall.current = key;
   }, [petState.call, currentDog.name]);
 
   const priorSleep=useRef({id:activeDogId,asleep:petState.sleep.asleep});
@@ -376,6 +385,24 @@ export const App: React.FC = () => {
     if (noteTimer.current) window.clearTimeout(noteTimer.current);
     noteTimer.current = window.setTimeout(() => setNote(null), NOTE_TTL_MS);
   };
+  const showDeltas = (next: Partial<Record<'fullness'|'energy'|'hygiene'|'happiness'|'trust'|'arousal', number>>) => {
+    const visible = Object.fromEntries(Object.entries(next).filter(([, n]) => typeof n === 'number' && Math.abs(Math.round(n)) >= 1));
+    if (!Object.keys(visible).length) return;
+    setMeterDeltas(visible);
+    if (deltaTimer.current) window.clearTimeout(deltaTimer.current);
+    deltaTimer.current = window.setTimeout(() => setMeterDeltas(null), 2200);
+  };
+  useEffect(() => {
+    const raw = loadStoredPetStates()[activeDogId];
+    if (!raw) return;
+    const line = describeAbsence(raw, petState);
+    const key = `${activeDogId}:${line}`;
+    if (!line || toldAbsence.current === key) return;
+    toldAbsence.current = key;
+    say(line);
+    // The return line is for this visit. Later care must not reprint it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDogId]);
 
   useEffect(() => () => {
     if (noteTimer.current) window.clearTimeout(noteTimer.current);
@@ -397,6 +424,7 @@ export const App: React.FC = () => {
     setIsInteracting(true);setPendingAction(action);
     let message='',trigger:AvatarInteractionTrigger=action;
     const care=['feed','play','walk','groom'].includes(action)?action as 'feed'|'play'|'walk'|'groom':undefined;
+    const beforeHappy=happiness(petState),beforeTrust=petState.trust,beforeNeeds={...petState.needs};
     const next=await commitPet(latest=>{
       // He ran away: only gentle pets in the park reach him (domain/runaway.ts).
       if(latest.away){
@@ -412,12 +440,21 @@ export const App: React.FC = () => {
       if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
       if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state={...result.state,trust:Math.min(100,result.state.trust+1)};
       if(action==='play'&&(latest.sick||result.state.sleep.asleep))trigger=null;
-      return answer.answered?{...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)}:result.state;
+      const done=answer.answered?{...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)}:result.state;
+      return done;
     },care);
     if(activeDogRef.current!==id)return;
     if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
     setInteractionTrigger(trigger);say(message);
-    if(action==='walk'&&trigger){setCareExtra(null);setActiveRegion('commons');}
+    if(action==='feed'&&/pantry is empty/i.test(message))setCareExtra('food');
+    else if(action==='feed'&&trigger)setCareExtra(null);
+    if(next&&trigger&&['feed','play','groom','clean','pet','walk'].includes(action))showDeltas({
+      fullness:next.needs.hunger-beforeNeeds.hunger,
+      energy:next.needs.energy-beforeNeeds.energy,
+      hygiene:next.needs.hygiene-beforeNeeds.hygiene,
+      happiness:happiness(next)-beforeHappy,
+      trust:next.trust-beforeTrust,
+    });
     actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);setInteractionTrigger(null);},2000);
   };
 
@@ -557,9 +594,8 @@ export const App: React.FC = () => {
   const renderRegion = (key: RegionKey) => {
     switch (key) {
       case 'care':
-        if(careExtra&&!isDogMenuOpen&&!labelsVisible)return <CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>;
         if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
-        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} />;
+        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} deltas={meterDeltas??undefined} onPantry={()=>{setCareExtra(careExtra==='food'?null:'food');setLabelsVisible(false);setIsDogMenuOpen(false);}} />;
       case 'coach':
         return (
           <Suspense fallback={<RegionLoading label="Coach" />}>
@@ -596,7 +632,7 @@ export const App: React.FC = () => {
   const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
-    <div className="cockpit" onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className="cockpit" data-layout={isWide?'desk':'phone'} onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
         <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
@@ -719,8 +755,8 @@ export const App: React.FC = () => {
             </div>
 
             {/* Feedback has its own row: never place text over the dog. */}
-            <div className={`stage-note-slot ${firstGuide.tip&&!saveError?'stage-note-slot--guide':''}`} data-open={!!stageNote||!!firstGuide.tip}>
-            {firstGuide.tip&&!saveError&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}
+            <div className="stage-note-slot" data-open={!!stageNote||(!!firstGuide.tip&&!stageNote)}>
+            {!stageNote&&firstGuide.tip&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}
             {stageNote && (
               <div className="bar bar--note" role="status" key={stageNote.id}>
                 <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={stageNote.text}>
@@ -740,6 +776,7 @@ export const App: React.FC = () => {
             {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={petState.growth.careDays.length}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span><button type="button" className="growth-backup" aria-label={`Back up ${currentDog.name}`} title="Stored in this browser. Download a backup to keep your dog if you clear site data or change devices." onClick={()=>{try{downloadOwnedBackup(currentDog.name);say('Backup ready. Restore it from the mode screen.');}catch{setSaveError('Could not create a complete backup yet. Please try again.');}}}><Download size={16}/><span>Backup</span></button></div>}
             <div className="stage-game-dock" hidden={isDogMenuOpen} ref={setGameControlsHost} aria-label="Dog game controls"/>
           </div>
+          {careExtra&&!isDogMenuOpen&&!labelsVisible&&<CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>}
         </section>
 
         {isWide ? (
@@ -885,7 +922,7 @@ export const App: React.FC = () => {
         petState={petState}
         isInteracting={isInteracting||isAddDogOpen}
         pendingAction={pendingAction}
-        onInteract={action=>{if(action==='feed'){setCareExtra('food');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}else void handleInteract(action);}}
+        onInteract={action=>{setLabelsVisible(false);setIsDogMenuOpen(false);if(action!=='feed')setCareExtra(null);if(['feed','play','pet','groom','clean','walk'].includes(action))setActiveRegion('care');void handleInteract(action);}}
         onCommunicate={handleCommunicate}
         onBed={()=>{setCareExtra('bed');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}
       />}
@@ -895,15 +932,15 @@ export const App: React.FC = () => {
 
 /** A region that has not arrived yet. A quiet plate, not a hole. */
 const RegionLoading: React.FC<{ label: string }> = ({ label }) => (
-  <div data-workspace-loading="true" role="status" className="flex-1 min-h-0 flex items-center justify-center bg-zinc-950">
-    <div className="region-loading-lines" aria-hidden="true"><i/><i/><i/></div><span className="sr-only">{label} — loading</span>
+  <div data-workspace-loading="true" role="status" aria-label={label} className="region-skeleton">
+    <i/><i/><i/>
   </div>
 );
 
 /** The scene has not arrived yet. */
 const StageLoading: React.FC<{ name: string }> = ({ name }) => {
   const file=({Expo:'expo',Mali:'mali',Oreo:'oreo',Paolo:'paolo',Hachiku:'hachiku'} as Record<string,string>)[name];
-  return <div data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center bg-black">
-    {file?<img src={`/dogs/${file}.webp`} className="stage-loading-art" alt=""/>:<div className="region-loading-lines" aria-hidden="true"><i/><i/><i/></div>}<span className="sr-only">{name} — loading</span>
+  return <div data-workspace-loading="true" role="status" aria-label={name} className="absolute inset-0 flex items-center justify-center">
+    {file?<img src={`/dogs/${file}.webp`} className="stage-loading-art" alt=""/>:<div className="region-loading-lines" aria-hidden="true"><i/><i/><i/></div>}
   </div>;
 };

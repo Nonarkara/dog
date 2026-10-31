@@ -6,7 +6,7 @@ import type {DogProfile} from '../types/dog';
 import {gameState} from '../domain/companionGame';
 export function CareExtras({kind,dog,state,busy,onClose,onBuy,onFeed,onBed,onPreference}:{kind:'food'|'bed';dog:DogProfile;state:PetState;busy:boolean;onClose:()=>void;onBuy:()=>void;onFeed:()=>void;onBed:()=>void;onPreference:(wakeMinute:number,wakeBark:boolean)=>void}){
  const g=gameState(state,dog.id),time=`${String(Math.floor(g.wakeMinute/60)).padStart(2,'0')}:${String(g.wakeMinute%60).padStart(2,'0')}`;
- return <section className="panel region-care care-extras" aria-label={kind==='food'?'Food pantry':'Bedtime'}>
+ return <section className="panel care-extras care-sheet" aria-label={kind==='food'?'Food pantry':'Bedtime'}>
   <header className="panel-head"><h2 className="label">{kind==='food'?'Pantry':'Bedtime'}</h2><button type="button" className="btn-quiet" aria-label="Close care extras" onClick={onClose}><X size={18}/></button></header>
   <div className="panel-body care-extras-body">
   {kind==='food'?<>

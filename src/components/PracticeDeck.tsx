@@ -57,6 +57,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   const [status, setStatus] = useState('');
   const [result, setResult] = useState<{ verdict: string; tip: string; score: number; advice: string | null } | null>(null);
   const [cueCount, setCueCount] = useState(0);
+  const [settled, setSettled] = useState(false);
 
   const stateRef = useRef(petState);
   const saving=useRef(false),epoch=useRef(0),mounted=useRef(true);
@@ -152,6 +153,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
       return;
     }
     if (phase !== 'ready') return;
+    setSettled(false);
     const now = performance.now();
     const roll = dogResponds(lesson, readiness(stateRef.current));
     trial.current = { cueAt: now, responds: roll.responds, doneAt: Infinity, count: 1 };
@@ -166,6 +168,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
         if(!mounted.current||currentEpoch!==epoch.current||trial.current!==currentTrial||currentTrial.finished||currentTrial.markAt!==undefined)return;
         if(at===null){clearTimers();setPhase('ready');setStatus('No completed stage action. Try again with an animated companion.');return;}
         currentTrial.doneAt=at;
+        setSettled(true);
         setStatus('Done — mark it now!');
         later(()=>finish({responded:true}),1500);
       },roll.latencyMs);
@@ -224,6 +227,8 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
   });
 
   const real = REAL_DOG[name];
+  const firstSit = name==='sit' && lesson.stage===0 && (lesson.sessionTrials??0)===0 && lesson.streak===0;
+  const waitForFinish = firstSit && phase==='waiting' && !settled;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-practice-phase={phase} data-practice-behaviour={name}>
@@ -261,7 +266,8 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               ? result.verdict
               : status || 'Cue once, wait, mark the moment, treat. Space bar does all four.'}
         </p>
-        <div className="mt-1.5 flex gap-1.5 flex-wrap">
+        {phase==='waiting'&&<p className={`mark-cue ${settled?'mark-cue--ready':''}`}><span>{settled?'Mark now — the movement finished.':/sniff|Wait —/.test(status)?'No finished sit — the marker stays dark.':'Watch the movement finish, then mark.'}</span><i aria-hidden="true"/></p>}
+        <div className="practice-actions mt-1.5 flex gap-1.5 flex-wrap">
           {phase === 'result' ? (
             <button type="button" onClick={reset} className="btn btn-accent flex-1 text-[12px]">
               Next trial
@@ -281,10 +287,11 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
               <button
                 type="button"
                 onClick={mark}
-                disabled={!!unavailable||phase !== 'waiting'||isSaving}
-                className={`btn flex-1 text-[12px] ${phase === 'waiting' ? 'btn-accent' : 'btn-quiet border-hairline'}`}
+                disabled={!!unavailable||phase !== 'waiting'||isSaving||waitForFinish}
+                className={`btn practice-mark ${phase === 'waiting' && !waitForFinish ? 'btn-accent' : 'btn-quiet border-hairline'}`}
+                aria-label="Yes, mark the moment"
               >
-                Yes! (mark)
+                Mark
               </button>
               <button
                 type="button"
