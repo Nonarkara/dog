@@ -33,6 +33,7 @@ import { CommandBar,ControlLegend } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
+import {MeterDeltas} from './components/MeterDeltas';
 import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download } from 'lucide-react';
 import {
   interact,
@@ -671,6 +672,7 @@ export const App: React.FC = () => {
           </h1>
           <div className="panel-body">
             <div className="stage-frame" data-feedback={!!note}>
+            <MeterDeltas petState={petState} dogId={activeDogId}/>
               {petState.away&&<div className="stage-away" role="status"><p><strong>{currentDog.name} slipped out.</strong> Three days without care was too long. He's in the park, wary — go and win him back.</p><button type="button" className="btn-accent" onClick={()=>togglePark()}>Go to the park</button></div>}
               <div className="stage-canvas">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>

@@ -1086,3 +1086,15 @@ html {font-synthesis:none;}
 .capture-stars i[data-on=true] {opacity:1;}
 .think-bubble {border-radius:50%!important;} /* a true circle, the one shape the house allows round */
 [data-practice-behaviour]>div:first-child>button:disabled {opacity:.4;text-decoration:none;}
+/* Each care action names the meter it moved. */
+.care-meter-value {position:relative;}
+.care-delta {font-size:13px;color:var(--accent);animation:delta-rise 1.6s ease-out forwards;}
+.care-delta[data-up=false] {color:var(--danger,#b4232c);}
+@keyframes delta-rise {0% {opacity:0;transform:translateY(4px);} 15% {opacity:1;transform:none;} 75% {opacity:1;} 100% {opacity:0;transform:translateY(-6px);}}
+@media (prefers-reduced-motion:reduce){.care-delta {animation:none;}}
+/* Each care action names the meters it moved, over the dog. */
+.meter-deltas {position:absolute;left:50%;top:8%;z-index:5;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;pointer-events:none;max-width:90%;}
+.meter-delta {display:inline-flex;align-items:center;gap:3px;padding:1px 6px;background:var(--bg-surface);border:1px solid var(--border-strong);font-size:14px;color:var(--accent);animation:delta-rise 1.8s ease-out forwards;}
+.meter-delta[data-up=false] {color:#9a2a22;}
+@keyframes delta-rise {0% {opacity:0;transform:translateY(6px);} 12% {opacity:1;transform:none;} 78% {opacity:1;} 100% {opacity:0;transform:translateY(-8px);}}
+@media (prefers-reduced-motion:reduce){.meter-delta {animation:none;}}
