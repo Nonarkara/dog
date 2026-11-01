@@ -320,7 +320,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
       </>}
 
       <details className="practice-real-notes border-hairline-t px-2 py-1.5">
-        <summary className="label">Try this with your real dog · guide</summary>
+        <summary className="label">Real-dog guide</summary>
         <p className="mt-1 text-[11px] leading-snug text-zinc-300">{real.lure}</p>
         <p className="mt-1 text-[11px] leading-snug text-zinc-400">Common mistake: {real.mistake}</p>
         <p className="mt-1 text-[10px] leading-snug text-faint">

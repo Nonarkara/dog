@@ -245,6 +245,10 @@ def open_record(page):
     The record is code-split, so switching to it means waiting for its chunk
     to arrive. Waiting the wrong length here is how a tab goes unmeasured.
     """
+    # Wide screens fold the record to one row; open it.
+    fold = page.locator(".record-fold-head > button[aria-expanded=false]")
+    if fold.count() and fold.first.is_visible():
+        fold.first.click(timeout=5000)
     try:
         page.wait_for_selector("#record-tab-identity", timeout=20000)
         return True
