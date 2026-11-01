@@ -86,6 +86,8 @@ export interface DogProfile {
     earShape: 'pricked' | 'floppy' | 'semi-pricked';
     tailShape: 'curl' | 'plume' | 'straight' | 'bob';
     customModelUrl?: string; // If user imports GLTF/GLB from 3D reconstruction
+    /** Palette override: a key of DOG_THEMES. Falls back to the dog's own theme. */
+    palette?: string;
   };
 }
 

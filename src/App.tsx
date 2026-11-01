@@ -617,7 +617,7 @@ export const App: React.FC = () => {
       case 'care':
         if(careExtra&&!isDogMenuOpen&&!labelsVisible)return <CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>;
         if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
-        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} onHome={home=>void commitPet(s=>({...s,home}))}/>;
+        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} onHome={home=>void commitPet(s=>({...s,home}))} onPalette={palette=>handleUpdateCurrentDog(dog=>({...dog,avatarConfig:{...dog.avatarConfig,palette}}))}/>;
       case 'coach':
         return (
           <Suspense fallback={<RegionLoading label="Coach" />}>
@@ -655,7 +655,7 @@ export const App: React.FC = () => {
   const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
-    <div className="cockpit" onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id)} data-dog-theme={currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className="cockpit" onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id, currentDog.avatarConfig.palette)} data-dog-theme={currentDog.avatarConfig.palette||currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
         <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
@@ -690,7 +690,7 @@ export const App: React.FC = () => {
           </p>
 
           <span title="Color palette for this dog; not a measured personality" className="hidden lg:inline text-[11px] text-faint shrink-0">
-            Palette · {DOG_THEMES[currentDog.id]?.name || 'Your companion'}
+            Palette · {DOG_THEMES[currentDog.avatarConfig.palette||currentDog.id]?.name || 'Your companion'}
           </span>
 
           <button

@@ -6,8 +6,16 @@ export const DOG_THEMES:Record<string,Theme>={
  'oreo-frenchie':{name:'Lemon explorer',plate:60,ground:'#faf5d9',paper:'#fffbee',field:'#deebed',line:'#b3c4c5',ink:'#24495d',muted:'#506770',action:'#275c73'},
  'paolo-pug':{name:'Biscuit dreamer',plate:11,ground:'#f6eddb',paper:'#fff8ec',field:'#eadbc0',line:'#ccbaa0',ink:'#614c37',muted:'#77624e',action:'#845a2f'},
  'shiba-chai':{name:'Quiet devotion',plate:50,ground:'#f3edf4',paper:'#fdf8f4',field:'#e9e0ed',line:'#cbb9cf',ink:'#563b60',muted:'#725d79',action:'#79527f'},
+ // Owner's picker themes — four more source-verified Wada plates, one job
+ // each: pale paper ground, quiet field, deep matching ink, one deep action.
+ 'passionate':{name:'Crimson promise',plate:122,ground:'#f7ece2',paper:'#fdf6ec',field:'#f3dcd3',line:'#d9b3a8',ink:'#4a1f2b',muted:'#6e4048',action:'#a12540'},
+ 'memorable':{name:'Pompeian evening',plate:311,ground:'#f6ebe0',paper:'#fcf5ea',field:'#f2d8cc',line:'#d6ae9f',ink:'#43202a',muted:'#71464c',action:'#96203a'},
+ 'youthful':{name:'Pink tide',plate:227,ground:'#f2eef0',paper:'#fbf7f7',field:'#f7dfe5',line:'#c8bccb',ink:'#173f47',muted:'#3f6b74',action:'#056c7c'},
+ 'fun':{name:'Marigold bay',plate:286,ground:'#f6f0e0',paper:'#fcf8ec',field:'#f4e4c0',line:'#d0c39a',ink:'#123f44',muted:'#43666a',action:'#a56908'},
 };
-export function dogTheme(id:string):CSSProperties{
- const t=DOG_THEMES[id]||DOG_THEMES['expo-2021'];
+/** Every palette an owner may dress a dog in — each a credited Wada plate. */
+export const THEME_CHOICES=Object.entries(DOG_THEMES).map(([id,t])=>({id,name:t.name,plate:t.plate}));
+export function dogTheme(id:string, paletteOverride?:string):CSSProperties{
+ const t=DOG_THEMES[paletteOverride||'']||DOG_THEMES[id]||DOG_THEMES['expo-2021'];
  return {'--bg-main':t.ground,'--bg-surface':t.paper,'--bg-elevated':t.ground,'--stage-ground':t.field,'--border-dim':t.line,'--border-strong':t.muted,'--text-main':t.ink,'--text-muted':t.muted,'--text-faint':t.muted,'--accent':t.action,'--accent-hover':t.ink,'--accent-ink':t.paper,'--accent-faint':t.field,'--accent-border':t.line} as CSSProperties;
 }
