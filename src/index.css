@@ -1118,3 +1118,7 @@ html {font-synthesis:none;}
 /* Play-test: the bubble sat on his ear; it floats above the head, the care floats sit top-left. */
 .think-bubble {top:2%;}
 .meter-deltas {left:8px;top:8px;transform:none;flex-direction:column;align-items:flex-start;max-width:60%;}
+
+/* Push offer: one quiet line under the care sentence. */
+.push-offer{margin-top:4px;font-size:11px;color:var(--text-faint,#6b6b6b);}
+.push-offer .btn-quiet{font-size:11px;padding:2px 8px;min-height:28px;}

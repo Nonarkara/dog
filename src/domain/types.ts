@@ -248,6 +248,12 @@ export interface PetState {
   noseSkill?: number;
   /** Capturing: how strongly each word predicts the pet, Sit first. */
   capture?: Partial<Record<BehaviourName, import('./capture').Capture>>;
+  /** What you did with him, counted — it decides who he grows into. */
+  careLog?: import('./life').CareLog;
+  /** Who he became, fixed once he grew up. */
+  character?: { name: import('./life').Character; at: number };
+  /** Today's wish and whether you granted it. */
+  wish?: import('./life').Wish;
   /** Time spent with him: today, in total, and the run of days. */
   together?: import('./attention').Together;
   /** He is asking for you, and why. */

@@ -1,5 +1,6 @@
 import { validRoom } from '../src/domain/parkProtocol';
 import { handleAccounts, type AccountEnv } from './accounts';
+import { handlePush, sendDuePushes, type PushEnv } from './push';
 export { ParkRoom } from './parkRoom';
 
 interface DurableObjectNamespace {
@@ -7,7 +8,7 @@ interface DurableObjectNamespace {
   get(id: unknown): { fetch: (request: Request) => Promise<Response> };
 }
 
-interface Env extends AccountEnv {
+interface Env extends AccountEnv, Omit<PushEnv,'DB'> {
   ASSETS: {
     fetch: (request: Request) => Promise<Response>;
   };
@@ -24,6 +25,10 @@ export default {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // His calls, when the app is closed.
+    const push = await handlePush(request, env as unknown as PushEnv, url);
+    if (push) return push;
 
     // Sign-in, cloud-saved dogs, export, delete.
     const account = await handleAccounts(request, env, url);
@@ -46,5 +51,9 @@ export default {
     // SPA fallback to index.html
     const indexRequest = new Request(new URL("/", request.url).toString(), request);
     return env.ASSETS.fetch(indexRequest);
+  },
+
+  async scheduled(_event: unknown, env: Env): Promise<void> {
+    await sendDuePushes(env as unknown as PushEnv);
   },
 };

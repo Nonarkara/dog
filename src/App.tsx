@@ -4,7 +4,9 @@ import { startCloudSync } from './utils/cloud';
 import { coax } from './domain/runaway';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
-import {growCompanion,growthStage} from './domain/growth';
+import {growCompanion} from './domain/growth';
+import {scheduleCall,clearCall,rememberEndpoint} from './utils/push';
+import {logCare,grantWish,wishFor,revealCharacter,birthday,growthLabel,CHARACTER_TEXT,WISH_TEXT,type WishKind} from './domain/life';
 import {sound} from './utils/proceduralAudio';
 import {CareExtras} from './components/CareExtras';
 import {TOUCH_PREFERENCES,gameState,buyFood,discoverTouch,socialize,completeParkWalk,type TouchPart} from './domain/companionGame';
@@ -16,7 +18,7 @@ import { dailyLife } from './domain/dailyLife';
 import type { AvatarInteractionTrigger } from './components/DogAvatar3D';
 import type {PoseRequest,AvatarPose,PerformPose} from './components/trainingMotion';
 import {calmNeed} from './domain/calm';
-import { addTogether, answerCall, tickCall } from './domain/attention';
+import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
 import { dogTheme, DOG_THEMES } from './data/dogThemes';
 import { DEFAULT_DOGS } from './data/defaultDogs';
@@ -331,7 +333,12 @@ export const App: React.FC = () => {
         // The Care sentence and on-stage need own automatic calls. A second
         // bottom overlay would hide the floor precisely when a puddle appears.
         const { call } = tickCall(drifted);
-        return { ...drifted, call };
+        // Missed only if it faded while the page was open, not after a long absence.
+        const age=prev.call?Date.now()-prev.call.since:0;
+        const missed=prev.call&&!call&&age>CALL_FADES_MS&&age<CALL_FADES_MS+30_000&&document.visibilityState==='visible';
+        // The wish is fixed once rolled, so it stays the same all day.
+        const now=Date.now();
+        return revealCharacter({ ...(missed?logCare(drifted,'missed'):drifted), call, wish:wishFor(drifted,now) },now).state;
       });
     }, 10_000);
     return () => window.clearInterval(interval);
@@ -368,6 +375,29 @@ export const App: React.FC = () => {
     const base = 'Tama-Dog-Chi — dog.nonarkara.org';
     document.title = petState.call ? `● ${currentDog.name} is calling — ${base}` : base;
   }, [petState.call, currentDog.name]);
+
+  // Who he became, his month-birthdays and today's wish: said once, when they happen.
+  const announced=useRef((()=>{try{return localStorage.getItem('dog-announced')??'';}catch{return '';}})());
+  useEffect(()=>{
+    if(playMode()!=='own')return;
+    const now=Date.now(),c=petState.character;
+    const lines=[c&&now-c.at<60_000?`${currentDog.name} has grown up — ${CHARACTER_TEXT[c.name]}`:'',birthday(petState,now)?`${currentDog.name} is ${birthday(petState,now)}!`:''];
+    const w=wishFor(petState,now);if(!w.done)lines.push(`Today ${currentDog.name} ${WISH_TEXT[w.kind]}.`);
+    const key=`${activeDogId}|${c?.at??''}|${w.day}`;
+    if(announced.current===key||!lines.some(Boolean))return;
+    announced.current=key;try{localStorage.setItem('dog-announced',key);}catch{/* private mode */}say(lines.filter(Boolean).join(' '));
+  },[activeDogId,petState.character?.at,petState.wish?.day]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  // Leaving: tell the server when he will next need you. Back: nothing pending.
+  const leaving=useRef({state:petState,name:currentDog.name});leaving.current={state:petState,name:currentDog.name};
+  useEffect(()=>{
+    const seen=()=>{if(document.visibilityState==='hidden')scheduleCall(leaving.current.state,leaving.current.name);else clearCall();};
+    document.addEventListener('visibilitychange',seen);void rememberEndpoint().then(clearCall);
+    return()=>document.removeEventListener('visibilitychange',seen);
+  },[]);
+
+  // An open call shows on the home-screen icon, when installed.
+  useEffect(()=>{const n=navigator as Navigator&{setAppBadge?:(n:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};void (petState.call?n.setAppBadge?.(1):n.clearAppBadge?.())?.catch(()=>{});},[petState.call]);
 
   const priorSleep=useRef({id:activeDogId,asleep:petState.sleep.asleep});
   useEffect(()=>{const prev=priorSleep.current;if(prev.id===activeDogId&&prev.asleep&&!petState.sleep.asleep&&gameState(petState,activeDogId).wakeBark&&document.visibilityState==='visible')sound.bark();priorSleep.current={id:activeDogId,asleep:petState.sleep.asleep};},[activeDogId,petState.sleep.asleep,petState.game?.wakeBark]);
@@ -414,7 +444,13 @@ export const App: React.FC = () => {
       if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
       if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state={...result.state,trust:Math.min(100,result.state.trust+1)};
       if(action==='play'&&(latest.sick||result.state.sleep.asleep))trigger=null;
-      return answer.answered?{...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)}:result.state;
+      let out=answer.answered?logCare({...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)},'answered'):result.state;
+      if(trigger&&(action==='feed'||action==='play'||action==='pet'||action==='walk')){
+        out=logCare(out,action);
+        const wish=action==='feed'?{state:out,granted:false}:grantWish(out,action,Date.now());out=wish.state;
+        if(wish.granted)message+=` That was ${currentDog.name}'s wish today. Trust +3, +5 paw coins.`;
+      }
+      return out;
     },care);
     if(activeDogRef.current!==id)return;
     if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
@@ -425,15 +461,18 @@ export const App: React.FC = () => {
 
   const handleMiniGameComplete = async (won: boolean, kind:'catch'|'find-treat'='catch') => {
     if(isAddDogOpen)return;
-    const id=activeDogId;let accepted=false;
+    const id=activeDogId;let accepted=false,wished=false;
     const next=await commitPet(base=>{
       if(base.sick||base.sleep.asleep)return base;
       accepted=true;
+      const kindOf:WishKind=kind==='find-treat'?'cups':'play';
+      const wish=grantWish(logCare(base,kindOf),kindOf,Date.now());wished=wish.granted;base=wish.state;
       if(kind==='find-treat')return {...base,noseSkill:Math.min(1,(base.noseSkill??0)+.1),needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:Date.now(),calmSince:undefined,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call};
       return won?{...base,arousal:Math.max(20,Math.min(80,base.arousal+15)),trust:Math.min(100,base.trust+5),weightKg:Math.max(15,(base.weightKg??24.8)-.1),calmSince:undefined}:base;
     },'play');
     if(!next||activeDogRef.current!==id)return;
     if(!accepted){say(`${currentDog.name} needs rest. We can play again later.`);return;}
+    if(wished){say(`That was ${currentDog.name}'s wish today. Trust +3, +5 paw coins.`);return;}
     say(kind==='find-treat'?(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`):(won?`Agility catch victory! ${currentDog.name} caught the balls with joyful barks. Trust +5!`:`Good effort! ${currentDog.name} burned energy and enjoyed the practice.`));
   };
 
@@ -607,7 +646,7 @@ export const App: React.FC = () => {
             <a href="/" aria-label="Tama-Dog-Chi modes">Tama-Dog-Chi</a>
           </span>
 
-          {playMode()==='own'&&<span className="owned-growth" title="Game growth: one minute of active attention on each of seven different days.">{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7</span>}
+          {playMode()==='own'&&<span className="owned-growth" title="One minute of active attention on each of seven days grows him up; twenty-eight days and he is a senior. Who he becomes depends on how you raise him.">{growthLabel(petState)}</span>}
           {/* The chooser uses the existing Care region instead of covering the dog. */}
           <div className="relative shrink-0">
             <button

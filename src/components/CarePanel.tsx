@@ -1,6 +1,7 @@
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
-import {growthStage} from '../domain/growth';
+import {PushOffer} from './PushOffer';
+import {growthLabel,CHARACTER_TEXT,wishFor,WISH_SHORT} from '../domain/life';
 import {recordSources} from '../utils/recordProvenance';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
 import React, {useRef,useState} from 'react';
@@ -180,10 +181,12 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           <p className="care-together data text-[10px] text-zinc-300 mt-1" title="Counted only while this page is in front of you and you are using it">
             Today {minutes(petState.together?.todaySec ?? 0)} · {petState.together?.streak ?? 0}-day streak ·{' '}
             Total {minutes(petState.together?.totalSec ?? 0)}
+            {(()=>{const w=wishFor(petState,Date.now());return <> · Wish: {WISH_SHORT[w.kind]}{w.done?' ✓':''}</>;})()}
           </p>
+          <PushOffer name={dog.name} answered={petState.careLog?.answered??0} detail={!!detailView}/>
         </div>
 
-        {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthStage(petState).name} · {petState.growth?.careDays?.length??0}/7 care days · your {dog.name}</p><p>One minute of active attention on a new day helps your puppy grow.</p><button type="button" className="btn-quiet" onClick={()=>{try{downloadOwnedBackup(dog.name);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
+        {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthLabel(petState)} · your {dog.name}</p><p>{petState.character?`${dog.name} grew up ${CHARACTER_TEXT[petState.character.name]}`:'One minute of active attention on a new day helps your puppy grow. How you raise him decides who he becomes.'}</p><button type="button" className="btn-quiet" onClick={()=>{try{downloadOwnedBackup(dog.name);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
         {/* THE CARE LOG */}
         <div className="care-history border-hairline-t">
           <p className="label">Last</p>

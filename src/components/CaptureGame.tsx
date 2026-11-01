@@ -17,6 +17,7 @@ import {POSE_FOR} from '../domain/lesson';
 import type {AvatarPose, PerformPose} from './trainingMotion';
 import type {CommitPet} from '../utils/progressStore';
 import {sound} from '../utils/proceduralAudio';
+import {logCare,grantWish} from '../domain/life';
 
 type Phase='ready'|'offering'|'marked';
 const DISTRACT:AvatarPose[]=['down','stand','come','paw','stand'];
@@ -110,7 +111,10 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
   useEffect(()=>{
     if(phase!=='marked'||petPulse===pulseAt.current)return;
     run.current++;setPhase('ready');setDoing(false);doingAt.current=false;setBubble('♥');
-    void commit(s=>withCapture(s,name,pair(captureOf(s,name),true)),`Good catch! ${dogName} liked that.`);
+    // A learned word performed and stroked is the trick he wanted to show you.
+    const known=captureOf(petState,name).association>=LEARNED;
+    void commit(s=>{const n=logCare(withCapture(s,name,pair(captureOf(s,name),true)),'train');return known?grantWish(n,'trick',Date.now()).state:n;},
+      known?`Good dog! ${dogName} loves showing you “${word}”.`:`Good catch! ${dogName} liked that.`);
     window.setTimeout(()=>setBubble(b=>b==='♥'?null:b),1400);
   },[petPulse]);// eslint-disable-line react-hooks/exhaustive-deps
 

@@ -25,6 +25,7 @@ import { chooseActivity, type Activity } from './parkPersonality';
 import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
 import { noseAccuracy, pickCup } from './nose';
+import { characterOf, revealCharacter, logCare, wishFor, grantWish, birthday, outOfQuietHours, nextCallAt, WISH_TRUST } from './life';
 import { captureOf, isUnlocked, lockedBehind, offerChance, pair, wrongMark, withCapture, LEARNED } from './capture';
 import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
 
@@ -622,6 +623,41 @@ ok('a practised nose is good, never perfect', noseAccuracy(1) > .8 && noseAccura
 ok('a sure nose picks the bone', pickCup(1, [0, 1, 2], 1, () => 0) === 1);
 ok('a miss picks a cup without the bone', pickCup(1, [0, 1, 2], 0, () => .99) !== 1);
 ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
+
+// ---- a life: character, wish, birthday, calls when closed ----
+{
+  const t0 = Date.UTC(2026, 10, 2, 3); // 10:00 Bangkok
+  const grown = (s: PetState): PetState => ({ ...s, growth: { adoptedAt: t0 - 8 * 86_400_000, seed: 's', careDays: ['a','b','c','d','e','f','g'], day: 'g', daySeconds: 0 } });
+  const base = grown(createPetState(t0));
+  let played = base; for (let i = 0; i < 8; i++) played = logCare(played, 'play'); for (let i = 0; i < 4; i++) played = logCare(played, 'feed');
+  ok('a dog raised on games grows Playful', characterOf(played) === 'Playful');
+  let stroked = base; for (let i = 0; i < 9; i++) stroked = logCare(stroked, 'pet'); stroked = logCare(stroked, 'feed');
+  ok('a dog raised on strokes grows Clingy', characterOf(stroked) === 'Clingy');
+  let left = base; for (let i = 0; i < 4; i++) left = logCare(left, 'missed');
+  ok('a dog whose calls go unanswered grows Independent', characterOf(left) === 'Independent');
+  ok('a dog with little on record is Steady', characterOf(base) === 'Steady');
+  ok('the same record always gives the same dog', characterOf(played) === characterOf({ ...played }));
+  const puppy = { ...base, growth: { ...base.growth!, careDays: ['a'] } };
+  ok('a puppy has no character yet', revealCharacter(puppy, t0).revealed === null);
+  ok('an empty record waits before choosing', revealCharacter(base, t0).revealed === null);
+  const shown = revealCharacter(played, t0);
+  ok('a grown dog shows who he became, once', shown.revealed === 'Playful' && revealCharacter(logCare(shown.state, 'missed'), t0).revealed === null);
+  const w = wishFor(base, t0);
+  ok('the wish holds all day', wishFor(base, t0 + 3_600_000).kind === w.kind);
+  ok('no trick wish before he knows a word', w.kind !== 'trick');
+  const g = grantWish(base, w.kind, t0);
+  ok('granting the wish gives trust', g.granted && g.state.trust === Math.min(100, base.trust + WISH_TRUST));
+  ok('a wish is granted once a day', !grantWish(g.state, w.kind, t0).granted);
+  ok('the wrong thing does not grant it', !grantWish(base, (['walk','play','pet','cups'] as const).find(k => k !== w.kind)!, t0).granted);
+  ok('a month-birthday on day 30', birthday({ ...base, growth: { ...base.growth!, adoptedAt: t0 - 30 * 86_400_000 } }, t0) === '1 month old today');
+  ok('no birthday on an ordinary day', birthday(base, t0) === null);
+  const late = Date.UTC(2026, 10, 2, 16); // 23:00 Bangkok
+  ok('a call at 23:00 waits until 07:00', new Date(outOfQuietHours(late) + 7 * 3_600_000).getUTCHours() === 7 && outOfQuietHours(late) > late);
+  ok('a call at 03:00 waits until 07:00 the same day', outOfQuietHours(Date.UTC(2026,10,1,20)) === Date.UTC(2026,10,2,0));
+  ok('a call at 10:00 goes as it is', outOfQuietHours(t0) === t0);
+  const next = nextCallAt({ ...base, updatedAt: t0 }, t0);
+  ok('a fed dog calls hours later, never at once', !!next && next.at - t0 >= 2 * 3_600_000, next ? `${((next.at - t0) / 3_600_000).toFixed(1)}h ${next.reason}` : 'none');
+}
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

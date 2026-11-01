@@ -97,7 +97,7 @@ export function validateOwnedBackup(raw:string){
  const pet=data.save.pets[a.dogId],growth=pet?.growth;
  const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
  const personality=object(pet)&&object(pet.personality)?pet.personality:null;
- if(!object(pet)||!personality||!['boldness','sociability','foodDrive','playDrive','sensitivity'].every(k=>Number.isFinite(personality[k]))||!object(growth)||growth.seed!==a.seed||growth.adoptedAt!==a.at||!Array.isArray(growth.careDays)||growth.careDays.length>7||growth.careDays.some((day:unknown)=>typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))||new Set(growth.careDays).size!==growth.careDays.length||typeof growth.day!=='string'||!Number.isFinite(growth.daySeconds)||Number(growth.daySeconds)<0)throw new Error('This backup is missing the adopted dog’s personality or growth record. Your current dog was not changed.');
+ if(!object(pet)||!personality||!['boldness','sociability','foodDrive','playDrive','sensitivity'].every(k=>Number.isFinite(personality[k]))||!object(growth)||growth.seed!==a.seed||growth.adoptedAt!==a.at||!Array.isArray(growth.careDays)||growth.careDays.length>28||growth.careDays.some((day:unknown)=>typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))||new Set(growth.careDays).size!==growth.careDays.length||typeof growth.day!=='string'||!Number.isFinite(growth.daySeconds)||Number(growth.daySeconds)<0)throw new Error('This backup is missing the adopted dog’s personality or growth record. Your current dog was not changed.');
  return data as {format:string;adoption:NonNullable<ReturnType<typeof readAdoption>>;save:ReturnType<typeof current>};
 }
 export function restoreOwnedBackup(raw:string):Promise<void>{
