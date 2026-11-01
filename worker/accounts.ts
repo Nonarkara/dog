@@ -24,7 +24,8 @@
 export interface D1Statement {
   bind(...values: unknown[]): D1Statement;
   first<T = Record<string, unknown>>(): Promise<T | null>;
-  run(): Promise<unknown>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<{ meta?: { changes?: number } }>;
 }
 export interface D1 {
   prepare(sql: string): D1Statement;
@@ -150,7 +151,7 @@ async function startSession(env: AccountEnv, userId: string, url: URL): Promise<
   return cookie(SESSION_COOKIE, token, url, SESSION_DAYS * 86_400);
 }
 
-async function currentUser(request: Request, env: AccountEnv) {
+export async function currentUser(request: Request, env: AccountEnv) {
   const token = readCookie(request, SESSION_COOKIE);
   if (!token || token.length > 100) return null;
   return env.DB.prepare(

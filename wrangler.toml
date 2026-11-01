@@ -39,6 +39,9 @@ migrations_dir = "migrations"
 GOOGLE_CLIENT_ID = ""
 LINE_CHANNEL_ID = ""
 VAPID_PUBLIC = "BMOKg6M88eHJaeZ4lBn_Ay74iBPLQdeccI0QUsebztGPkAKtAA4SHPWMaeWX6_wWuOV_dXMBiPBJpqPxXTkmlks"
+# Care-ledger keepers: these accounts may read every owner's park-visit
+# summary. Comma-separated emails of signed-in Google accounts.
+CARE_KEEPERS = "nonsmartcity@gmail.com"
 
 # His calls when the app is closed (worker/push.ts). The public key is public;
 # the private one is `npx wrangler secret put VAPID_PRIVATE_JWK`.

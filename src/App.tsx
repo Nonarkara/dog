@@ -1,6 +1,7 @@
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
 import { startCloudSync } from './utils/cloud';
+import { arriveAtPark, leavePark } from './utils/careLog';
 import { coax } from './domain/runaway';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
@@ -280,6 +281,18 @@ export const App: React.FC = () => {
   const starterAge=recordSources(currentDog).fields.includes('birthDate');
   const age = calculateDogAge(currentDog.birthDate, currentDog.weightKg);
   const subject = { name: currentDog.name, sex: currentDog.sex } as const;
+
+  // THE CARE LEDGER — a signed-in owner's park visit writes itself: arrive
+  // with a care snapshot, leave with another. The game never waits on it.
+  const careRef=useRef({dog:currentDog,petState});
+  careRef.current={dog:currentDog,petState};
+  useEffect(()=>{
+    if(activeRegion!=='commons')return;
+    arriveAtPark(careRef.current.dog,careRef.current.petState,liveRoom??'commons');
+    const hide=()=>{if(document.visibilityState==='hidden')leavePark(careRef.current.dog,careRef.current.petState);};
+    document.addEventListener('visibilitychange',hide);
+    return()=>{document.removeEventListener('visibilitychange',hide);leavePark(careRef.current.dog,careRef.current.petState);};
+  },[activeRegion,liveRoom]);
 
   // Switch identity and state in one React batch, before the save effect runs.
   const selectDog = (id: string) => {
