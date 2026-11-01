@@ -12,6 +12,9 @@ import type { PetState } from '../domain/types';
 import {Help} from './Help';
 import { happiness, readiness, sickCause, temperament } from '../domain/pet';
 import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
+import {ILLUSTRATIONS} from './IllustratedDog';
+import {PhotoBooth} from './PhotoBooth';
+import {Camera} from 'lucide-react';
 
 interface CarePanelProps {
   dog: DogProfile;
@@ -65,6 +68,7 @@ function clockTime(at: number | null | undefined): string {
 export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, onHome }) => {
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
+  const [booth,setBooth]=useState(false);
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -121,6 +125,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           {dog.name} / {dog.breed}
         </span>
         {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
+        {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
       </header>
 
       <div className="panel-body care-body @container">
@@ -222,6 +227,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         <button type="button" className="btn-quiet care-details-close" onClick={()=>details.current?.close()}>Close ×</button>
         <CarePanel dog={dog} petState={petState} detailView onHome={onHome}/>
       </dialog>}
+      {booth&&<PhotoBooth dog={dog} artUrl={ILLUSTRATIONS[dog.id]??''} onClose={()=>setBooth(false)}/>}
     </section>
   );
 };

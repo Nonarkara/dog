@@ -330,6 +330,36 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           Reward-based method: Pryor, Don&apos;t Shoot the Dog · Dunbar, lure-reward · AVSAB 2021
         </p>
       </details>
+
+      {/* THE TRAINER'S LEDGER — the real reps already logged for this
+          behaviour, newest first. It grows with use, and it is what lets the
+          coach column own its full height on a desk instead of ending in dead
+          space. Empty reads honestly: nothing logged yet. */}
+      <div className="practice-attempts border-hairline-t px-2 py-1.5">
+        <p className="label">Last attempts · {BEHAVIOURS.find(b=>b.name===name)?.label ?? name}</p>
+        {(petState.behaviours[name]?.history?.length ?? 0) === 0 ? (
+          <p className="mt-1 text-[11px] leading-snug text-faint">
+            None logged yet. Practice trains the stage dog; Real log scores the real one.
+          </p>
+        ) : (
+          <div className="mt-1 space-y-0.5 pr-1">
+            {petState.behaviours[name].history.slice(-8).reverse().map((a, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-2 border-hairline-b last:border-b-0 py-0.5">
+                <span className="data text-[10px] text-zinc-500 shrink-0">
+                  {new Date(a.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className={`data text-[10px] truncate ${
+                  a.performed && a.marked ? 'text-accent' : a.performed ? 'text-zinc-300' : 'text-zinc-500'
+                }`}>
+                  {a.performed ? 'did it' : 'no response'}
+                  {a.marked ? ` · ${a.delayMs ?? '—'} ms` : ''}
+                  {a.real ? '' : ' · rehearsal'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <TrainingTips state={petState}/>
     </div>
   );

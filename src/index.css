@@ -1055,6 +1055,20 @@ html {font-synthesis:none;}
 [data-practice-behaviour] {overflow-y:auto!important;}
 [data-practice-behaviour]>div:first-child {gap:2px;}
 [data-practice-behaviour]>div:first-child>button {padding:0 3px;}
+/* MSH B4 close (audited 386px, then 422px dead third): the right column is
+   the TRAINER'S column, so it spans the full workspace height. The coach
+   grows into the space and the record fold anchors its base; the deck fills
+   the grown panel with the trainer's real working content — the attempt
+   ledger — so the third is read, not empty. */
+.cockpit-workspace--wide .desktop-detail {grid-row:2/4;align-self:stretch;}
+.cockpit-workspace--wide .desktop-detail>.region-coach {flex:1 1 0%;max-height:none;}
+.cockpit-workspace--wide .desktop-detail>.region-coach .panel-body {flex:1 1 0%;min-height:0;display:flex;flex-direction:column;}
+.cockpit-workspace--wide [data-practice-behaviour] {flex:1 1 0%;min-height:0;}
+.practice-attempts {flex:1 1 0%;min-height:0;display:flex;flex-direction:column;}
+.practice-attempts>div {flex:1 1 0%;min-height:0;overflow-y:auto;scrollbar-width:thin;}
+/* The photo booth lives beside "History & details" in the care head — a
+   28 px icon button, label-sized, the care head's own row. */
+.care-photo-toggle {width:28px;height:28px;min-height:28px;padding:4px;flex:none;}
 /* MSH B4: Record docks under Coach on desktop; the column has a job, no tab row. */
 .desktop-detail {grid-row:2;gap:4px;}
 .desktop-detail>.region-record {flex:1 1 0%;min-height:0;}
@@ -1144,6 +1158,6 @@ html {font-synthesis:none;}
 .record-fold-caret {margin-left:auto;transition:transform .15s ease-out;}
 .record-fold[data-open=true] .record-fold-caret {transform:rotate(90deg);}
 .record-fold>.region-record {flex:1 1 0%;min-height:0;}
-.desktop-detail>.region-coach {flex:0 1 auto;min-height:0;}
-.cockpit-workspace--wide .desktop-detail {grid-row:2/4;align-self:start;max-height:100%;}
+.desktop-detail>.region-coach {flex:1 1 0%;min-height:0;}
+.cockpit-workspace--wide .desktop-detail {grid-row:2/4;align-self:stretch;}
 .cockpit-workspace--wide .desktop-detail:has(.record-fold[data-open=true]) {align-self:stretch;}
