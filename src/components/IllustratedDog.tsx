@@ -256,7 +256,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextGreeting=performance.now()+18000;
+    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       const interval=reduced.matches?1000/6:1000/60;
@@ -273,7 +273,7 @@ function IllustratedStage(props: Props & {url:string}) {
       const mood=dailyMood(p.petState),toilet=now<toiletUntil.current&&!asleep&&!p.petState.sick;
       const free=p.petState.calmSince===undefined&&!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
       // Keep the household's earlier spontaneous greetings alongside daily life.
-      if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(personality.idle);}
+      if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(growthStage(p.petState).progress<.35&&atlas?'turn':personality.idle);}
       if(wasSleeping&&!asleep)wakePending=true;wasSleeping=asleep;
       if(asleep||p.petState.sick)wakePending=false;
       if(free&&!asleep&&!p.petState.sick&&wakePending){wakePending=false;wakeStarted=t;}
@@ -281,7 +281,13 @@ function IllustratedStage(props: Props & {url:string}) {
       let idle:string=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':t-wakeStarted<2.3?'stretching':t-wakeStarted<4.6?'yawning':dailyAct):'watching';
       if(reduced.matches&&!['sleeping','sick','resting','sitting'].includes(idle))idle='watching';
       const actEase=Math.min(1,Math.max(0,Math.min(dailyUntil-t,1)))*(!free||asleep||p.petState.sick||reduced.matches?0:1);
-      uniforms.lifeAct.value.lerp(new THREE.Vector4(idle==='yawning'?actEase:0,idle==='ear-twitch'?actEase:0,idle==='scratch'?actEase:0,idle==='shake'?actEase:0),1-Math.exp(-dt*5));
+      // DREAMING: a sleeping dog twitches — an ear, a jowl, a paw — every few
+      // seconds, because real dogs dream. The ear channel carries it; the
+      // next twitch is scheduled 3–8 s out.
+      let dreamEase=0;
+      if(asleep&&now>nextDream){nextDream=now+3000+Math.random()*5000;dreamEase=1;}
+      if(!asleep)nextDream=Math.min(nextDream,now+2500);
+      uniforms.lifeAct.value.lerp(new THREE.Vector4(idle==='yawning'?actEase:0,idle==='ear-twitch'?actEase:dreamEase,idle==='scratch'?actEase:0,idle==='shake'?actEase:0),1-Math.exp(-dt*(asleep?9:5)));
       if(ambientLabel!==idle){ambientLabel=idle;setAmbient(idle);}
       const strolling=free&&!reduced.matches&&(idle==='wandering'||idle==='trotting'||idle==='toilet');
       const sniffing=free&&(idle==='sniffing'||idle==='toilet');

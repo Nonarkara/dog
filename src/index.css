@@ -673,6 +673,18 @@
 .dog-pee-drops {position:absolute;left:62%;top:calc(var(--dog-floor,90%) - 38px);color:#9b7a36;pointer-events:none;animation:wee-drops .65s ease-out infinite;}
 @keyframes wee-drops {from{transform:translateY(-7px);opacity:0;}40%{opacity:1;}to{transform:translateY(8px);opacity:0;}}
 @media(prefers-reduced-motion:reduce){.dog-pee-drops{animation:none;}}
+/* Park butterflies: a slow figure-of-eight drift, wings shy of 2 Hz.
+   Suppressed with the rest of the autonomous motion. */
+@media(prefers-reduced-motion:no-preference){
+.park-butterfly {transform-box:fill-box;transform-origin:center;animation:park-drift 26s ease-in-out infinite alternate;}
+.park-butterfly-b {animation-duration:34s;animation-delay:-13s;animation-direction:alternate-reverse;}
+@keyframes park-drift {
+  0% {transform:translate(-120px,140px) rotate(-8deg) scale(2.2);}
+  25% {transform:translate(-40px,40px) rotate(10deg) scale(2.2);}
+  50% {transform:translate(60px,-60px) rotate(-6deg) scale(2.2);}
+  75% {transform:translate(140px,60px) rotate(8deg) scale(2.2);}
+  100% {transform:translate(40px,170px) rotate(-10deg) scale(2.2);}
+}}
 .cockpit .illustration-puddle,.cockpit .illustration-mess {background:transparent;border:0;}
 
 /* Care is a short fixed readout, not a scrolling record. */
