@@ -17,6 +17,7 @@ import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
 import {trainingMotion,type PerformanceProps} from './trainingMotion';
+import {homeScene,isHome} from './homeScenes';
 
 interface Props extends PerformanceProps {
   controlsHost?: HTMLElement|null;
@@ -407,6 +408,7 @@ function IllustratedStage(props: Props & {url:string}) {
   }[mood];
   const ambientText:Record<string,string>={looking:'What was that?',yawning:'A little yawn…','ear-twitch':'Did I hear you?','head-tilt':'Hmm?','tail-wag':'Happy you’re here',shake:'Shake it off!',scratch:'An itchy spot…','paw-screen':'Are you there?','nose-nudge':'Hello, you.','play-bow':'Come play!',watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
   return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
+    {(()=>{const s=homeScene(isHome(props.petState.home)?props.petState.home:'house');return <div className="home-scene" aria-hidden="true"><div className="home-wall" dangerouslySetInnerHTML={{__html:s.wall}}/><div className="home-floor" dangerouslySetInnerHTML={{__html:s.floor}}/></div>;})()}
     <div ref={mount} className="dog-art-layer w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
     {!ready&&<p data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center label">Loading {dog.name}’s illustration</p>}
     {game&&dock(<div className="catch-hud flex items-center justify-between text-[11px]">

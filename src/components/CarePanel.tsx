@@ -1,6 +1,7 @@
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
 import {PushOffer} from './PushOffer';
+import {HOMES,isHome,type HomeId} from './homeScenes';
 import {growthLabel,CHARACTER_TEXT,wishFor,WISH_SHORT} from '../domain/life';
 import {recordSources} from '../utils/recordProvenance';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
@@ -15,6 +16,7 @@ interface CarePanelProps {
   dog: DogProfile;
   petState: PetState;
   detailView?:boolean;
+  onHome?:(home:HomeId)=>void;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -59,7 +61,7 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, onHome }) => {
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const isSick = petState.sick ?? false;
@@ -187,6 +189,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         </div>
 
         {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthLabel(petState)} · your {dog.name}</p><p>{petState.character?`${dog.name} grew up ${CHARACTER_TEXT[petState.character.name]}`:'One minute of active attention on a new day helps your puppy grow. How you raise him decides who he becomes.'}</p><button type="button" className="btn-quiet" onClick={()=>{try{downloadOwnedBackup(dog.name);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
+        {detailView&&onHome&&<label className="home-pick">Home <select value={isHome(petState.home)?petState.home:'house'} onChange={e=>onHome(e.target.value as HomeId)}>{HOMES.map(h=><option key={h.id} value={h.id}>{h.label}</option>)}</select></label>}
         {/* THE CARE LOG */}
         <div className="care-history border-hairline-t">
           <p className="label">Last</p>
@@ -215,7 +218,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
       </div>
       {!detailView&&<dialog ref={details} className="care-details-dialog" aria-label={`${dog.name} care details`} onClick={e=>{if(e.target===e.currentTarget)details.current?.close();}}>
         <button type="button" className="btn-quiet care-details-close" onClick={()=>details.current?.close()}>Close ×</button>
-        <CarePanel dog={dog} petState={petState} detailView/>
+        <CarePanel dog={dog} petState={petState} detailView onHome={onHome}/>
       </dialog>}
     </section>
   );

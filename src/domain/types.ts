@@ -252,6 +252,8 @@ export interface PetState {
   careLog?: import('./life').CareLog;
   /** Who he became, fixed once he grew up. */
   character?: { name: import('./life').Character; at: number };
+  /** Where he lives: the room drawn behind him (components/homeScenes.ts). */
+  home?: import('../components/homeScenes').HomeId;
   /** Today's wish and whether you granted it. */
   wish?: import('./life').Wish;
   /** Time spent with him: today, in total, and the run of days. */
