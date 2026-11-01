@@ -9,7 +9,8 @@ import React, {useRef,useState} from 'react';
 import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
-import { happiness, readiness, temperament } from '../domain/pet';
+import {Help} from './Help';
+import { happiness, readiness, sickCause, temperament } from '../domain/pet';
 import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
 
 interface CarePanelProps {
@@ -95,7 +96,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
    */
   const nextAction = (): string => {
     const mood=dailyMood(petState);
-    if(mood==='sick')return `${dog.name} is sick and trembling. Give the game medicine and let them rest.`;
+    if(mood==='sick')return sickCause(petState)==='mess'?`${dog.name} is ill from lying in mess. Clean up (broom), then give medicine.`:sickCause(petState)==='hunger'?`${dog.name} is ill from going hungry. Give medicine (red button), then a meal.`:`${dog.name} is still unwell. Give medicine (red button).`;
     if(mood==='sleeping')return `${dog.name} is sleeping. Quiet time while energy returns.`;
     if(mood==='toilet')return `${dog.name} needs a toilet break. Take a walk before an accident.`;
     if(mood==='hungry')return `${dog.name} is hungry. Food first.`;
@@ -115,6 +116,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
     <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''}`} aria-label="Care">
       <header className="panel-head">
         <h2 className="label text-zinc-300">Care</h2>
+        <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, calm. A red bar needs you. The line under Now says the one thing to do next."/>
         <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}
         </span>
@@ -167,12 +169,12 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         {/* The sentence: advice, health, discipline and time together */}
         <div className="care-now border-hairline-t">
           <p className="label">Now</p>
-          {petState.call ? (
+          {petState.call&&petState.call.reason!=='sick' ? (
             <p className="text-[12px] leading-snug text-accent mt-0.5" role="status">
               {dog.name} {CALL_TEXT[petState.call.reason]}. Answer with {ANSWERS[petState.call.reason].join(' or ')}.
             </p>
           ) : (
-            <p className="text-[12px] leading-snug text-zinc-200 mt-0.5">{nextAction()}</p>
+            <p className={`text-[12px] leading-snug mt-0.5 ${isSick?'text-accent':'text-zinc-200'}`} role={isSick?'status':undefined}>{nextAction()}</p>
           )}
           <p className="care-summary text-[11px] text-faint mt-1">
             <span className="data">Ready {Math.round(ready * 100)}%</span>

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
-import type { Interaction } from '../domain/pet';
+import { sickCause, type Interaction } from '../domain/pet';
 import type { AvatarPose, AvatarInteractionTrigger } from './DogAvatar3D';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { artPoseFor, landmarksFor, poseAnchors, type ArtPose } from './illustratedRig';
@@ -398,7 +398,7 @@ function IllustratedStage(props: Props & {url:string}) {
   const asleep=!!props.petState.sleep?.asleep;
   const needs={
     sleeping:{Icon:Moon,text:'Dreaming…',action:undefined},
-    sick:{Icon:Thermometer,text:'Feeling poorly · medicine',action:'medicine' as const},
+    sick:sickCause(props.petState)==='mess'?{Icon:Broom,text:'Ill from the mess · clean up, then medicine',action:'clean' as const}:{Icon:Thermometer,text:sickCause(props.petState)==='hunger'?'Feeling poorly · medicine, then food':'Feeling poorly · medicine',action:'medicine' as const},
     toilet:{Icon:Footprints,text:'Need to go! · walk',action:'walk' as const},
     bored:{Icon:Bone,text:'Bored… play with me?',action:'play' as const},
     hungry:{Icon:Utensils,text:'A little hungry · feed',action:'feed' as const},

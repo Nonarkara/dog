@@ -36,6 +36,7 @@ import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
 import {MeterDeltas} from './components/MeterDeltas';
+import { Help } from './components/Help';
 import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download } from 'lucide-react';
 import {
   interact,
@@ -150,6 +151,7 @@ export const App: React.FC = () => {
   // A live park invite (?park=<room>) opens straight into the park.
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
+  const [recordOpen, setRecordOpen] = useState(false);
   // Signed-in owners: every save goes to the cloud a few seconds later.
   useEffect(()=>playMode()==='own'?startCloudSync():undefined,[]);
   useEffect(()=>{const url=new URL(location.href);if(liveRoom)url.searchParams.set('park',liveRoom);else url.searchParams.delete('park');if(url.href!==location.href)history.replaceState(history.state,'',url);},[liveRoom]);
@@ -438,7 +440,9 @@ export const App: React.FC = () => {
       if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
       const touched=part?discoverTouch(latest,id,part):latest;
       const result=interact(touched,action,Date.now(),subject);
-      const answer=answerCall(latest,action);
+      // A dose refused in the mess has not answered his call.
+      if(action==='medicine'&&result.state.sick)trigger=null;
+      const answer=latest.call?.reason==='sick'&&result.state.sick?{answered:false,trustBonus:0}:answerCall(latest,action);
       message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called. Trust +${answer.trustBonus}.`:result.note;
       if(action==='rewardCalm'&&result.state.lastCalmRewardAt===latest.lastCalmRewardAt)trigger=null;
       if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
@@ -791,7 +795,13 @@ export const App: React.FC = () => {
           <>
             {renderRegion('care')}
             {/* MSH: the column under Coach was empty, so Record lives there; no tabs needed. */}
-            <div className="desktop-detail">{renderRegion('coach')}{renderRegion('record')}</div>
+            <div className="desktop-detail">{renderRegion('coach')}
+              {/* The papers fold to one row; most play never needs them. */}
+              <div className="record-fold" data-open={recordOpen}>
+                <div className="record-fold-head"><button type="button" className="btn-quiet" aria-expanded={recordOpen} onClick={()=>setRecordOpen(o=>!o)}><BookOpen size={16} aria-hidden="true"/><span className="label">Record</span><span className="record-fold-caret" aria-hidden="true">›</span></button><Help label="What is the record" text={`${currentDog.name}'s papers: ID, vaccines, parasite care, history and photos. Starter entries are examples until you change them.`}/></div>
+                {recordOpen&&renderRegion('record')}
+              </div>
+            </div>
           </>
         ) : (
           <>

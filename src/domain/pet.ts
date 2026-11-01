@@ -292,6 +292,14 @@ export function happiness(state: PetState): number {
   return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100 - poopPenalty);
 }
 
+/** What is keeping him ill: lying in mess, or an empty belly. 'other' once the cause is gone. */
+export function sickCause(state: PetState): 'mess' | 'hunger' | 'other' | null {
+  if (!state.sick) return null;
+  const life = dailyLife(state);
+  if ((state.poopCount ?? 0) + life.peeCount >= 2 && state.needs.hygiene < 25) return 'mess';
+  return life.lowFullnessMinutes >= 180 || state.needs.hunger < 30 ? 'hunger' : 'other';
+}
+
 /** The pet drifts whether anyone is watching. */
 export function decay(state: PetState, now: number = Date.now()): PetState {
   // Repair saves from the old 0–100 clamp before applying any elapsed time.
@@ -465,6 +473,8 @@ export function interact(
   // Quiet practice never wakes a sleeping dog or rewards an unmet need.
   if(action==='settle'||action==='rewardCalm'||action==='scold')return calmInteraction(base,action==='scold'?'settle':action,now,name);
   let wakeNote = '';
+  // A dose refused in the mess leaves him asleep.
+  if (action === 'medicine' && sickCause(base) === 'mess') return { state: base, note: `${name} is lying in mess. Clean up first, then the medicine will work.` };
   if ((base.sleep ?? createSleepState()).asleep && action !== 'clean') {
     const woken = wake(base, now, subject);
     base = woken.state;
@@ -571,9 +581,13 @@ export function interact(
       if (base.sick) {
         next.sick = false;
         next.sickSince = undefined;
+        // Medicine clears the illness and its hunger clock; an empty belly starts it again.
+        next.life = { ...dailyLife(base), lowFullnessMinutes: 0 };
         next.needs.energy = clamp(base.needs.energy + 25);
         next.trust = clamp(base.trust + 10);
-        note = `Administered medication. ${name} ceases shivering, breathes easily, and begins to recover. Health restored!`;
+        note = base.needs.hunger < 30
+          ? `Medicine worked: ${name} is better. Feed ${p.obj} soon, or hunger will make ${p.obj} ill again.`
+          : `Medicine worked: ${name} stops shivering and starts to recover.`;
       } else {
         note = `${name} is in good health and does not require medication.`;
       }

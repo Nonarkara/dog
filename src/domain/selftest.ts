@@ -14,6 +14,7 @@ import {DEFAULT_DOGS} from '../data/defaultDogs';
  *   node --experimental-strip-types src/domain/selftest.ts
  */
 
+import { sickCause } from './pet';
 import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate } from './pet';
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
@@ -407,6 +408,15 @@ ok('a sick dog has zero readiness for training', readiness(sickState) === 0);
 ok('a sick dog cannot play', interact(sickState, 'play', noon).note.includes('sick'));
 const cured = interact(sickState, 'medicine', noon);
 ok('medicine cures sickness and restores readiness', !cured.state.sick && readiness(cured.state) > 0);
+// Tester bug 2026-11-01: hungry-sick dog relapsed 10 s after every dose.
+const starved: PetState = { ...createPetState(noon), sick: true, sickSince: noon, needs: { hunger: 5, energy: 60, hygiene: 80 }, life: { ...createPetState(noon).life!, lowFullnessMinutes: 400 } };
+const dosed = interact(starved, 'medicine', noon).state;
+ok('medicine holds: no relapse a minute later', !decay(dosed, noon + 60_000).sick);
+const filthy: PetState = { ...messyState, sick: true, sickSince: noon };
+const cleanedSick = interact(filthy, 'clean', noon).state;
+ok('after cleaning a well-fed dog, the cause is no longer named hunger', sickCause(cleanedSick) === 'other');
+ok('a refused dose leaves a sleeping dog asleep', interact({ ...filthy, sleep: { ...filthy.sleep, asleep: true, fellAsleepAt: noon - 60_000 } }, 'medicine', noon).state.sleep.asleep);
+ok('medicine in the mess says clean first, and cleaning then medicine cures', interact(filthy, 'medicine', noon).state.sick && !interact(interact(filthy, 'clean', noon).state, 'medicine', noon).state.sick);
 
 const tantrumDog: PetState = {
   ...createPetState(noon),
