@@ -1,6 +1,7 @@
 export const VERTEX = `
   varying vec2 vUv;
   uniform float time, reduced;
+  uniform float wagT;
   uniform vec2 morphFrom[8],morphTo[8];
   uniform float morphAmount;
   uniform vec2 profile;
@@ -37,17 +38,20 @@ export const VERTEX = `
     p.y+=bow*head;
     float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
     vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
-    headPosition+=vec2(motion.x*.012,more.z*.012+temperament.z*.015);
+    // A real dog nods at stride frequency — the head leads each forepaw's landing.
+    headPosition+=vec2(motion.x*.012+walk*.003*sin(phase+1.5708),more.z*.012+temperament.z*.015+walk*.006*(abs(sin(phase))-.5));
     p=mix(p,headPosition,head);
     float muzzle=band(original.x,headPivot.x-.12,.095)*band(original.y,headPivot.y-.015,.06);
     p.y+=motion.z*abs(sin(time*16.))*.007*muzzle;
+    // Sniffing is a fast nose quiver, not only a slow sway of the whole head.
+    p.x+=more.y*sin(time*24.)*.0016*muzzle*(1.-reduced);
     p.y+=lifeAct.x*.026*muzzle*(1.-reduced);
     float ears=band(original.y,.13,.10)*head;
     p.x+=lifeAct.y*sin(time*17.)*.012*ears*(1.-reduced);
     p.x+=lifeAct.z*sin(time*18.)*.018*nearBack*(1.-reduced);
     p.x+=lifeAct.w*sin(time*19.)*.008*torso*(1.-reduced);
     float tail=band(original.x,tailPivot.x,.105)*band(original.y,tailPivot.y,.12);
-    vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),sin(time*(motion.x>0.1?13.:3.+temperament.y*5.))*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
+    vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),sin(time*wagT)*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
     p=mix(p,tailPosition,tail);
     if(morphAmount>.001){
       vec2 shift=vec2(0.);float total=0.;
