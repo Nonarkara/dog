@@ -33,11 +33,15 @@ database_id = "a8931b9d-f7b1-4bb6-af9e-466626a53a8b"
 migrations_dir = "migrations"
 
 # Sign-in providers. Client ids are public; the secrets are set with
-# `npx wrangler secret put GOOGLE_CLIENT_SECRET` / `LINE_CHANNEL_SECRET`.
-# A provider with an empty id is simply not offered.
+# `npx wrangler secret put GOOGLE_CLIENT_SECRET` / `LINE_CHANNEL_SECRET` /
+# `APPLE_PRIVATE_KEY` (the .p8 file's contents). A provider with an empty id
+# is simply not offered. Setup steps: docs/SIGN-IN-SETUP.md.
 [vars]
 GOOGLE_CLIENT_ID = ""
 LINE_CHANNEL_ID = ""
+APPLE_SERVICE_ID = ""
+APPLE_TEAM_ID = ""
+APPLE_KEY_ID = ""
 VAPID_PUBLIC = "BMOKg6M88eHJaeZ4lBn_Ay74iBPLQdeccI0QUsebztGPkAKtAA4SHPWMaeWX6_wWuOV_dXMBiPBJpqPxXTkmlks"
 # Care-ledger keepers: these accounts may read every owner's park-visit
 # summary. Comma-separated emails of signed-in Google accounts.

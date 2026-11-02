@@ -107,7 +107,8 @@ export async function handleCare(request: Request, env: CareEnv, url: URL): Prom
   if (path === '/api/care/summary' && request.method === 'GET') {
     await purgeOldVisits(env);
     const keepers = (env.CARE_KEEPERS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    const isKeeper = !!user.email && keepers.includes(user.email.toLowerCase());
+    // Keepers are Google accounts only: one verified source decides who reads everyone's book.
+    const isKeeper = user.provider === 'google' && !!user.email && keepers.includes(user.email.toLowerCase());
     if (!isKeeper) {
       const own = await env.DB.prepare(
         'SELECT dog_name, dog_id, room, arrived_at, left_at, snapshot FROM park_visits WHERE user_id = ? ORDER BY arrived_at DESC LIMIT 50'

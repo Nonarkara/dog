@@ -1,7 +1,8 @@
 /**
  * ACCOUNTS AND CLOUD-SAVED DOGS.
  *
- * Sign in with Google or LINE (OpenID Connect, authorization code + PKCE).
+ * Sign in with Apple, Google or LINE (OpenID Connect, authorization code;
+ * PKCE for Google and LINE, a signed client secret for Apple).
  * "Signed in" is a fact the server decides from a session row, never a flag
  * the browser holds: the cookie carries a random token, and only its SHA-256
  * is stored. No passwords anywhere.
@@ -38,6 +39,11 @@ export interface AccountEnv {
   GOOGLE_CLIENT_SECRET?: string;
   LINE_CHANNEL_ID?: string;
   LINE_CHANNEL_SECRET?: string;
+  /** Apple: the Services ID, team, key id (plain vars) and the .p8 key (a secret). */
+  APPLE_SERVICE_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
   /** Local testing only: a fake provider, honoured only on localhost. */
   DEV_AUTH?: string;
 }
@@ -48,7 +54,7 @@ const SESSION_DAYS = 60;
 const MAX_BACKUP_BYTES = 300_000;
 const DOG_IDS = ['expo-2021', 'mali-2022', 'oreo-frenchie', 'paolo-pug', 'shiba-chai'];
 
-type Provider = 'google' | 'line' | 'dev';
+type Provider = 'apple' | 'google' | 'line' | 'dev';
 
 interface ProviderConfig {
   authorize: string;
@@ -68,6 +74,15 @@ function providerConfig(p: Provider, env: AccountEnv): ProviderConfig | null {
       scope: 'openid profile email',
       id: env.GOOGLE_CLIENT_ID,
       secret: env.GOOGLE_CLIENT_SECRET,
+    };
+  if (p === 'apple' && env.APPLE_SERVICE_ID && env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY)
+    return {
+      authorize: 'https://appleid.apple.com/auth/authorize',
+      token: 'https://appleid.apple.com/auth/token',
+      issuers: ['https://appleid.apple.com'],
+      scope: 'name email',
+      id: env.APPLE_SERVICE_ID,
+      secret: '', // signed fresh for each sign-in, see appleClientSecret
     };
   if (p === 'line' && env.LINE_CHANNEL_ID && env.LINE_CHANNEL_SECRET)
     return {
@@ -92,6 +107,7 @@ const devAllowed = (url: URL, env: AccountEnv) => env.DEV_AUTH === '1' && url.pr
 
 export function providersFor(url: URL, env: AccountEnv): Provider[] {
   const list: Provider[] = [];
+  if (providerConfig('apple', env)) list.push('apple');
   if (providerConfig('line', env)) list.push('line');
   if (providerConfig('google', env)) list.push('google');
   if (devAllowed(url, env)) list.push('dev');
@@ -109,9 +125,11 @@ async function sha256(text: string): Promise<string> {
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers } });
 
-function cookie(name: string, value: string, url: URL, maxAge: number): string {
+function cookie(name: string, value: string, url: URL, maxAge: number, crossSitePost = false): string {
   const secure = url.protocol === 'https:' ? '; Secure' : '';
-  return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+  // Apple returns by a cross-site form POST, which a Lax cookie would not ride along with.
+  const site = crossSitePost && secure ? 'None' : 'Lax';
+  return `${name}=${value}; Path=/; HttpOnly; SameSite=${site}; Max-Age=${maxAge}${secure}`;
 }
 function readCookie(request: Request, name: string): string | null {
   const header = request.headers.get('Cookie') ?? '';
@@ -138,6 +156,20 @@ async function lineSignatureOk(token: string, secret: string): Promise<boolean> 
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${h}.${p}`)));
   return b64url(sig) === s;
 }
+/**
+ * Apple has no fixed client secret: it is a short JWT signed (ES256) with the
+ * .p8 key Apple issues. WebCrypto's ECDSA output is already the raw r||s form JWT wants.
+ */
+async function appleClientSecret(env: AccountEnv): Promise<string> {
+  const pem = (env.APPLE_PRIVATE_KEY ?? '').replace(/-----[^-]+-----|\s+/g, '');
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const now = Math.floor(Date.now() / 1000);
+  const part = (o: object) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+  const body = `${part({ alg: 'ES256', kid: env.APPLE_KEY_ID })}.${part({ iss: env.APPLE_TEAM_ID, iat: now, exp: now + 300, aud: 'https://appleid.apple.com', sub: env.APPLE_SERVICE_ID })}`;
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(body)));
+  return `${body}.${b64url(sig)}`;
+}
 const clean = (v: unknown, max: number) =>
   typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, max) : '';
 
@@ -161,12 +193,15 @@ export async function currentUser(request: Request, env: AccountEnv) {
     .first<{ id: string; display_name: string; provider: string; email: string | null }>();
 }
 
-async function upsertUser(env: AccountEnv, provider: Provider, sub: string, name: string, email: string | null) {
+/** `name` null keeps the stored name: Apple shares a name only on the very first sign-in.
+ *  The email is always the current one, since it decides who may read the care ledger. */
+async function upsertUser(env: AccountEnv, provider: Provider, sub: string, name: string | null, email: string | null, fallback = 'Friend') {
   const found = await env.DB.prepare('SELECT id FROM users WHERE provider = ? AND provider_sub = ?').bind(provider, sub).first<{ id: string }>();
   if (found) {
-    await env.DB.prepare('UPDATE users SET display_name = ?, email = ? WHERE id = ?').bind(name, email, found.id).run();
+    await env.DB.prepare('UPDATE users SET display_name = COALESCE(?, display_name), email = ? WHERE id = ?').bind(name, email, found.id).run();
     return found.id;
   }
+  name = name ?? fallback;
   const id = randomToken(12);
   await env.DB.prepare('INSERT INTO users (id, provider, provider_sub, display_name, email, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(id, provider, sub, name, email, Date.now())
@@ -185,12 +220,14 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
 
   // Changes need a same-site request with our header: a plain cross-site
   // form or image cannot send it, so cookies alone cannot be abused.
-  if (request.method !== 'GET') {
+  // Apple's return is a form POST from appleid.apple.com; it is guarded by the
+  // state and nonce of the sign-in flow instead of our header.
+  if (request.method !== 'GET' && path !== '/api/auth/apple/callback') {
     const origin = request.headers.get('Origin');
     if (request.headers.get('X-TDC') !== '1' || (origin && origin !== url.origin)) return json({ error: 'Refused.' }, 403);
   }
 
-  const start = path.match(/^\/api\/auth\/(google|line|dev)\/start$/);
+  const start = path.match(/^\/api\/auth\/(apple|google|line|dev)\/start$/);
   if (start && request.method === 'GET') {
     const provider = start[1] as Provider;
     const back = safeBack(url.searchParams.get('back'));
@@ -205,17 +242,22 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     const state = randomToken(16), verifier = randomToken(32), nonce = randomToken(16);
     const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
     const target = new URL(config.authorize);
-    target.search = new URLSearchParams({
+    const params: Record<string, string> = {
       response_type: 'code', client_id: config.id, redirect_uri: `${url.origin}/api/auth/${provider}/callback`,
-      scope: config.scope, state, nonce, code_challenge: challenge, code_challenge_method: 'S256',
-    }).toString();
+      scope: config.scope, state, nonce,
+    };
+    // Apple must POST back when asked for a name or email, and does not use PKCE.
+    if (provider === 'apple') params.response_mode = 'form_post';
+    else Object.assign(params, { code_challenge: challenge, code_challenge_method: 'S256' });
+    target.search = new URLSearchParams(params).toString();
     const flow = b64url(new TextEncoder().encode(JSON.stringify({ provider, state, verifier, nonce, back })));
-    return new Response(null, { status: 302, headers: { Location: target.toString(), 'Set-Cookie': cookie(FLOW_COOKIE, flow, url, 600) } });
+    return new Response(null, { status: 302, headers: { Location: target.toString(), 'Set-Cookie': cookie(FLOW_COOKIE, flow, url, 600, provider === 'apple') } });
   }
 
-  const callback = path.match(/^\/api\/auth\/(google|line)\/callback$/);
-  if (callback && request.method === 'GET') {
+  const callback = path.match(/^\/api\/auth\/(apple|google|line)\/callback$/);
+  if (callback && (request.method === 'GET' || (callback[1] === 'apple' && request.method === 'POST'))) {
     const provider = callback[1] as Provider;
+    const params = request.method === 'POST' ? new URLSearchParams(await request.text()) : url.searchParams;
     const config = providerConfig(provider, env);
     const fail = (why: string) =>
       new Response(null, { status: 302, headers: { Location: `/?signin=failed&why=${encodeURIComponent(why)}`, 'Set-Cookie': cookie(FLOW_COOKIE, '', url, 0) } });
@@ -227,16 +269,23 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     } catch {
       return fail('expired');
     }
-    if (flow.provider !== provider || url.searchParams.get('state') !== flow.state) return fail('state');
-    const code = url.searchParams.get('code');
-    if (!code) return fail(url.searchParams.get('error') ?? 'cancelled');
+    if (flow.provider !== provider || params.get('state') !== flow.state) return fail('state');
+    const code = params.get('code');
+    if (!code) return fail(params.get('error') ?? 'cancelled');
 
+    let appleSecret = '';
+    if (provider === 'apple') {
+      try { appleSecret = await appleClientSecret(env); } catch { return fail('apple-key'); } // a badly pasted .p8
+    }
     const tokenResponse = await fetch(config.token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code', code, redirect_uri: `${url.origin}/api/auth/${provider}/callback`,
-        client_id: config.id, client_secret: config.secret, code_verifier: flow.verifier,
+        client_id: config.id,
+        ...(provider === 'apple'
+          ? { client_secret: appleSecret }
+          : { client_secret: config.secret, code_verifier: flow.verifier }),
       }),
     });
     if (!tokenResponse.ok) return fail('token');
@@ -249,11 +298,17 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     const claims = decodeJwtPayload(tokens.id_token);
     if (!claims) return fail('id-token');
     const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-    if (!config.issuers.includes(String(claims.iss)) || !aud.includes(config.id) || claims.nonce !== flow.nonce || Number(claims.exp) * 1000 < Date.now() || typeof claims.sub !== 'string')
+    if (!config.issuers.includes(String(claims.iss)) || !aud.includes(config.id) || claims.nonce !== flow.nonce || !Number.isFinite(Number(claims.exp)) || Number(claims.exp) * 1000 < Date.now() || typeof claims.sub !== 'string')
       return fail('claims');
-    const name = clean(claims.name, 40) || (provider === 'line' ? 'LINE friend' : 'Google friend');
-    const email = provider === 'google' && claims.email_verified ? clean(claims.email, 120) || null : null;
-    const userId = await upsertUser(env, provider, claims.sub, name, email);
+    let name: string | null = clean(claims.name, 40) || null;
+    if (provider === 'apple') {
+      // Apple sends the name once, beside the code, on the very first sign-in only.
+      try { const n = JSON.parse(params.get('user') ?? '{}').name ?? {}; name = clean(`${n.firstName ?? ''} ${n.lastName ?? ''}`, 40) || null; } catch { name = null; }
+    }
+    const verified = claims.email_verified === true || claims.email_verified === 'true';
+    const email = provider !== 'line' && verified ? clean(claims.email, 120) || null : null;
+    const fallback = provider === 'line' ? 'LINE friend' : provider === 'apple' ? 'Apple friend' : 'Google friend';
+    const userId = await upsertUser(env, provider, claims.sub, provider === 'apple' ? name : name ?? fallback, email, fallback);
     const headers = new Headers({ Location: safeBack(flow.back) });
     headers.append('Set-Cookie', await startSession(env, userId, url));
     headers.append('Set-Cookie', cookie(FLOW_COOKIE, '', url, 0));
