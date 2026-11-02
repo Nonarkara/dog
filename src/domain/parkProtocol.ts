@@ -31,6 +31,8 @@ export interface LiveDog {
   coat: { base: string; light: string; dark: string };
   /** How the owner wants to be shown, e.g. "Expo's person". */
   owner: string;
+  /** How grown up he is, 0 (new puppy) to 1 (adult), so a puppy looks like one to friends too. */
+  grown?: number;
 }
 
 export interface LiveIntent {
@@ -83,7 +85,8 @@ export function parseDog(v: unknown): LiveDog | null {
   if (!name || !breed || !owner || art === null || !coat) return null;
   const { base, light, dark } = coat;
   if (![base, light, dark].every((c) => typeof c === 'string' && HEX_RE.test(c))) return null;
-  return { name, breed, art, owner, coat: { base: base as string, light: light as string, dark: dark as string } };
+  const grown = num(d.grown, 0, 1);
+  return { name, breed, art, owner, coat: { base: base as string, light: light as string, dark: dark as string }, ...(grown === null ? {} : { grown }) };
 }
 
 export function parseIntent(d: Record<string, unknown>): LiveIntent | null {

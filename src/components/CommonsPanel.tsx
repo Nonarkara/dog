@@ -47,11 +47,11 @@ const OWNER_KEY='tama_dog_chi_live_owner';
 const STARTER_ART=['expo-2021','mali-2022','oreo-frenchie','paolo-pug','shiba-chai'];
 const HEX=/^#[0-9a-fA-F]{6}$/;
 /** Only what the park draws. Never the record. */
-function liveDogFor(dog:DogProfile,owner:string):LiveDog{
+function liveDogFor(dog:DogProfile,owner:string,grown:number):LiveDog{
   const starter=DEFAULT_DOGS.find(d=>d.id===dog.id);
   const drawn=!!starter&&STARTER_ART.includes(dog.id)&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>starter.avatarConfig[k]===dog.avatarConfig[k]);
   const hex=(c:string,fallback:string)=>HEX.test(c)?c:fallback;
-  return {name:dog.name.slice(0,24)||'Dog',breed:(dog.breed||'Dog').slice(0,40),art:drawn?dog.id:'',owner:owner.slice(0,32)||`${dog.name}'s person`,
+  return {grown,name:dog.name.slice(0,24)||'Dog',breed:(dog.breed||'Dog').slice(0,40),art:drawn?dog.id:'',owner:owner.slice(0,32)||`${dog.name}'s person`,
     coat:{base:hex(dog.avatarConfig.baseColor,'#d8c5a3'),light:hex(dog.avatarConfig.secondaryColor,'#f5efdf'),dark:hex(dog.avatarConfig.maskColor,'#302c29')}};
 }
 
@@ -319,7 +319,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
   const [liveNote,setLiveNote]=useState<string|null>(null);
   const liveNoteTimer=useRef(0);
   const sayLive=(text:string)=>{setLiveNote(text);clearTimeout(liveNoteTimer.current);liveNoteTimer.current=window.setTimeout(()=>setLiveNote(null),6000);};
-  const me=useMemo(()=>liveDogFor(myDog,ownerName),[myDog,ownerName]);
+  const grown=petState?growthStage(petState).progress:1;
+  const me=useMemo(()=>liveDogFor(myDog,ownerName,grown),[myDog,ownerName,grown]);
   const live=useLivePark({room:liveRoom,me,scene:()=>sceneApiRef.current,
     packDog:art=>parkNeighbors.find(n=>n.id===`pack-${art}`),
     hungry:()=>(stateRef.current?.needs.hunger??100)<35,

@@ -594,6 +594,12 @@ console.log('\nLIVE PARK MESSAGES');
 const liveDog = { name: 'Expo', breed: 'Thai Bangkaew Dog', art: 'expo-2021', owner: "Expo's person", coat: { base: '#ece7de', light: '#f8f6f1', dark: '#211c18' } };
 ok('a proper hello is accepted', parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: liveDog }))?.t === 'hello');
 ok('broken JSON is dropped', parseClient('{"t":"hello"') === null);
+{
+  const grownOf = (grown: unknown) => { const m = parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: { ...liveDog, grown } })); return m?.t === 'hello' ? m.dog.grown : 'dropped'; };
+  ok('a friend\'s puppy arrives as a puppy', grownOf(0.25) === 0.25);
+  ok('growth is clamped to 0..1', grownOf(7) === 1 && grownOf(-2) === 0);
+  ok('an older app without growth still joins', grownOf(undefined) === undefined);
+}
 ok('an unknown message type is dropped', parseClient(JSON.stringify({ t: 'admin', id: 'x' })) === null);
 const leaky = parseClient(JSON.stringify({ t: 'hello', id: 'abcd1234efgh', dog: { ...liveDog, microchip: 'TH-985141002849102', vet: 'Thonglor' } }));
 ok('record fields never pass through, even if a client sends them', leaky?.t === 'hello' && !JSON.stringify(leaky).includes('985141') && !JSON.stringify(leaky).includes('Thonglor'));

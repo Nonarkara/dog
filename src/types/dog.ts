@@ -111,4 +111,6 @@ export interface MetaverseNeighborDog {
   artId?: string;
   /** A friend's dog in a live park: steered by its owner's browser. */
   remote?: boolean;
+  /** A live friend's growth, 0 (puppy) to 1 (adult). */
+  grown?: number;
 }

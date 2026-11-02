@@ -56,7 +56,8 @@ export function useLivePark({ room, me, scene, packDog, hungry, onPetted, onNote
   const opts = useRef({ scene, packDog, hungry, onPetted, onNote });
   opts.current = { scene, packDog, hungry, onPetted, onNote };
   const myId = useRef(liveId()).current;
-  const meKey = me ? JSON.stringify(me) : '';
+  // Growth rides along with hello but never reconnects: a care day mid-visit must not send him home and back.
+  const meKey = me ? JSON.stringify({ ...me, grown: undefined }) : '';
 
   const commit = (next: Record<string, Friend>) => {
     friendsRef.current = next;
@@ -72,7 +73,7 @@ export function useLivePark({ room, me, scene, packDog, hungry, onPetted, onNote
     api.spawnNeighbor({
       id: sceneId(id), name: labelFor(f.dog), breed: f.dog.breed, tribe: 'Live', ownerName: f.dog.owner, personality: '',
       avatarColors: { base: f.dog.coat.base, secondary: f.dog.coat.light, mask: f.dog.coat.dark },
-      earShape: 'pricked', position: [0, 0, 0], action: 'walking', speed: 0, artId: f.dog.art || undefined, remote: true,
+      earShape: 'pricked', position: [0, 0, 0], action: 'walking', speed: 0, artId: f.dog.art || undefined, remote: true, grown: f.dog.grown,
     });
     if (f.intent) api.steer?.(sceneId(id), f.intent);
   };
