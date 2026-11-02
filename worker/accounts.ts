@@ -51,7 +51,7 @@ export interface AccountEnv {
 const SESSION_COOKIE = 'tdc_session';
 const FLOW_COOKIE = 'tdc_signin';
 const SESSION_DAYS = 60;
-const MAX_BACKUP_BYTES = 300_000;
+const MAX_BACKUP_BYTES = 1_000_000; // room for ~20 shrunk record photos; D1 rows cap at 2 MB
 const DOG_IDS = ['expo-2021', 'mali-2022', 'oreo-frenchie', 'paolo-pug', 'shiba-chai'];
 
 type Provider = 'apple' | 'google' | 'line' | 'dev';

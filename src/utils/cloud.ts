@@ -65,14 +65,20 @@ export async function pushOwnedDog(keepalive = false): Promise<'saved' | 'newer-
   }
 }
 
-/** Push a few seconds after the game saves, and once more when the page is hidden. */
+/**
+ * Push at most once a minute while playing, and at once when the page is hidden.
+ * The game saves locally every ~10 s; pushing each one would spend the free
+ * database's daily writes on a few hundred player-hours.
+ */
+const CLOUD_EVERY_MS = 60_000;
 export function startCloudSync(): () => void {
-  let timer = 0;
-  const later = () => { clearTimeout(timer); timer = window.setTimeout(() => void pushOwnedDog(), 4000); };
-  const now = () => { if (document.visibilityState === 'hidden') { clearTimeout(timer); void pushOwnedDog(true); } };
+  let timer = 0, last = Date.now();
+  const push = (keepalive = false) => { last = Date.now(); void pushOwnedDog(keepalive); };
+  const later = () => { clearTimeout(timer); timer = window.setTimeout(push, Math.max(4000, CLOUD_EVERY_MS - (Date.now() - last))); };
+  const now = () => { if (document.visibilityState === 'hidden') { clearTimeout(timer); push(true); } };
   window.addEventListener('tdc-saved', later);
   document.addEventListener('visibilitychange', now);
-  void pushOwnedDog();
+  push();
   return () => { clearTimeout(timer); window.removeEventListener('tdc-saved', later); document.removeEventListener('visibilitychange', now); };
 }
 

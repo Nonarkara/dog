@@ -418,16 +418,23 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      if (typeof reader.result !== 'string') return;
-      if(!await onAddPhoto(reader.result,captureAngle)){setNote({tone:'error',text:'Photo was not saved. Please try again.'});return;}
+    // A phone photo is 3–5 MB; stored as is it fills the browser and stops cloud
+    // saves. Shrunk to 512 px JPEG it is ~40 KB and still reads as the dog.
+    void (async () => {
+      let url: string;
+      try {
+        const image = await createImageBitmap(file), scale = Math.min(1, 512 / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
+        canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height);
+        url = canvas.toDataURL('image/jpeg', 0.72);
+      } catch { setNote({tone:'error',text:'That file could not be read as a photo.'}); return; }
+      if(!await onAddPhoto(url,captureAngle)){setNote({tone:'error',text:'Photo was not saved. Please try again.'});return;}
       setNote({
         tone: 'ok',
         text: `Photo stored on ${dog.name}'s record at ${ANGLE_LABEL[captureAngle].toLowerCase()}.`,
       });
-    };
-    reader.readAsDataURL(file);
+    })();
   };
 
   /* ---- the model file ------------------------------------------------------ */
