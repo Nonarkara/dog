@@ -6,7 +6,6 @@ const TIPS={
  clean:{title:'Clean little home',text:'The broom clears mess and cleans the coat. Regular cleanup protects game health.'},
  feed:{title:'Meals and rewards',text:'Keep regular meals. Use tiny training rewards from the daily allowance; never skip meals to force learning.'},
  coins:{title:'Your pantry',text:'Active time together earns paw coins. Six coins buy three meals; hungry dogs have an emergency bowl.'},
- play:{title:'A ball is a learned game',text:'New dogs watch it drop. Teach Fetch first, then help them catch left or right.'},
  walk:{title:'A sniff walk',text:'Tap the ground to explore. Gentle greetings build your dog’s social confidence.'},
  bed:{title:'Goodnight together',text:'Tuck your dog in when you settle down. Each dog has a wake habit; rest restores energy.'},
  wake:{title:'A little morning woof',text:'Opt in to wake-up barking. Keep the app open with sound allowed; this is not a lock-screen alarm.'},
@@ -18,7 +17,6 @@ const TIPS={
  park:{title:'Your little universe',text:'Pet a dog or tap a place to walk. Pinch to come closer.'},
  dogs:{title:'Meet the pack',text:'Each dog keeps separate care, training and personality. Switching dogs never transfers progress.'},
  tricks:{title:'A little invitation',text:'Try a gesture and watch the response. Let a tired or unwell dog rest instead.'},
- nose:{title:'Three cups',text:'He turns away while you hide the bone. Then watch his nose work — it gets better with practice.'},
  marker:{title:'That exact moment',text:'Your marker promises a reward. Follow it with a treat, even if your timing wasn’t perfect.'},
  treat:{title:'Keep your promise',text:'Deliver a small reward promptly after the marker. Start new skills with consistent rewards.'},
  zoom:{title:'Come closer',text:'Zoom changes the camera, not the dog. Find my dog brings your companion back into view.'},
@@ -32,7 +30,7 @@ export function useFirstPlayTips(){
   const element=event.target instanceof Element?event.target.closest('button,[role="tab"],input[type="checkbox"]'):null;if(!element)return;
   const label=(element.getAttribute('aria-label')||element.getAttribute('title')||element.textContent||'').trim();
   if(element.getAttribute('aria-controls')==='dog-switcher'){show('dogs');return;}
-  if(element.closest('.dog-toys')){show(label==='Find the treat'?'nose':'tricks');return;}
+  if(element.closest('.dog-toys')){if(label!=='Find the treat')show('tricks');return;}
   if(element.closest('.wake-bark')){show('wake');return;}
   if(element.getAttribute('role')==='tab'&&['Care','Coach','Record','Commons'].includes(label)){show(({Care:'care',Coach:'coach',Record:'record',Commons:'park'} as const)[label as 'Care'|'Coach'|'Record'|'Commons']);return;}
   if(/Open Commons park/.test(label)){show('park');return;}
@@ -45,11 +43,10 @@ export function useFirstPlayTips(){
   if(/Tuck .+ in|^Put .+ to bed/.test(label)){show('bed');return;}
   if(/^Pet /.test(label)){show('pet');return;}
   if(/^Clean|^Groom/.test(label)){show('clean');return;}
-  if(/^Play /.test(label)){show('play');return;}
   if(/^Walk /.test(label)){show('walk');return;}
   if(/Talk to your dog|^Say a word/.test(label)){show('talk');return;}
   if(/Quiet time|Watch calm|Reward calm/.test(label))show('calm');
  };
  return {tip,show,capture,close:()=>setTip(null)};
 }
-export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const close=useRef(onClose);close.current=onClose;useEffect(()=>{if(!['park','zoom','walk'].includes(tip))return;const timer=setTimeout(()=>close.current(),16000);return()=>clearTimeout(timer);},[tip]);const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span><span>{t.text}</span></p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}
+export function FirstPlayTip({tip,onClose}:{tip:TipKey;onClose:()=>void}){const close=useRef(onClose);close.current=onClose;useEffect(()=>{const timer=setTimeout(()=>close.current(),9000);return()=>clearTimeout(timer);},[tip]);const t=TIPS[tip];return <aside className="first-play-tip" data-first-tip={tip} role="status" aria-label={`First-time tip: ${t.title}`}><Lightbulb size={17} aria-hidden="true"/><p><span className="label">{t.title}</span><span>{t.text}</span></p><button type="button" className="btn-quiet" aria-label="Got it, close this tip" onClick={onClose}><X size={17}/></button></aside>;}

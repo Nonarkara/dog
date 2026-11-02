@@ -127,7 +127,7 @@ function IllustratedStage(props: Props & {url:string}) {
     if(action==='clean')sound.sweepClean();
     if(action==='medicine')sound.medicineChime();
     if(action==='play'){
-      if(!fetchLearned(latest.current.petState)){setFetchConfused(true);reaction.current.aimX=.4;showCheer('…? What do I do with this ball?');sound.ballBounce();return;}
+      if(!fetchLearned(latest.current.petState)){runTrick('bow',true);setFetchConfused(true);reaction.current.aimX=.4;showCheer('…? What do I do with this ball?');sound.ballBounce();return;}
       setFetchConfused(false);
       if(gameTimer.current)clearTimeout(gameTimer.current);
       leap.current={direction:0,started:0};

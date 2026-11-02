@@ -1076,7 +1076,7 @@ html {font-synthesis:none;}
 .cockpit-workspace--wide .desktop-detail>.region-coach {flex:1 1 0%;max-height:none;}
 .cockpit-workspace--wide .desktop-detail>.region-coach .panel-body {flex:1 1 0%;min-height:0;display:flex;flex-direction:column;}
 .cockpit-workspace--wide [data-practice-behaviour] {flex:1 1 0%;min-height:0;}
-.practice-attempts {flex:1 1 0%;min-height:0;display:flex;flex-direction:column;}
+.practice-attempts {flex:1 1 0%;min-height:4.5rem;overflow:hidden;display:flex;flex-direction:column;}
 .practice-attempts>div {flex:1 1 0%;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 /* The photo booth lives beside "History & details" in the care head — a
    28 px icon button, label-sized, the care head's own row. */
@@ -1141,9 +1141,9 @@ html {font-synthesis:none;}
 .cups-row {--cup-w:clamp(64px,12vw,112px);top:calc(var(--dog-floor,88%) - var(--cup-h)*.45);width:calc(var(--cup-w)*3 + 2*var(--cup-gap));--cup-gap:clamp(18px,4vw,44px);}
 .cockpit .stage-cup {left:calc(var(--slot)*(var(--cup-w) + var(--cup-gap)));}
 .stage-cup-bone {left:18%;bottom:2%;width:64%;height:64%;}
-/* Play-test: the bubble sat on his ear; it floats above the head, the care floats sit top-left. */
+/* Play-test: the bubble sat on his ear; it floats above the head. The care floats sit top-left, below the speech line so the two never overlap. */
 .think-bubble {top:2%;}
-.meter-deltas {left:8px;top:8px;transform:none;flex-direction:column;align-items:flex-start;max-width:60%;}
+.meter-deltas {left:8px;top:44px;transform:none;flex-direction:column;align-items:flex-start;max-width:60%;}
 
 /* Push offer: one quiet line under the care sentence. */
 .push-offer{margin-top:4px;font-size:11px;color:var(--text-faint,#6b6b6b);}

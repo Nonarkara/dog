@@ -339,7 +339,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
         <p className="label">Last attempts · {BEHAVIOURS.find(b=>b.name===name)?.label ?? name}</p>
         {(petState.behaviours[name]?.history?.length ?? 0) === 0 ? (
           <p className="mt-1 text-[11px] leading-snug text-faint">
-            None logged yet. Practice trains the stage dog; Real log scores the real one.
+            None logged yet.
           </p>
         ) : (
           <div className="mt-1 space-y-0.5 pr-1">
