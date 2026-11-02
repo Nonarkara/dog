@@ -12,7 +12,7 @@ import { sickCause, type Interaction } from '../domain/pet';
 import type { AvatarPose, AvatarInteractionTrigger } from './DogAvatar3D';
 import { DEFAULT_DOGS } from '../data/defaultDogs';
 import { artPoseFor, landmarksFor, poseAnchors, type ArtPose } from './illustratedRig';
-import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles,Broom,RotateCw} from 'lucide-react';
+import {Hand,Heart,Music2,Wind,Bone,ChevronsDown,Moon,Thermometer,Droplets,Footprints,Utensils,Battery,Sparkles,Broom,RotateCw,Shapes,X} from 'lucide-react';
 import {TreatGame} from './TreatGame';
 import {PLAY_PERSONALITIES,type Trick} from './dogPlay';
 import { sound } from '../utils/proceduralAudio';
@@ -29,10 +29,8 @@ interface Props extends PerformanceProps {
   onPet?: (part?:TouchPart) => void; onClean?: () => void; onMiniGameComplete?: (won: boolean,kind?:'catch'|'find-treat') => void;
   fallback: React.ReactNode;
 }
-export const ILLUSTRATIONS: Record<string, string> = {
-  'expo-2021': '/dogs/expo.webp', 'mali-2022': '/dogs/mali.webp',
-  'oreo-frenchie': '/dogs/oreo.webp', 'paolo-pug': '/dogs/paolo.webp', 'shiba-chai': '/dogs/hachiku.webp',
-};
+import {ILLUSTRATIONS} from '../data/dogIllustrations';
+export {ILLUSTRATIONS} from '../data/dogIllustrations';
 
 // A textured 2D skin, articulated on a fine mesh. The artwork stays one coherent
 // character per authored pose; motion between display frames comes from the rig.
@@ -56,6 +54,7 @@ function IllustratedStage(props: Props & {url:string}) {
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const [motionReady,setMotionReady]=useState(false);
+  const [toysOpen,setToysOpen]=useState(()=>window.innerWidth>=1024);
   const [game, setGame] = useState<{round:number; score:number; target:'left'|'right'; busy:boolean; result:string}|null>(null);
   const gameRef=useRef(game); gameRef.current=game;
   const gameTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -229,7 +228,8 @@ function IllustratedStage(props: Props & {url:string}) {
         if(key==='stand'){uniforms.art.value=t;const m=masks.get(key);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}setReady(true);}
       },undefined,()=>{if(!disposed)setFailed(true);});
     }
-    let pendingResize=false,lastWidth=0,lastHeight=0;
+    let pendingResize=false,lastWidth=0,lastHeight=0,barSpace=.23,lastChromeRead=-Infinity;
+    const measureChrome=()=>{const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();barSpace=toysBox?(canvasBox.right-toysBox.left+6)/Math.max(1,canvasBox.width)*(camera.right-camera.left):.23;};
     const resize=()=>{pendingResize=false;const w=container.clientWidth,h=container.clientHeight;if(!w||!h||w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
     const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
@@ -256,17 +256,23 @@ function IllustratedStage(props: Props & {url:string}) {
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
+    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
-      const interval=reduced.matches?1000/6:1000/60;
+      // Spend frames on motion. Quiet breathing needs fewer; hidden tabs render none.
+      const state=latest.current,active=!!state.interactionTrigger||!!state.poseRequest||!!fun.current||!!gameRef.current||!!findingRef.current||now<reaction.current.petUntil||now-poseChangedAt<transitionDuration||['wandering','trotting','stretching','yawning'].includes(dailyAct)||now-blinkStarted<220;
+      const targetFps=reduced.matches?6:state.petState.sleep?.asleep?12:active?60:30;
+      const interval=1000/targetFps;canvas.dataset.targetFps=String(targetFps);
       if(!next)next=now;
       if(now+.5<next)return;
       const dt=last?Math.min((now-last)/1000,.1):1/60;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
       if(!uniforms.art.value)return;if(pendingResize)resize();
+      if(now-lastChromeRead>350){measureChrome();lastChromeRead=now;}
       uniforms.art.value=textures.get(shownPose)||uniforms.art.value;uniforms.artTile.value.set(1,1,0,0);uniforms.locomotion.value=0;uniforms.running.value=0;hitAtlasFrame=-1;
       const p=latest.current,asleep=!!p.petState.sleep?.asleep,t=(now-start)/1000;
+      if(now>nextBlink){blinkStarted=now;nextBlink=now+3200+Math.random()*4200;}
+      const blinkPhase=(now-blinkStarted)/190;uniforms.blink.value=!asleep&&!reduced.matches&&blinkPhase<1?Math.sin(Math.max(0,blinkPhase)*Math.PI):0;outgoingUniforms.blink.value=uniforms.blink.value;canvas.dataset.blink=uniforms.blink.value.toFixed(2);
       // The parent owns the care action lifecycle; avoid a second competing clock.
       const action=p.interactionTrigger;
       const activeFun=fun.current&&now<fun.current.until&&!asleep&&!p.petState.sick&&(!p.pose||p.pose==='stand')?fun.current:null;
@@ -370,8 +376,7 @@ function IllustratedStage(props: Props & {url:string}) {
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,from);
         uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
         if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
-        const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();
-        const ink=art.displayBox,barSpace=toysBox?(canvasBox.right-toysBox.left+6)/canvasBox.width*(camera.right-camera.left):.23;
+        const ink=art.displayBox;
         const verticalFit=(camera.top+.82-.07)/(2*(.90625-ink[1]));
         const horizontalFit=(camera.right-camera.left-barSpace-.10)/(2*ink[2]);
         scale=Math.min(size*scale,verticalFit,horizontalFit);
@@ -433,7 +438,7 @@ function IllustratedStage(props: Props & {url:string}) {
       onReact={hit=>runTrick(hit?'wiggle':'tilt',true)}
       onClose={()=>{closeFinding();stopFun();}}
       onComplete={won=>{closeFinding();stopFun();showCheer(won?'Clever nose!':'Good sniffing practice!');latest.current.onMiniGameComplete?.(won,'find-treat');}}/>}
-    {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys">{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind},{kind:'come',label:'Come closer',Icon:Footprints},{kind:'turn',label:'Turn around',Icon:RotateCw}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()||((kind==='come'||kind==='turn')&&!motionReady)} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></div>}
+    {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys" data-open={toysOpen}><button type="button" className="btn-quiet toy-disclosure" aria-label="Tricks and toys" title="Tricks and toys" aria-expanded={toysOpen} onClick={()=>setToysOpen(o=>!o)}>{toysOpen?<X size={19}/>:<Shapes size={19}/>}</button>{toysOpen&&<>{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind},{kind:'come',label:'Come closer',Icon:Footprints},{kind:'turn',label:'Turn around',Icon:RotateCw}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()||((kind==='come'||kind==='turn')&&!motionReady)} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></>}</div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
     {!game&&!finding&&!cheer&&mood!=='content'&&<div className={`dog-daily-status dog-daily-status--${mood}`} role="status">{needs.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(needs.action!)}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:<span><needs.Icon size={16} aria-hidden="true"/>{needs.text}</span>}</div>}

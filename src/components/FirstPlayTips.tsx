@@ -32,6 +32,8 @@ export function useFirstPlayTips(){
   if(element.getAttribute('aria-controls')==='dog-switcher'){show('dogs');return;}
   if(element.closest('.dog-toys')){if(label!=='Find the treat')show('tricks');return;}
   if(element.closest('.wake-bark')){show('wake');return;}
+  // Coach teaches its first action in pictures beside the button.
+  if(element.getAttribute('role')==='tab'&&label==='Coach'){setTip(null);return;}
   if(element.getAttribute('role')==='tab'&&['Care','Coach','Record','Commons'].includes(label)){show(({Care:'care',Coach:'coach',Record:'record',Commons:'park'} as const)[label as 'Care'|'Coach'|'Record'|'Commons']);return;}
   if(/Open Commons park/.test(label)){show('park');return;}
   if(/Zoom in|Zoom out|Find my dog/.test(label)){show('zoom');return;}

@@ -1184,3 +1184,33 @@ html {font-synthesis:none;}
 .park-consent-actions {display:flex;gap:8px;margin-top:10px;}
 .park-consent-actions>button {flex:1;justify-content:center;border:1px solid var(--border-strong);min-height:36px;}
 .park-consent-actions>button:first-child {background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+
+/* A three-picture lesson, with the next action beside its explanation. */
+.training-pictures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none;}
+.training-pictures li{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.55;border-bottom:2px solid transparent;}
+.training-pictures li[data-current=true]{opacity:1;border-color:var(--accent);}
+.training-pictures svg{width:100%;height:60px;max-width:112px;}
+.training-pictures span{font-size:13px;white-space:nowrap;}
+.capture-status{min-height:1.35em;margin:2px 0;font-size:13px;}
+.capture-actions .capture-primary{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.practice-attempts--fold{display:block;flex:none;min-height:0;overflow:auto;}
+.practice-attempts--fold summary{cursor:pointer;min-height:28px;display:list-item;}
+.practice-attempts--fold[open]{max-height:160px;}
+.dog-toys[data-open=false]{display:flex;top:auto;bottom:38px;transform:none;}
+.companion-toggle{flex:none;padding:4px;min-height:36px;min-width:32px;}
+.companion-toggle[aria-pressed=true]{color:var(--accent);background:var(--bg-surface);}
+.cockpit--companion .cockpit-workspace:not(.cockpit-workspace--park){display:flex!important;flex-direction:column;}
+.cockpit--companion .region-stage{flex:1;min-height:0;width:100%;}
+.park-cleanup{position:absolute;z-index:4;transform:translate(-50%,-25%);width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;}
+.park-cleanup[hidden]{display:none;}
+.park-cleanup:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+.practice-support{flex:none;min-height:0;font-size:12px;}
+.practice-support>summary{cursor:pointer;min-height:28px;padding:3px 6px;border-top:1px solid var(--border-dim);}
+.practice-support[open]{max-height:160px;overflow-y:auto;}
+
+.capture-actions>button{min-width:44px;}
+/* On short phones, reserve the task's measured space rather than clipping its button. */
+@media(max-height:740px){.cockpit-workspace--tall:has(.region-coach){grid-template-rows:minmax(0,1fr) auto minmax(286px,auto);}.training-pictures svg{height:48px;}}
+
+.park-cleanup[data-kind=pee] .park-poop,.park-cleanup[data-kind=poop] .park-pee{display:none;}

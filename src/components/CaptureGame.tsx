@@ -1,10 +1,12 @@
+import {Eye,MessageCircle,Cookie,Square} from 'lucide-react';
+import {TrainingSteps} from './TrainingSteps';
 /**
  * THE FIRST WORD.
  *
- * Say "Sit". He tilts his head — no idea. He wanders, lies down, sniffs, and
- * sometimes sits on his own. Catch that moment: say "Sit!" again and stroke
- * him. A few good catches and the word starts to mean something; then one day
- * "Sit" and he is already sitting, wagging, waiting for your hand.
+ * Watch the dog offer an action. Name it at that moment, then give one tiny
+ * treat. Three pictures and a single next action make the first catch legible.
+ * Direct petting remains an alternate reward; the advanced deck teaches
+ * giving an established cue before the action, once the word is familiar.
  *
  * Nothing here trains itself. Look away and you miss the sit.
  */
@@ -12,7 +14,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {BehaviourName, PetState} from '../domain/types';
 import {BEHAVIOURS} from '../domain/types';
-import {captureOf, offerChance, pair, wrongMark, withCapture, LEARNED, LEARN_ORDER, OFFER_HOLD_MS, PET_WINDOW_MS} from '../domain/capture';
+import {captureOf, offerChance, pair, withCapture, LEARNED, LEARN_ORDER, OFFER_HOLD_MS, PET_WINDOW_MS} from '../domain/capture';
 import {POSE_FOR} from '../domain/lesson';
 import type {AvatarPose, PerformPose} from './trainingMotion';
 import type {CommitPet} from '../utils/progressStore';
@@ -25,60 +27,68 @@ const pause=(ms:number)=>new Promise(r=>window.setTimeout(r,ms));
 
 interface Props {
   dogName:string; name:BehaviourName; petState:PetState; onPetStateChange:CommitPet;
-  onPose:PerformPose; petPulse:number; unavailable:string|null;
+  onPose:PerformPose; petPulse:number;busy?:boolean; unavailable:string|null;
 }
 
-export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChange,onPose,petPulse,unavailable})=>{
+export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChange,onPose,petPulse,unavailable,busy})=>{
   const [phase,setPhase]=useState<Phase>('ready');
   const [status,setStatus]=useState('');
   const [bubble,setBubble]=useState<string|null>(null);
   const [doing,setDoing]=useState(false);
+  const saving=useRef(false),mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   const run=useRef(0), doingAt=useRef(false), doneAt=useRef(0), pulseAt=useRef(petPulse), markedAt=useRef(0);
   const c=captureOf(petState,name);
   const word=BEHAVIOURS.find(b=>b.name===name)?.label??name;
   const target=POSE_FOR[name];
   const stars=Math.min(5,Math.round(c.association/LEARNED*5));
 
-  const stop=()=>{run.current++;doingAt.current=false;setDoing(false);setBubble(null);setPhase('ready');void onPose('stand');};
+  const stop=()=>{run.current++;doneAt.current=0;doingAt.current=false;setDoing(false);setBubble(null);setPhase('ready');void onPose('stand');};
   useEffect(()=>stop,[name]);// eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(()=>{if(unavailable&&phase==='offering'){stop();setStatus(`${unavailable} Training paused.`);}},[unavailable]);// eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{if((unavailable&&phase!=='ready')||(busy&&phase==='offering')){stop();setStatus(`${unavailable??'Finish caring first.'} Training paused.`);}},[unavailable,busy]);// eslint-disable-line react-hooks/exhaustive-deps
 
   /** He tries things. Sometimes the right thing. */
   const offer=async(id:number)=>{
     const learned=captureOf(petState,name).association>=LEARNED;
-    for(let i=0;i<(learned?1:9)&&run.current===id;i++){
+    for(let i=0;i<(learned?1:3)&&run.current===id;i++){
       await pause(learned&&i===0?250:1100+Math.random()*1300);
       if(run.current!==id)return;
-      const hit=learned&&i===0?true:Math.random()<offerChance(captureOf(petState,name).association);
-      const pose=hit?target:DISTRACT[Math.floor(Math.random()*DISTRACT.length)];
+      const hit=learned||i===2||i>0&&Math.random()<offerChance(captureOf(petState,name).association);
+      const distract=DISTRACT.filter(pose=>pose!==target);
+      const pose=hit?target:distract[Math.floor(Math.random()*distract.length)];
       setBubble(hit?null:Math.random()<.5?'?':null);
       if(!hit)setStatus(pose==='down'?`${dogName} lies down…`:pose==='paw'?`${dogName} lifts a paw…`:`${dogName} wanders, sniffing…`);
-      await onPose(pose);
+      const completed=await onPose(pose);
       if(run.current!==id)return;
+      if(completed===null&&pose!=='stand'){stop();setStatus('That action was interrupted. Watch again when ready.');return;}
       if(hit){
         doingAt.current=true;setDoing(true);setBubble(learned?'♥':'!');
-        setStatus(learned?`“${word}” — ${dogName} does it at once, wagging. Stroke him!`:`He's doing it — say “${word}!” now!`);
+        setStatus(`Now say “${word}” once.`);
         if(learned)sound.happyYip();
-        await pause(learned?2500:OFFER_HOLD_MS);
+        await pause(Math.max(3000,OFFER_HOLD_MS));
         if(run.current!==id)return;
         doingAt.current=false;doneAt.current=Date.now();setDoing(false);setBubble(null);
       }
     }
-    if(run.current===id){setPhase('ready');setBubble(null);void onPose('stand');setStatus(learned?`He knows “${word}”. Say it again any time.`:`${dogName} lost interest. Say “${word}” to try again.`);}
+    if(run.current===id){setPhase('ready');setBubble(null);void onPose('stand');setStatus('No rush. Watch again to catch the next one.');}
   };
 
   const cue=()=>{
-    if(unavailable||phase!=='ready')return;
+    if(unavailable||saving.current||phase!=='ready')return;
     const id=++run.current;setPhase('offering');
+    doneAt.current=0;
     const fresh=c.association<.4;
     setBubble(fresh?'?':null);
-    setStatus(fresh?`“${word}?” ${dogName} tilts his head. Watch him…`:`“${word}.” ${dogName} is thinking…`);
+    setStatus(`Watch for ${word.toLowerCase()}.`);
     void offer(id);
   };
 
   const commit=async(next:(s:PetState)=>PetState,msg:string)=>{
+    if(saving.current)return;
+    saving.current=true;const current=run.current;
     const before=captureOf(petState,name).association;
     const saved=await onPetStateChange(next);
+    saving.current=false;if(!mounted.current||current!==run.current)return;
     if(!saved){setStatus('Not saved. Please try again.');return;}
     const after=captureOf(saved,name).association;
     if(before<LEARNED&&after>=LEARNED){
@@ -91,46 +101,48 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
 
   /** "Sit!" — the marker. Only worth something if he is sitting right now. */
   const mark=()=>{
-    if(phase!=='offering')return;
+    if(unavailable||saving.current||phase!=='offering'||!doingAt.current)return;
     sound.markerClick();
-    // A human finger is a beat behind the eye: a press just after he stops still counts.
-    if(!doingAt.current&&Date.now()-doneAt.current>250){
-      const late=Date.now()-doneAt.current<1500;
-      setBubble('?');setStatus(late?`A moment too late — he'd already stopped. Watch for the next one.`:`He wasn't doing it yet. That confused him a little.`);
-      void onPetStateChange(s=>withCapture(s,name,wrongMark(captureOf(s,name))));
-      return;
-    }
     run.current++;setPhase('marked');markedAt.current=Date.now();pulseAt.current=petPulse;
-    setStatus(`Yes! Now stroke ${dogName} to reward him.`);
+    setStatus('Now give one tiny treat.');
     const id=run.current;
     window.setTimeout(()=>{if(run.current!==id)return;run.current++;setPhase('ready');setDoing(false);doingAt.current=false;setBubble(null);
-      void commit(s=>withCapture(s,name,pair(captureOf(s,name),false)),`You said it, but no stroke came — that one didn't count. Stroke him right after.`);},PET_WINDOW_MS);
+      void commit(s=>withCapture(s,name,pair(captureOf(s,name),false)),`The reward was late. Try again; treat right after naming it.`);},PET_WINDOW_MS);
   };
 
-  // A stroke on the stage within the window completes the pairing.
-  useEffect(()=>{
-    if(phase!=='marked'||petPulse===pulseAt.current)return;
+  const reward=(kind:'treat'|'pet'='treat')=>{
+    if(unavailable||saving.current||phase!=='marked'||(busy&&kind==='treat'))return;
     run.current++;setPhase('ready');setDoing(false);doingAt.current=false;setBubble('♥');
-    // A learned word performed and stroked is the trick he wanted to show you.
     const known=captureOf(petState,name).association>=LEARNED;
-    void commit(s=>{const n=logCare(withCapture(s,name,pair(captureOf(s,name),true)),'train');return known?grantWish(n,'trick',Date.now()).state:n;},
-      known?`Good dog! ${dogName} loves showing you “${word}”.`:`Good catch! ${dogName} liked that.`);
-    window.setTimeout(()=>setBubble(b=>b==='♥'?null:b),1400);
-  },[petPulse]);// eslint-disable-line react-hooks/exhaustive-deps
+    if(kind==='treat')sound.eatCrunch();
+    void commit(s=>{
+      if(s.sleep.asleep||s.sick)return s;
+      const n=logCare(withCapture({...s,needs:{...s.needs,hunger:Math.min(100,s.needs.hunger+(kind==='treat'?1:0))}},name,pair(captureOf(s,name),true)),'train');
+      return known?grantWish(n,'trick',Date.now()).state:n;
+    },known?`Good dog! ${dogName} remembers.`:'Good catch. A clear word and a little reward.');
+    if(kind==='treat'&&!['sit','stay','wait'].includes(name))void onPose('reward');
+    const id=run.current;window.setTimeout(()=>{if(run.current===id&&mounted.current)setBubble(null);},1400);
+  };
+  // Direct petting remains an alternate reward for existing players.
+  useEffect(()=>{if(phase==='marked'&&petPulse!==pulseAt.current)reward('pet');},[petPulse]);// eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{const hidden=()=>{if(document.hidden){stop();setStatus('Paused. Watch again when you return.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const stage=typeof document!=='undefined'?document.querySelector('.stage-frame'):null;
   return (
-    <div className="capture-game" data-capture-phase={phase}>
+    <div className="capture-game" data-capture-phase={phase} data-capture-doing={doing}>
       <div className="capture-progress" aria-label={`${word}: ${stars} of 5`}>
         <span className="label">Teach “{word}”</span>
         <span className="capture-stars" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} data-on={i<stars}>★</i>)}</span>
         <span className="data">{c.association>=LEARNED?'Learned ✓':`${stars}/5 to learn`}</span>
       </div>
-      <p className="capture-status" aria-live="polite">{unavailable??(status||`Say “${word}”, then watch ${dogName}. The moment he does it, press “${word}!” and stroke him. Too early counts as a miss.`)}</p>
+      <TrainingSteps name={name} word={word} step={phase==='marked'?2:doing?1:0}/>
+      <p className="capture-status" aria-live="polite">{unavailable??(status||`Watch for ${word.toLowerCase()}.`)}</p>
       <div className="capture-actions">
-        <button type="button" className={`btn ${phase==='ready'?'btn-accent':'btn-quiet border-hairline'}`} onClick={cue} disabled={!!unavailable||phase!=='ready'}>Say “{word}”</button>
-        <button type="button" className={`btn ${doing?'btn-accent capture-now':'btn-quiet border-hairline'}`} onClick={mark} disabled={phase!=='offering'}>“{word}!”</button>
-        {phase!=='ready'&&<button type="button" className="btn btn-quiet border-hairline" onClick={()=>{stop();setStatus('Stopped. Say the word when you are ready.');}}>Stop</button>}
+        <button type="button" className="btn btn-accent capture-primary" onClick={phase==='ready'?cue:phase==='marked'?()=>reward():mark} disabled={!!unavailable||!!busy||saving.current||(phase==='offering'&&!doing)}>
+          {phase==='ready'?<Eye size={19}/>:phase==='marked'?<Cookie size={19}/>:<MessageCircle size={19}/>}
+          {phase==='ready'?'Watch':phase==='marked'?'Tiny treat':doing?`Say “${word}”`:'Watch…'}
+        </button>
+        {phase!=='ready'&&<button type="button" className="btn btn-quiet border-hairline" aria-label="Stop training" onClick={()=>{stop();setStatus('Paused. Watch again when ready.');}}><Square size={16}/></button>}
       </div>
       {stage&&bubble&&createPortal(<div className="think-bubble" aria-hidden="true">{bubble}</div>,stage)}
     </div>

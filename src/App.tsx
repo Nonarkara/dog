@@ -39,7 +39,7 @@ import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
 import {MeterDeltas} from './components/MeterDeltas';
 import { Help } from './components/Help';
-import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download } from 'lucide-react';
+import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download, Eye } from 'lucide-react';
 import {
   interact,
   communicate,
@@ -153,6 +153,7 @@ export const App: React.FC = () => {
   // A live park invite (?park=<room>) opens straight into the park.
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
+  const [companionView,setCompanionView]=useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
   // Signed-in owners: every save goes to the cloud a few seconds later.
   useEffect(()=>playMode()==='own'?startCloudSync():undefined,[]);
@@ -650,7 +651,7 @@ export const App: React.FC = () => {
       case 'commons':
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
-            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onGoHome={togglePark} liveRoom={liveRoom} onLiveRoom={setLiveRoom} />
+            <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onClean={()=>handleInteract('clean')} onGoHome={togglePark} liveRoom={liveRoom} onLiveRoom={setLiveRoom} />
             {visitOk===null&&<ParkConsent onChoose={async agree=>{const saved=await chooseVisitRecord(agree);setVisitOk(saved&&agree?'yes':'no');}}/>}
           </Suspense>
         );
@@ -660,7 +661,7 @@ export const App: React.FC = () => {
   const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
-    <div className="cockpit" onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id, currentDog.avatarConfig.palette)} data-dog-theme={currentDog.avatarConfig.palette||currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className={`cockpit ${companionView?'cockpit--companion':''}`} onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id, currentDog.avatarConfig.palette)} data-dog-theme={currentDog.avatarConfig.palette||currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
         <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">
@@ -688,6 +689,7 @@ export const App: React.FC = () => {
           </div>
 
           <button type="button" className={`btn-quiet park-navigation ${activeRegion==='commons'?'park-navigation--home':''}`} aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>togglePark()}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
+          <button type="button" className="btn-quiet companion-toggle" aria-label="Quiet companion view" title="Quiet companion view" aria-pressed={companionView} onClick={()=>{firstGuide.close();setCompanionView(v=>!v);if(activeRegion==='commons')togglePark();else setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}><Eye size={19}/></button>
           {/* The facts about the dog you are with. */}
           <p className="header-dog-facts min-w-0 flex-1 truncate text-[12px] text-zinc-400">
             <span className="text-zinc-300">{currentDog.breed}</span>
@@ -809,7 +811,7 @@ export const App: React.FC = () => {
           </div>
         </section>
 
-        {isWide ? (
+        {!companionView&&(isWide ? (
           <>
             {renderRegion('care')}
             {/* MSH: the column under Coach was empty, so Record lives there; no tabs needed. */}
@@ -850,7 +852,7 @@ export const App: React.FC = () => {
 
             <div className="region-frame">{renderRegion(activeRegion)}</div>
           </>
-        )}
+        ))}
 
         </>}
         {/* ---- enroll a dog, as a bar ---------------------------------------

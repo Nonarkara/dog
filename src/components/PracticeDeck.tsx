@@ -251,7 +251,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
         );})}
       </div>
 
-      {!proofing?<><CaptureGame dogName={dog.name} name={name} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose} petPulse={petPulse} unavailable={asleep?`${dog.name} is asleep.`:calmNeed(petState,'training')}/>{isLearned(petState,name)&&<button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(true)} title="Lure, signal, word, then distance, duration and distraction">Proof it →</button>}</>:<>
+      {!proofing?<><CaptureGame busy={busy} dogName={dog.name} name={name} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose} petPulse={petPulse} unavailable={asleep?`${dog.name} is asleep.`:calmNeed(petState,'training')}/>{isLearned(petState,name)&&<button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(true)} title="Lure, signal, word, then distance, duration and distraction">Proof it →</button>}</>:<>
       <button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(false)}>← Catch game</button>
       <div className="shrink-0 border-hairline-t px-2 py-1.5">
         <div className="flex items-baseline justify-between gap-2">
@@ -319,12 +319,13 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
       </div>
       </>}
 
+      <details className="practice-support"><summary>Guide &amp; history</summary>
       <details className="practice-real-notes border-hairline-t px-2 py-1.5">
         <summary className="label">Real-dog guide</summary>
         <p className="mt-1 text-[11px] leading-snug text-zinc-300">{real.lure}</p>
         <p className="mt-1 text-[11px] leading-snug text-zinc-400">Common mistake: {real.mistake}</p>
         <p className="mt-1 text-[10px] leading-snug text-faint">
-          Catching a behaviour he offers is capturing (Skinner); the word becoming a promise of your touch is Pavlov.
+          Capture an offered action: mark it, then give a tiny treat. Once it is predictable, say the cue just before it happens.
         </p>
         <p className="mt-1 text-[10px] leading-snug text-faint">
           Reward-based method: Pryor, Don&apos;t Shoot the Dog · Dunbar, lure-reward · AVSAB 2021
@@ -335,8 +336,8 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           behaviour, newest first. It grows with use, and it is what lets the
           coach column own its full height on a desk instead of ending in dead
           space. Empty reads honestly: nothing logged yet. */}
-      <div className="practice-attempts border-hairline-t px-2 py-1.5">
-        <p className="label">Last attempts · {BEHAVIOURS.find(b=>b.name===name)?.label ?? name}</p>
+      <details className="practice-attempts practice-attempts--fold border-hairline-t px-2 py-1.5">
+        <summary className="label">Last attempts · {BEHAVIOURS.find(b=>b.name===name)?.label ?? name}</summary>
         {(petState.behaviours[name]?.history?.length ?? 0) === 0 ? (
           <p className="mt-1 text-[11px] leading-snug text-faint">
             None logged yet.
@@ -359,8 +360,9 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
             ))}
           </div>
         )}
-      </div>
+      </details>
       <TrainingTips state={petState}/>
+      </details>
     </div>
   );
 };

@@ -1,0 +1,45 @@
+{
+  "report": [
+    {
+      "w": 320,
+      "h": 667,
+      "scrollW": 320,
+      "scrollH": 667,
+      "pictures": 3,
+      "buttonBottom": 535.140625,
+      "buttonVisible": true,
+      "taskHeight": 176.140625
+    },
+    {
+      "w": 390,
+      "h": 844,
+      "scrollW": 390,
+      "scrollH": 844,
+      "pictures": 3,
+      "buttonBottom": 764.140625,
+      "buttonVisible": true,
+      "taskHeight": 188.140625
+    },
+    {
+      "w": 1024,
+      "h": 768,
+      "scrollW": 1024,
+      "scrollH": 768,
+      "pictures": 3,
+      "buttonBottom": 726.140625,
+      "buttonVisible": true,
+      "taskHeight": 188.140625
+    },
+    {
+      "w": 1440,
+      "h": 900,
+      "scrollW": 1440,
+      "scrollH": 900,
+      "pictures": 3,
+      "buttonBottom": 404.6875,
+      "buttonVisible": true,
+      "taskHeight": 188.140625
+    }
+  ],
+  "errors": []
+}

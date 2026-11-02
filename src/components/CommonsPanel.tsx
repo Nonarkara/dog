@@ -32,6 +32,7 @@ import { sound } from '../utils/proceduralAudio';
 export interface CommonsPanelProps {
   myDog: DogProfile;
   onPet?: () => void;
+  onClean?:()=>void;
   petState?:PetState;
   onSocialize?:()=>void;
   onWalk?:(distance:number,seconds:number)=>void;
@@ -249,7 +250,7 @@ const clockNow = (): string =>
 
 /* --------------------------------------------------------------- the panel */
 
-export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petState,onSocialize,onWalk,guide,onGoHome,liveRoom=null,onLiveRoom }) => {
+export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean,petState,onSocialize,onWalk,guide,onGoHome,liveRoom=null,onLiveRoom }) => {
   /**
    * WATCH MODE — the park as a second screen.
    *
@@ -1004,7 +1005,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,petStat
             never grow the region. */}
         <div ref={worldRef} className={`park-world relative w-full overflow-hidden border-hairline-b${watching?' park-world--watching':''}${watching&&watchIdle?' park-world--idle':''}`}>
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
-          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onSocialize={()=>socialRef.current?.()} ambient={watching} onIntent={liveRoom?live.sendIntent:undefined} onPetRemote={live.petFriend} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;live.resync();spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onClean={onClean} onSocialize={()=>socialRef.current?.()} ambient={watching} onIntent={liveRoom?live.sendIntent:undefined} onPetRemote={live.petFriend} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;live.resync();spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">

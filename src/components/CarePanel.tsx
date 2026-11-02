@@ -12,7 +12,7 @@ import type { PetState } from '../domain/types';
 import {Help} from './Help';
 import { happiness, readiness, sickCause, temperament } from '../domain/pet';
 import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
-import {ILLUSTRATIONS} from './IllustratedDog';
+import {ILLUSTRATIONS} from '../data/dogIllustrations';
 import {PhotoBooth} from './PhotoBooth';
 import {Camera} from 'lucide-react';
 import {THEME_CHOICES} from '../data/dogThemes';
