@@ -8,6 +8,8 @@ export interface DailyLife {
   lowFullnessMinutes: number;
   peeCount: number;
   lastPeedAt?: number;
+  /** The glow after a game. It lifts happiness and fades within the hour. */
+  joy: number;
 }
 const bound=(n:number,hi=100)=>Math.max(0,Math.min(hi,n));
 const number=(n:unknown,fallback=0)=>typeof n==='number'&&Number.isFinite(n)?n:fallback;
@@ -15,7 +17,7 @@ export function dailyLife(state: Pick<PetState,'life'>): DailyLife {
   const l=state.life;
   return {bladder:bound(number(l?.bladder)),boredom:bound(number(l?.boredom)),
     digestionMinutes:bound(number(l?.digestionMinutes),90),lowFullnessMinutes:bound(number(l?.lowFullnessMinutes),4320),
-    peeCount:Math.floor(bound(number(l?.peeCount),3)),lastPeedAt:typeof l?.lastPeedAt==='number'&&Number.isFinite(l.lastPeedAt)?l.lastPeedAt:undefined};
+    peeCount:Math.floor(bound(number(l?.peeCount),3)),joy:bound(number(l?.joy)),lastPeedAt:typeof l?.lastPeedAt==='number'&&Number.isFinite(l.lastPeedAt)?l.lastPeedAt:undefined};
 }
 export function advanceDailyLife(state:PetState,minutes:number,now:number){
   const life=dailyLife(state),elapsed=bound(minutes,4320),bodyMinutes=elapsed*(state.sleep?.asleep ? .25 : 1);
@@ -26,7 +28,7 @@ export function advanceDailyLife(state:PetState,minutes:number,now:number){
   const lowMinutes=state.needs.hunger<10?elapsed:Math.max(0,elapsed-(state.needs.hunger-10)/1.6*60);
   return {life:{...life,bladder:bound(bladder-pees*100),boredom:bound(life.boredom+elapsed*(state.sleep?.asleep?-.25:100/30)),
     digestionMinutes:Math.max(0,digestion-poops*90),lowFullnessMinutes:lowMinutes>0?life.lowFullnessMinutes+lowMinutes:0,
-    peeCount:Math.min(3,life.peeCount+pees),lastPeedAt:pees?now:life.lastPeedAt},
+    peeCount:Math.min(3,life.peeCount+pees),joy:bound(life.joy-elapsed*100/60),lastPeedAt:pees?now:life.lastPeedAt},
     poopCount:Math.min(3,(state.poopCount??0)+poops),lastPoopedAt:poops?now:state.lastPoopedAt};
 }
 export type DailyMood='sleeping'|'sick'|'toilet'|'bored'|'hungry'|'tired'|'dirty'|'content';

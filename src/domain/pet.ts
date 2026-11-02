@@ -289,7 +289,7 @@ export function happiness(state: PetState): number {
   const bond = state.trust / 100;
   const calm = clamp(1 - Math.abs(state.arousal - 55) / 100);
   const poopPenalty = ((state.poopCount ?? 0) + dailyLife(state).peeCount) * 8 + dailyLife(state).boredom * .12;
-  return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100 - poopPenalty);
+  return clamp((body * 0.5 + bond * 0.35 + calm * 0.15) * 100 - poopPenalty + dailyLife(state).joy * 0.5);
 }
 
 /** What is keeping him ill: lying in mess, or an empty belly. 'other' once the cause is gone. */
@@ -469,6 +469,8 @@ export function interact(
   // so — the reader is told they interrupted something, rather than being
   // served a cheerful response from an animal that was not there.
   let base = decay(state,now);
+  // What the player saw before pressing, before any waking.
+  const seenHappiness = happiness(base), seenEnergy = base.needs.energy;
   // The old scold command remains a safe alias for imported/older callers.
   // Quiet practice never wakes a sleeping dog or rewards an unmet need.
   if(action==='settle'||action==='rewardCalm'||action==='scold')return calmInteraction(base,action==='scold'?'settle':action,now,name);
@@ -541,6 +543,14 @@ export function interact(
       next.trust = clamp(base.trust + 2);
       next.personality.playDrive = clampTrait(base.personality.playDrive + 0.05);
       next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.05);
+      // A game is the best part of his day: unless he is already tired, play
+      // always leaves him happier. The cost shows on the energy bar instead.
+      if (seenEnergy >= 35) {
+        const want = Math.min(100, seenHappiness + 3);
+        let joy = dailyLife(next).joy;
+        while (joy < 100 && happiness({ ...next, life: { ...dailyLife(next), joy } }) < want) joy = Math.min(100, joy + 5);
+        next.life = { ...dailyLife(next), joy };
+      }
       note =
         base.needs.energy < 35
           ? `Played on an empty tank. ${p.subj} was excited, and then ${p.subj} was done.`

@@ -180,6 +180,30 @@ const realRep = recordRep(rehearsalState, {
 });
 ok('a real rep DOES move trust', realRep.state.trust > rehearsalState.trust);
 
+console.log('\nPLAY MAKES HIM HAPPIER');
+{
+  let worst = Infinity, rounds = 0;
+  for (const energy of [35, 50, 75, 100]) for (const hunger of [30, 70, 100]) for (const trust of [10, 60, 95]) for (const arousal of [0, 50, 90]) {
+    for (const asleep of [false, true]) {
+    let s: PetState = { ...createPetState(), trust, arousal, needs: { ...createPetState().needs, energy, hunger } };
+    if (asleep) s = { ...s, sleep: { ...s.sleep!, asleep: true } };
+    while (s.needs.energy >= 35) {
+      // Compare with what the player sees at the moment of the press: the state brought up to now.
+      const at = s.updatedAt, before = happiness(decay(s, at)), after = happiness(s = interact(s, 'play', at).state);
+      if (before < 97) worst = Math.min(worst, after - before);
+      rounds++;
+    }
+    }
+  }
+  ok('every game a rested dog plays leaves him happier, even woken for it', worst > 0, `worst change ${worst.toFixed(2)} over ${rounds} games`);
+  const spent = interact({ ...createPetState(), needs: { ...createPetState().needs, energy: 20 } }, 'play').state;
+  ok('a tired dog gets no glow from a game', (spent.life?.joy ?? 0) === 0);
+  const glow = interact(createPetState(), 'play').state;
+  const later = decay(glow, glow.updatedAt + 61 * 60_000);
+  ok('a game leaves a glow', (glow.life?.joy ?? 0) > 0);
+  ok('the glow fades within the hour', (later.life?.joy ?? 0) === 0, String(later.life?.joy));
+}
+
 console.log('\nTHE BODY GATES THE LEARNING');
 const hungryDog = createPetState();
 hungryDog.needs.hunger = 10;
