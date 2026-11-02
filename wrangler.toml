@@ -38,7 +38,7 @@ migrations_dir = "migrations"
 # is simply not offered. Setup steps: docs/SIGN-IN-SETUP.md.
 [vars]
 GOOGLE_CLIENT_ID = "105350918460-phdvl8idv3fshroq1h8hrk95qr68asno.apps.googleusercontent.com"
-LINE_CHANNEL_ID = ""
+LINE_CHANNEL_ID = "2012344445"
 APPLE_SERVICE_ID = ""
 APPLE_TEAM_ID = ""
 APPLE_KEY_ID = ""
