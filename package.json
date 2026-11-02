@@ -11,13 +11,14 @@
     "deploy": "vite build && wrangler deploy"
   },
   "dependencies": {
+    "@clerk/backend": "3.26.5",
     "lucide-react": "^1.16.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.174.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241230.0",
+    "@cloudflare/workers-types": "5.20261023.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -26,6 +27,6 @@
     "tailwindcss": "4.3.3",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
-    "wrangler": "^4.154.0"
+    "wrangler": "4.154.0"
   }
 }

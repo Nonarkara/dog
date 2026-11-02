@@ -1214,3 +1214,10 @@ html {font-synthesis:none;}
 @media(max-height:740px){.cockpit-workspace--tall:has(.region-coach){grid-template-rows:minmax(0,1fr) auto minmax(286px,auto);}.training-pictures svg{height:48px;}}
 
 .park-cleanup[data-kind=pee] .park-poop,.park-cleanup[data-kind=poop] .park-pee{display:none;}
+
+.email-signin-dialog{width:min(420px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:12px;overflow:auto;background:var(--bg-surface,#fff9ed);color:var(--text-main,#294434);border:1px solid var(--border-dim);font:inherit;}
+.email-signin-dialog::backdrop{background:rgb(41 68 52 / .3);}
+.email-signin-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.email-signin-dialog>header button{min-width:44px;min-height:44px;}
+.email-signin-note{font-size:12px;line-height:1.4;max-width:55ch;margin-top:8px;}
+.email-signin-dialog .cl-rootBox,.email-signin-dialog .cl-cardBox{width:100%;max-width:100%;}

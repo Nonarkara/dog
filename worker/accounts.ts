@@ -1,3 +1,4 @@
+import {emailConfig,emailIdentity,emailProfile,finishEmailDeletion,revokeEmailSession,type EmailEnv} from './emailAuth';
 /**
  * ACCOUNTS AND CLOUD-SAVED DOGS.
  *
@@ -5,7 +6,7 @@
  * PKCE for Google and LINE, a signed client secret for Apple).
  * "Signed in" is a fact the server decides from a session row, never a flag
  * the browser holds: the cookie carries a random token, and only its SHA-256
- * is stored. No passwords anywhere.
+ * is stored. Email/password credentials are managed by Clerk, never stored here.
  *
  * A dog is stored as the app's own owned-dog backup (format
  * tama-dog-chi-owned-v1): the browser already validates and restores that
@@ -33,7 +34,7 @@ export interface D1 {
   batch(statements: D1Statement[]): Promise<unknown>;
 }
 
-export interface AccountEnv {
+export interface AccountEnv extends EmailEnv {
   DB: D1;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -50,11 +51,12 @@ export interface AccountEnv {
 
 const SESSION_COOKIE = 'tdc_session';
 const FLOW_COOKIE = 'tdc_signin';
+const EMAIL_COOKIE = 'tdc_email';
 const SESSION_DAYS = 60;
 const MAX_BACKUP_BYTES = 1_000_000; // room for ~20 shrunk record photos; D1 rows cap at 2 MB
 const DOG_IDS = ['expo-2021', 'mali-2022', 'oreo-frenchie', 'paolo-pug', 'shiba-chai'];
 
-type Provider = 'apple' | 'google' | 'line' | 'dev';
+type Provider = 'apple' | 'google' | 'line' | 'dev' | 'email';
 
 interface ProviderConfig {
   authorize: string;
@@ -111,6 +113,7 @@ export function providersFor(url: URL, env: AccountEnv): Provider[] {
   if (providerConfig('line', env)) list.push('line');
   if (providerConfig('google', env)) list.push('google');
   if (devAllowed(url, env)) list.push('dev');
+  if (emailConfig(env,url)) list.push('email');
   return list;
 }
 
@@ -185,12 +188,17 @@ async function startSession(env: AccountEnv, userId: string, url: URL): Promise<
 
 export async function currentUser(request: Request, env: AccountEnv) {
   const token = readCookie(request, SESSION_COOKIE);
-  if (!token || token.length > 100) return null;
+  if(request.headers.has('Authorization')||!token){
+    if(!request.headers.has('Authorization')&&readCookie(request,EMAIL_COOKIE)!=='1')return null;
+    const identity=await emailIdentity(request,env,new URL(request.url));if(!identity)return null;
+    return env.DB.prepare('SELECT id, display_name, provider, provider_sub, email FROM users WHERE provider = ? AND provider_sub = ?').bind('email',identity).first<{id:string;display_name:string;provider:string;provider_sub:string;email:string|null}>();
+  }
+  if (token.length > 100) return null;
   return env.DB.prepare(
-    'SELECT u.id, u.display_name, u.provider, u.email FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?'
+    'SELECT u.id, u.display_name, u.provider, u.provider_sub, u.email FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?'
   )
     .bind(await sha256(token), Date.now())
-    .first<{ id: string; display_name: string; provider: string; email: string | null }>();
+    .first<{ id: string; display_name: string; provider: string; provider_sub:string; email: string | null }>();
 }
 
 /** `name` null keeps the stored name: Apple shares a name only on the very first sign-in.
@@ -212,6 +220,11 @@ async function upsertUser(env: AccountEnv, provider: Provider, sub: string, name
 /** Only send people back into this app, never to another site. */
 const safeBack = (v: string | null) => (v && /^\/[^/\\]/.test(v) && v.length < 200 ? v : '/?mode=own');
 
+/** A selection cookie is not authentication; Clerk still verifies every email request. */
+function accountReply(body:unknown,status:number,url:URL,email=false){
+ const response=json(body,status);response.headers.append('Set-Cookie',cookie(SESSION_COOKIE,'',url,0));response.headers.append('Set-Cookie',cookie(EMAIL_COOKIE,email?'1':'',url,email?7*86400:0));return response;
+}
+
 /* ---- the routes ----------------------------------------------------- */
 
 export async function handleAccounts(request: Request, env: AccountEnv, url: URL): Promise<Response | null> {
@@ -225,6 +238,25 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   if (request.method !== 'GET' && path !== '/api/auth/apple/callback') {
     const origin = request.headers.get('Origin');
     if (request.headers.get('X-TDC') !== '1' || (origin && origin !== url.origin)) return json({ error: 'Refused.' }, 403);
+  }
+
+  if(path==='/api/auth/email/config'&&request.method==='GET'){
+    const config=emailConfig(env,url);return config?json({publishableKey:config.publishableKey}):json({error:'Email sign-in is not available.'},404);
+  }
+  if(path==='/api/auth/email/session'&&request.method==='POST'){
+    const identity=await emailIdentity(request,env,url);if(!identity)return json({error:'Email sign-in could not be confirmed.'},401);
+    try{
+      if(await env.DB.prepare('SELECT provider_sub FROM email_deletions WHERE provider_sub = ?').bind(identity).first())return json({error:'This account is being deleted.'},410);
+      const profile=await emailProfile(env,identity);if(!profile)return json({error:'Verify your email and password with Clerk first.'},401);
+      // The check and write are one SQL statement: a concurrent deletion wins.
+      const registered=await env.DB.prepare(
+        'INSERT INTO users (id, provider, provider_sub, display_name, email, created_at) SELECT ?, ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM email_deletions WHERE provider_sub = ?) ' +
+        'ON CONFLICT(provider, provider_sub) DO UPDATE SET display_name = excluded.display_name, email = excluded.email WHERE NOT EXISTS (SELECT 1 FROM email_deletions WHERE provider_sub = ?)'
+      ).bind(randomToken(12),'email',identity,profile.name,profile.email,Date.now(),identity,identity).run();
+      if(!registered.meta?.changes)return json({error:'This account is being deleted.'},410);
+      // Keep the managed session revocable. Never mint a 60-day app cookie here.
+      return accountReply({ok:true},200,url,true);
+    }catch{return json({error:'Email sign-in is temporarily unavailable.'},503);}
   }
 
   const start = path.match(/^\/api\/auth\/(apple|google|line|dev)\/start$/);
@@ -316,9 +348,10 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   }
 
   if (path === '/api/auth/logout' && request.method === 'POST') {
+    if(!await revokeEmailSession(request,env,url))return json({error:'Sign-out did not finish. Please try again.'},503);
     const token = readCookie(request, SESSION_COOKIE);
     if (token) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(token)).run();
-    return json({ ok: true }, 200, { 'Set-Cookie': cookie(SESSION_COOKIE, '', url, 0) });
+    return accountReply({ok:true},200,url);
   }
 
   const user = await currentUser(request, env);
@@ -368,13 +401,17 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   }
 
   if (path === '/api/account' && request.method === 'DELETE') {
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM dogs WHERE user_id = ?').bind(user.id),
-      env.DB.prepare('DELETE FROM park_visits WHERE user_id = ?').bind(user.id),
-      env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
-      env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
-    ]);
-    return json({ ok: true }, 200, { 'Set-Cookie': cookie(SESSION_COOKIE, '', url, 0) });
+    try{
+      await env.DB.batch([
+        ...(user.provider==='email'?[env.DB.prepare('INSERT OR IGNORE INTO email_deletions (provider_sub, requested_at) VALUES (?, ?)').bind(user.provider_sub,Date.now())]:[]),
+        env.DB.prepare('DELETE FROM dogs WHERE user_id = ?').bind(user.id),
+        env.DB.prepare('DELETE FROM park_visits WHERE user_id = ?').bind(user.id),
+        env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
+        env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
+      ]);
+    }catch{return json({error:'Account deletion did not finish. Please try again.'},503);}
+    if(user.provider==='email'&&!await finishEmailDeletion(env,user.provider_sub))return accountReply({ok:true,pendingCleanup:true},202,url);
+    return accountReply({ok:true},200,url);
   }
 
   return json({ error: 'Not found.' }, 404);

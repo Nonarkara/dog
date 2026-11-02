@@ -1,3 +1,4 @@
+import {rememberedEmail,rememberEmail,resumeEmail,signOutEmail,emailAuthorization,bounded} from './emailClient';
 /**
  * CLOUD-SAVED DOG — the browser side of worker/accounts.ts.
  *
@@ -16,6 +17,7 @@ export interface Me { user: { name: string; provider: string } | null; dog: Clou
 
 const CLOUD_KEY = 'tama_dog_chi_cloud';
 const headers = { 'Content-Type': 'application/json', 'X-TDC': '1' };
+async function accountFetch(path:string,options:RequestInit={}){const merged=new Headers(options.headers);for(const[k,v]of Object.entries(await emailAuthorization()))merged.set(k,v);return fetch(path,{...options,headers:merged,credentials:'same-origin'});}
 
 export const cloudOn = (): boolean => {
   try { return localStorage.getItem(CLOUD_KEY) === '1'; } catch { return false; }
@@ -26,7 +28,9 @@ const setCloud = (on: boolean) => {
 
 export async function fetchMe(): Promise<Me | null> {
   try {
-    const r = await fetch('/api/me', { credentials: 'same-origin' });
+    let discoveryOnly=false;
+    if(rememberedEmail()){const controller=new AbortController();try{await bounded(resumeEmail(controller.signal),8000);}catch{controller.abort();rememberEmail(false);discoveryOnly=true;}}
+    const r = discoveryOnly?await fetch('/api/me',{credentials:'omit',signal:AbortSignal.timeout(4000)}):await accountFetch('/api/me',{signal:AbortSignal.timeout(4000)});
     if (!r.ok) return null;
     const me = (await r.json()) as Me;
     setCloud(!!me.user);
@@ -54,7 +58,7 @@ export async function pushOwnedDog(keepalive = false): Promise<'saved' | 'newer-
   let backup;
   try { backup = ownedBackup(); } catch { return 'skipped'; }
   try {
-    const r = await fetch('/api/dog', {
+    const r = await accountFetch('/api/dog', {
       method: 'PUT', headers, credentials: 'same-origin', keepalive,
       body: JSON.stringify({ revision: backup.save.revision, backup }),
     });
@@ -83,12 +87,19 @@ export function startCloudSync(): () => void {
 }
 
 export async function signOut(): Promise<void> {
-  try { await fetch('/api/auth/logout', { method: 'POST', headers, credentials: 'same-origin' }); } finally { setCloud(false); }
+  const response=await fetch('/api/auth/logout',{method:'POST',headers,credentials:'same-origin'});if(!response.ok)throw new Error('Sign-out did not finish.');
+  try{await bounded(signOutEmail(),5000);}catch{rememberEmail(false);}setCloud(false);
 }
 
 /** Deletes the account and the cloud copy. The dog in this browser stays unless the owner resets it. */
-export async function deleteAccount(): Promise<boolean> {
-  const r = await fetch('/api/account', { method: 'DELETE', headers, credentials: 'same-origin' });
-  if (r.ok) setCloud(false);
-  return r.ok;
+export async function deleteAccount(): Promise<'deleted'|'pending'|false> {
+  const r = await accountFetch('/api/account', { method: 'DELETE', headers, credentials: 'same-origin' });
+  if (r.ok) {try{await bounded(signOutEmail(),5000);}catch{/* The server has revoked/deleted the identity; local cleanup is best-effort. */}setCloud(false);rememberEmail(false);}
+  return !r.ok?false:r.status===202?'pending':'deleted';
+}
+
+/** Fetch with the managed identity too; a plain link cannot carry a bearer token. */
+export async function downloadMyData(){
+ const response=await accountFetch('/api/export');if(!response.ok)throw new Error('Your data could not be downloaded. Please try again.');
+ const url=URL.createObjectURL(await response.blob()),anchor=document.createElement('a');anchor.href=url;anchor.download='tama-dog-chi-my-data.json';document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
