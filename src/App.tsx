@@ -1,7 +1,8 @@
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
 import { startCloudSync } from './utils/cloud';
-import { arriveAtPark, leavePark } from './utils/careLog';
+import { arriveAtPark, leavePark, fetchVisitChoice, chooseVisitRecord, type VisitChoice } from './utils/careLog';
+import { ParkConsent } from './components/ParkConsent';
 import { coax } from './domain/runaway';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
 import {householdDefaults,playMode,modeKey} from './utils/playMode';
@@ -286,13 +287,16 @@ export const App: React.FC = () => {
   // with a care snapshot, leave with another. The game never waits on it.
   const careRef=useRef({dog:currentDog,petState});
   careRef.current={dog:currentDog,petState};
+  // undefined until the server answers; it stays undefined when signed out or offline.
+  const [visitOk,setVisitOk]=useState<VisitChoice|undefined>(undefined);
+  useEffect(()=>{if(activeRegion==='commons'&&visitOk===undefined)void fetchVisitChoice().then(setVisitOk);},[activeRegion,visitOk]);
   useEffect(()=>{
-    if(activeRegion!=='commons')return;
+    if(activeRegion!=='commons'||visitOk!=='yes')return;
     arriveAtPark(careRef.current.dog,careRef.current.petState,liveRoom??'commons');
     const hide=()=>{if(document.visibilityState==='hidden')leavePark(careRef.current.dog,careRef.current.petState);};
     document.addEventListener('visibilitychange',hide);
     return()=>{document.removeEventListener('visibilitychange',hide);leavePark(careRef.current.dog,careRef.current.petState);};
-  },[activeRegion,liveRoom]);
+  },[activeRegion,liveRoom,visitOk]);
 
   // Switch identity and state in one React batch, before the save effect runs.
   const selectDog = (id: string) => {
@@ -647,6 +651,7 @@ export const App: React.FC = () => {
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
             <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onGoHome={togglePark} liveRoom={liveRoom} onLiveRoom={setLiveRoom} />
+            {visitOk===null&&<ParkConsent onChoose={async agree=>{const saved=await chooseVisitRecord(agree);setVisitOk(saved&&agree?'yes':'no');}}/>}
           </Suspense>
         );
     }

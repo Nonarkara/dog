@@ -18,7 +18,7 @@
  *   GET    /api/me                        → { user, dog, providers }
  *   PUT    /api/dog                       → save (higher revision wins)
  *   GET    /api/export                    → everything we hold about you
- *   DELETE /api/account                   → delete you, your dog, your sessions
+ *   DELETE /api/account                   → delete you, your dog, your park visits, your sessions
  */
 
 export interface D1Statement {
@@ -305,7 +305,9 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
 
   if (path === '/api/export' && request.method === 'GET') {
     const dog = await env.DB.prepare('SELECT name, dog_id, revision, backup, updated_at FROM dogs WHERE user_id = ?').bind(user.id).first();
-    return json({ account: { name: user.display_name, provider: user.provider, email: user.email }, dog }, 200, {
+    await env.DB.prepare('DELETE FROM park_visits WHERE arrived_at < ?').bind(Date.now() - 30 * 86_400_000).run(); // the consent note's one month
+    const parkVisits = (await env.DB.prepare('SELECT dog_name, room, arrived_at, left_at, snapshot FROM park_visits WHERE user_id = ? ORDER BY arrived_at DESC').bind(user.id).all()).results;
+    return json({ account: { name: user.display_name, provider: user.provider, email: user.email }, dog, parkVisits }, 200, {
       'Content-Disposition': 'attachment; filename="tama-dog-chi-my-data.json"',
     });
   }
@@ -313,6 +315,7 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   if (path === '/api/account' && request.method === 'DELETE') {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM dogs WHERE user_id = ?').bind(user.id),
+      env.DB.prepare('DELETE FROM park_visits WHERE user_id = ?').bind(user.id),
       env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
       env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
     ]);

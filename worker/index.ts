@@ -1,7 +1,7 @@
 import { validRoom } from '../src/domain/parkProtocol';
 import { handleAccounts, type AccountEnv } from './accounts';
 import { handlePush, sendDuePushes, type PushEnv } from './push';
-import { handleCare, type CareEnv } from './care';
+import { handleCare, purgeOldVisits, type CareEnv } from './care';
 export { ParkRoom } from './parkRoom';
 
 interface DurableObjectNamespace {
@@ -60,5 +60,6 @@ export default {
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
     await sendDuePushes(env as unknown as PushEnv);
+    await purgeOldVisits(env as CareEnv);
   },
 };

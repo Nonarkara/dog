@@ -25,6 +25,12 @@ interface Snapshot {
   sick?: boolean; asleep?: boolean;
 }
 
+// The note promises one month: anything older goes, for every owner.
+// Runs from the cron and before every read, so no row outlives the promise.
+const MONTH_MS = 30 * 86_400_000;
+export const purgeOldVisits = (env: CareEnv) =>
+  env.DB.prepare('DELETE FROM park_visits WHERE arrived_at < ?').bind(Date.now() - MONTH_MS).run();
+
 const clean = (v: unknown, max: number) => String(v ?? '').slice(0, max).trim();
 const json = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -38,9 +44,32 @@ const snapshotOk = (s: unknown): s is Snapshot => {
 
 export async function handleCare(request: Request, env: CareEnv, url: URL): Promise<Response | null> {
   const path = url.pathname;
-  if (!['/api/visit', '/api/visit/leave', '/api/care/summary'].includes(path)) return null;
+  if (!['/api/visit', '/api/visit/leave', '/api/visit/consent', '/api/care/summary'].includes(path)) return null;
+  if (request.method !== 'GET') {
+    const origin = request.headers.get('Origin');
+    if (request.headers.get('X-TDC') !== '1' || (origin && origin !== url.origin)) return json({ error: 'Refused.' }, 403);
+  }
   const user = await currentUser(request, env);
   if (!user) return json({ error: 'Sign in to keep the care ledger.' }, 401);
+
+  // CONSENT — visit_consent_at: NULL never asked, 0 declined, a time agreed.
+  // The server is the only record of the answer, so every device and account agrees.
+  if (path === '/api/visit/consent' && request.method === 'GET') {
+    const row = await env.DB.prepare('SELECT visit_consent_at FROM users WHERE id = ?').bind(user.id).first<{ visit_consent_at: number | null }>();
+    const at = row?.visit_consent_at;
+    return json({ consent: at == null ? null : at > 0 ? 'yes' : 'no' });
+  }
+  // Agree turns the record on; declining turns it off and deletes this owner's visits.
+  if (path === '/api/visit/consent' && request.method === 'POST') {
+    let agree = false;
+    try { agree = (await request.json()).agree === true; } catch { /* no body means no */ }
+    if (agree) await env.DB.prepare('UPDATE users SET visit_consent_at = ? WHERE id = ?').bind(Date.now(), user.id).run();
+    else await env.DB.batch([
+      env.DB.prepare('UPDATE users SET visit_consent_at = 0 WHERE id = ?').bind(user.id),
+      env.DB.prepare('DELETE FROM park_visits WHERE user_id = ?').bind(user.id),
+    ]);
+    return json({ ok: true, agreed: agree });
+  }
 
   // ARRIVE — close any visit still open for this owner, then open this one.
   if (path === '/api/visit' && request.method === 'POST') {
@@ -52,11 +81,15 @@ export async function handleCare(request: Request, env: CareEnv, url: URL): Prom
     if (!dogId) return json({ error: 'Which dog?' }, 400);
     if (!snapshotOk(body.snapshot)) return json({ error: 'Not a care snapshot.' }, 400);
     const now = Date.now();
-    await env.DB.batch([
+    // Consent is checked inside the insert itself, so a decline or an account
+    // deletion landing mid-request can never leave a visit behind.
+    const [, inserted] = await env.DB.batch([
       env.DB.prepare('UPDATE park_visits SET left_at = ? WHERE user_id = ? AND left_at IS NULL').bind(now, user.id),
-      env.DB.prepare('INSERT INTO park_visits (user_id, dog_id, dog_name, room, arrived_at, snapshot) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(user.id, dogId, dogName, room, now, JSON.stringify(body.snapshot)),
-    ]);
+      env.DB.prepare(`INSERT INTO park_visits (user_id, dog_id, dog_name, room, arrived_at, snapshot)
+        SELECT id, ?, ?, ?, ?, ? FROM users WHERE id = ? AND visit_consent_at > 0`)
+        .bind(dogId, dogName, room, now, JSON.stringify(body.snapshot), user.id),
+    ]) as { meta?: { changes?: number } }[];
+    if (!inserted?.meta?.changes) return json({ ok: false, error: 'No consent, nothing recorded.' }, 403);
     return json({ ok: true });
   }
 
@@ -72,6 +105,7 @@ export async function handleCare(request: Request, env: CareEnv, url: URL): Prom
 
   // SUMMARY — the keeper reads everyone; an owner reads only their own book.
   if (path === '/api/care/summary' && request.method === 'GET') {
+    await purgeOldVisits(env);
     const keepers = (env.CARE_KEEPERS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
     const isKeeper = !!user.email && keepers.includes(user.email.toLowerCase());
     if (!isKeeper) {

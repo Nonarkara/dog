@@ -1173,3 +1173,14 @@ html {font-synthesis:none;}
 .desktop-detail>.region-coach {flex:1 1 0%;min-height:0;}
 .cockpit-workspace--wide .desktop-detail {grid-row:2/4;align-self:stretch;}
 .cockpit-workspace--wide .desktop-detail:has(.record-fold[data-open=true]) {align-self:stretch;}
+.park-consent {padding:12px 16px;}
+.park-consent-head {display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.park-consent h2 {font-weight:600;margin:0;}
+.park-consent p,.park-consent ul,.park-consent dl {margin:6px 0;}
+.park-consent ul {padding-left:18px;list-style:disc;}
+.park-consent dl {display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
+.park-consent dt {font-weight:600;}
+.park-consent dd {margin:0;}
+.park-consent-actions {display:flex;gap:8px;margin-top:10px;}
+.park-consent-actions>button {flex:1;justify-content:center;border:1px solid var(--border-strong);min-height:36px;}
+.park-consent-actions>button:first-child {background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
