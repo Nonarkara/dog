@@ -42,6 +42,12 @@ export const VERTEX = `
 
     float bow=motion.w*.035*(1.-reduced);
     p.y+=bow*head;
+    // A BLINK: the fur of the brow dips down over each eye for a beat. The
+    // band is computed in original coordinates so it rides the head turn.
+    float exx=min(abs(original.x-eyes.x),abs(original.x-eyes.z));
+    float eyy=original.y-eyes.y;
+    float lid=step(0.,eyy)*(1.-smoothstep(0.,.045,eyy))*(1.-smoothstep(.045,.095,exx));
+    p.y-=lid*blink*.028;
     float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
     vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
     // A real dog nods at stride frequency — the head leads each forepaw's landing.

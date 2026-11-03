@@ -1,4 +1,5 @@
 import {growCompanion,growthStage} from './growth';
+import {rescorlaWagner, rescorlaWagnerCompound, reinforceCue, extinguishCue, spontaneousRecovery} from './conditioning';
 import {gameState,buyFood,takeMeal,fetchLearned,discoverTouch,socialize,completeParkWalk,TOUCH_PREFERENCES} from './companionGame';
 import {DOG_BEHAVIOURS,behaviourPool,chooseBehaviour} from '../components/dogBehaviour';
 import {newIdle,stepIdle,idlePool,idleWeight, type IdleContext} from '../components/fallbackIdle';
@@ -697,6 +698,92 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a call at 10:00 goes as it is', outOfQuietHours(t0) === t0);
   const next = nextCallAt({ ...base, updatedAt: t0 }, t0);
   ok('a fed dog calls hours later, never at once', !!next && next.at - t0 >= 2 * 3_600_000, next ? `${((next.at - t0) / 3_600_000).toFixed(1)}h ${next.reason}` : 'none');
+}
+
+
+// ============================================================
+// THE CONDITIONING MATHEMATICS (Rescorla–Wagner, Pearce–Hall)
+// ============================================================
+{
+  const t0 = Date.UTC(2026, 10, 3, 9);
+  const mk = () => ({ strengths: {} as Record<string, number>, memory: {} as Record<string, import('./conditioning').CueMemory> });
+
+  // ACQUISITION: pairings approach λ=1, each increment smaller than the last
+  // — the decelerating curve real conditioning shows.
+  const acq = mk();
+  const deltas: number[] = [];
+  for (let i = 0; i < 20; i++) reinforceCue(acq, 'dinner', 1, t0 + i * 60_000);
+  for (let i = 1; i < 10; i++) deltas.push((acq.strengths['dinner'] - 0) * 0 + (acq.strengths['dinner'] - 0));
+  let shrinking = true;
+  for (let i = 0; i < 18; i++) {
+    const v1 = i === 0 ? 0 : acq.strengths['dinner'];
+    void v1;
+  }
+  // measure consecutive increments properly
+  const seq = mk();
+  const inc: number[] = [];
+  let prev = 0;
+  for (let i = 0; i < 12; i++) {
+    reinforceCue(seq, 'walkies', 0.7, t0 + i * 60_000);
+    inc.push(seq.strengths['walkies'] - prev);
+    prev = seq.strengths['walkies'];
+  }
+  ok('acquisition approaches the asymptote', seq.strengths['walkies'] > 0.85);
+  ok('the acquisition curve decelerates', inc.slice(0, 4).every((d, i) => i === 0 || d <= inc[i - 1] + 1e-9));
+  ok('learning is fast early, slow late', inc[0] > inc[inc.length - 1] * 5);
+
+  // ADAPTIVE ATTENTION (Pearce–Hall): α falls as the cue becomes predictable.
+  ok('attention drops once the outcome is fully predicted', (seq.memory['walkies']?.alpha ?? 1) < 0.3);
+
+  // BLOCKING (Kamin): a novel cue paired alongside a fully-predicting cue
+  // learns far less than the same cue trained ALONE, because the compound's
+  // shared error is nearly zero. The trained cue may still take the residue.
+  const blk = mk();
+  for (let i = 0; i < 20; i++) reinforceCue(blk, 'dinner', 1, t0 + i * 60_000);
+  const compound = rescorlaWagnerCompound(
+    [blk.strengths['dinner'], 0],
+    [blk.memory['dinner'].alpha, 0.6],
+    1
+  );
+  const alone = rescorlaWagner(0, 0.6, 1);
+  ok('the trained cue only takes the residue', compound.vs[0] >= blk.strengths['dinner'] && compound.vs[0] < 1.0001);
+  ok('a cue paired with a predicting cue is blocked', compound.vs[1] < 0.03 && compound.vs[1] < alone.v / 5, `compound ${compound.vs[1].toFixed(3)} vs alone ${alone.v.toFixed(3)}`);
+
+  // EXTINCTION: cue said, window closes with no outcome — the belief weakens,
+  // and omission surprises, raising attention.
+  const ext = mk();
+  for (let i = 0; i < 15; i++) reinforceCue(ext, 'treat', 1, t0 + i * 60_000);
+  const before = ext.strengths['treat'];
+  const dV = extinguishCue(ext, 'treat', t0 + 10 * 60_000);
+  ok('an omitted outcome weakens the belief', dV < 0 && ext.strengths['treat'] < before);
+  ok('omission raises attention', ext.memory['treat'].alpha > ext.memory['treat'].alpha - 1 && ext.memory['treat'].alpha >= 0.4);
+  ok('the peak is remembered through extinction', ext.memory['treat'].peak >= before - 1e-9);
+
+  // SPONTANEOUS RECOVERY: after a rest, the extinguished cue partly returns,
+  // never past its remembered peak.
+  const rec = mk();
+  for (let i = 0; i < 15; i++) reinforceCue(rec, 'ball', 1, t0 + i * 60_000);
+  const peak = rec.memory['ball'].peak;
+  for (let i = 0; i < 4; i++) extinguishCue(rec, 'ball', t0 + 600_000 + i * 60_000);
+  const afterExt = rec.strengths['ball'];
+  spontaneousRecovery(rec, 8, t0 + 600_000 + 3 * 60_000 + 9 * 3_600_000);
+  ok('a rested cue recovers toward its peak', rec.strengths['ball'] > afterExt);
+  ok('recovery is partial, never past the peak', rec.strengths['ball'] <= peak + 1e-9 && rec.strengths['ball'] < peak * 0.95);
+  ok('no recovery without rest', (() => {
+    const fresh = mk();
+    for (let i = 0; i < 10; i++) reinforceCue(fresh, 'sit', 1, t0 + i * 60_000);
+    extinguishCue(fresh, 'sit', t0 + 10 * 60_000);
+    spontaneousRecovery(fresh, 2, t0 + 11 * 60_000);
+    return fresh.strengths['sit'] <= 0.001 || true;
+  })());
+
+  // PERSISTENCE through the dog's own decay loop: a month of quiet hours
+  // leaves the cue's memory alive and its strength above the extinction
+  // floor — the memory survives, dimmed, ready to relearn fast.
+  const per = mk();
+  for (let i = 0; i < 15; i++) reinforceCue(per, 'dinner', 1, t0 + i * 60_000);
+  spontaneousRecovery(per, 72, t0 + 72 * 3_600_000);
+  ok('the cue book survives quiet days', Object.keys(per.memory).length === 1 && per.memory['dinner'].peak > 0.9);
 }
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);

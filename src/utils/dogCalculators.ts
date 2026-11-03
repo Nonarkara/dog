@@ -242,6 +242,7 @@ function migratePetState(raw: unknown): PetState | null {
       ])
     ),
     associations: isObject(state.associations) ? state.associations : {},
+    cueMemory: isObject(state.cueMemory) ? state.cueMemory : {},
     observations: Array.isArray(state.observations) ? state.observations : [],
     sleep: {
       asleep: Boolean(state.sleep?.asleep),

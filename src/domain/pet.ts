@@ -48,6 +48,14 @@ export type { Observation, ObservationTag };
 import {gameState,takeMeal} from './companionGame';
 import { dailyLife, advanceDailyLife } from './dailyLife';
 import {calmInteraction,calmNeed} from './calm';
+import {
+  BETA_BY_ACTION,
+  cueBook,
+  extinguishCue,
+  presentCue,
+  reinforceCue,
+  spontaneousRecovery,
+} from './conditioning';
 
 /** How long after a behaviour a marker still predicts it. */
 export const MARKER_WINDOW_MS = 500;
@@ -352,6 +360,15 @@ function decayStep(state:PetState,now:number):PetState {
       hygiene: nextHygiene,
     },
     trust: clamp(state.trust - (trustDecayRate * factor) / 24),
+    // Spontaneous recovery: cues resting below their remembered peak creep
+    // back during quiet hours. This is why an old word still works.
+    ...(Object.keys(state.cueMemory ?? {}).length
+      ? (() => {
+          const book = cueBook(state.associations, state.cueMemory);
+          spontaneousRecovery(book, factor, now);
+          return { associations: book.strengths, cueMemory: book.memory };
+        })()
+      : {}),
     // Authored game pacing: excitement eases toward neutral during quiet time.
     // This never winds up a dog whose arousal is already below neutral.
     arousal: clamp(state.arousal-Math.min(Math.max(0,state.arousal-30),20*factor)),
@@ -383,8 +400,16 @@ function decayStep(state:PetState,now:number):PetState {
   }
   if(next.calmSince!==undefined&&(calmNeed(next)||next.arousal>55))next.calmSince=undefined;
   // A spoken cue expires if nothing follows it — classical conditioning
-  // needs the cue and the outcome close together in time.
+  // needs the cue and the outcome close together in time. The expiry is an
+  // OMISSION trial: the same equation that builds the belief weakens it,
+  // and the surprise raises attention (the dog tries harder next time).
   if (state.lastCueAt && now - state.lastCueAt > 5 * 60_000) {
+    if (state.lastCue) {
+      const book = cueBook(state.associations, state.cueMemory);
+      extinguishCue(book, state.lastCue, now);
+      next.associations = book.strengths;
+      next.cueMemory = book.memory;
+    }
     next.lastCue = undefined;
     next.lastCueAt = undefined;
   }
@@ -621,10 +646,15 @@ export function interact(
     }
   }
 
-  // Pair the last spoken cue with this outcome (classical conditioning):
-  // say "dinner", then feed, and the dog learns "dinner" means food is coming.
+  // Pair the last spoken cue with this outcome (classical conditioning).
+  // The equation is Rescorla–Wagner: ΔV = α·β·(λ − V) — learning is fast at
+  // first and slows as the belief approaches the truth, with the attention α
+  // adapting Pearce–Hall style. β follows the outcome: food teaches fastest.
   if (base.lastCue && base.lastCueAt && now - base.lastCueAt <= 30_000) {
-    next = strengthenAssociation(next, base.lastCue, 0.06);
+    const book = cueBook(next.associations, next.cueMemory);
+    reinforceCue(book, base.lastCue, BETA_BY_ACTION[action] ?? 0.5, now);
+    next.associations = book.strengths;
+    next.cueMemory = book.memory;
   }
 
   // The waking, if there was one, comes first: it is what actually happened.
@@ -661,6 +691,13 @@ export function communicate(
     lastCue: clean,
     lastCueAt: now,
   };
+  // Saying the word is presenting the cue: it starts the extinction clock
+  // and marks the memory as seen (rest intervals measure from here).
+  if (clean) {
+    const book = cueBook(next.associations, next.cueMemory);
+    presentCue(book, clean, now);
+    next.cueMemory = book.memory;
+  }
 
   let note = '';
   if (clean === '') {

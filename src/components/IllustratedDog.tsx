@@ -209,7 +209,7 @@ function IllustratedStage(props: Props & {url:string}) {
     let pixels:Uint8ClampedArray|null=null,imageW=0,imageH=0;
     const masks=new Map<ArtPose,{pixels:Uint8ClampedArray,w:number,h:number}>();
     const loader=new THREE.TextureLoader();
-    let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0;
+    let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0;const facingE={v:1};
     const artName=url.split('/').pop()!.replace('.webp','') as MotionArtName;
     // Load optional movement after the base dog is usable; actions never rebuild
     // the renderer or wait for this atlas, and a failed atlas preserves care.
@@ -347,10 +347,15 @@ function IllustratedStage(props: Props & {url:string}) {
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
       const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*personality.pace:0;
+      // THE TURN, NOT THE MIRROR: when the catch game sends him the other
+      // way, his facing eases through edge-on instead of flipping — a dog
+      // pivots, he does not reflect.
+      const faceTarget=lesson?.facing??(zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1);
+      facingE.v+=(faceTarget-facingE.v)*(1-Math.exp(-dt*10));
       const growth=growthStage(p.petState);uniforms.puppy.value=1-growth.progress;outgoingUniforms.puppy.value=uniforms.puppy.value;
       const size=growth.scale*(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
-      skin.scale.set((lesson?.facing??(zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1))*size,size,1);
+      skin.scale.set(facingE.v*size,size,1);
       const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
       skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);

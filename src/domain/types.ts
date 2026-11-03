@@ -232,6 +232,8 @@ export interface PetState {
   behaviours: Record<string, Behaviour>;
   /** Cue name -> conditioned strength, 0..1. */
   associations: Record<string, number>;
+  /** Per-cue conditioning memory: peak, adaptive attention, timestamps. */
+  cueMemory?: Record<string, import('./conditioning').CueMemory>;
   /** What the owner actually saw, newest last. */
   observations: Observation[];
   /** Whether he is asleep, and how hard he is to settle. */
