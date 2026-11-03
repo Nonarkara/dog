@@ -1221,3 +1221,15 @@ html {font-synthesis:none;}
 .email-signin-dialog>header button{min-width:44px;min-height:44px;}
 .email-signin-note{font-size:12px;line-height:1.4;max-width:55ch;margin-top:8px;}
 .email-signin-dialog .cl-rootBox,.email-signin-dialog .cl-cardBox{width:100%;max-width:100%;}
+
+/* Account identity decisions fit one phone task; no game can upload past this gate. */
+.entry-sync-choice{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:12px;padding:24px;}
+.entry-sync-choice h1{font-size:28px;}.entry-sync-choice p{max-width:48ch;}
+.entry-sync-choice>button{min-height:44px;padding:6px 12px;border:1px solid var(--border-strong);}
+.cloud-save-status{padding:4px!important;min-width:28px;min-height:28px;}
+.cloud-save-status[data-sync-status=failed],.cloud-save-status[data-sync-status=conflict]{color:var(--text-danger,#a92e45);}
+.cloud-save-dialog{max-width:36ch;padding:24px;}.cloud-save-dialog p{margin-top:12px;}
+
+/* A short lesson earns its own height, not the remaining desktop column. */
+.cockpit-workspace--wide .desktop-detail>.region-coach{flex:0 1 auto;height:auto;max-height:100%;}
+.cockpit-workspace--wide .desktop-detail>.region-coach>.panel-body{flex:0 1 auto;}

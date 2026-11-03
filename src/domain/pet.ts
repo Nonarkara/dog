@@ -50,6 +50,7 @@ import { dailyLife, advanceDailyLife } from './dailyLife';
 import {calmInteraction,calmNeed} from './calm';
 import {
   BETA_BY_ACTION,
+  CUE_WINDOW_MS,
   cueBook,
   extinguishCue,
   presentCue,
@@ -402,11 +403,11 @@ function decayStep(state:PetState,now:number):PetState {
   // A spoken cue expires if nothing follows it — classical conditioning
   // needs the cue and the outcome close together in time. The expiry is an
   // OMISSION trial: the same equation that builds the belief weakens it,
-  // and the surprise raises attention (the dog tries harder next time).
-  if (state.lastCueAt && now - state.lastCueAt > 5 * 60_000) {
+  // and raises this game model's attention for the next trial.
+  if (state.lastCueAt !== undefined && now - state.lastCueAt > CUE_WINDOW_MS) {
     if (state.lastCue) {
-      const book = cueBook(state.associations, state.cueMemory);
-      extinguishCue(book, state.lastCue, now);
+      const book = cueBook(next.associations, next.cueMemory);
+      extinguishCue(book, state.lastCue, state.lastCueAt + CUE_WINDOW_MS);
       next.associations = book.strengths;
       next.cueMemory = book.memory;
     }
@@ -521,6 +522,7 @@ export function interact(
   };
 
   let note = '';
+  let outcomeDelivered = true;
   switch (action) {
     case 'pet': {
       next.life={...dailyLife(next),boredom:Math.max(0,dailyLife(base).boredom-25)};
@@ -558,6 +560,7 @@ export function interact(
     }
     case 'play': {
       if (base.sick) {
+        outcomeDelivered = false;
         note = `${name} is sick and trembling. ${p.subjCap} is too weak to play — administer medicine first.`;
         break;
       }
@@ -608,6 +611,7 @@ export function interact(
         next.trust = clamp(base.trust + 4);
         note = `Scooped and cleared ${mess} mess${mess > 1 ? 'es' : ''} from the stage. Spotless and fresh again. Trust +4.`;
       } else {
+        outcomeDelivered = false;
         note = 'The stage is already clean and spotless.';
       }
       break;
@@ -624,6 +628,7 @@ export function interact(
           ? `Medicine worked: ${name} is better. Feed ${p.obj} soon, or hunger will make ${p.obj} ill again.`
           : `Medicine worked: ${name} stops shivering and starts to recover.`;
       } else {
+        outcomeDelivered = false;
         note = `${name} is in good health and does not require medication.`;
       }
       break;
@@ -631,6 +636,7 @@ export function interact(
     case 'walk': {
       next.personality.boldness=clampTrait(base.personality.boldness+.015);
       if (base.sick) {
+        outcomeDelivered = false;
         note = `${name} is sick and shivering. ${p.subjCap} cannot go on a walk — rest and medicine needed.`;
         break;
       }
@@ -650,11 +656,15 @@ export function interact(
   // The equation is Rescorla–Wagner: ΔV = α·β·(λ − V) — learning is fast at
   // first and slows as the belief approaches the truth, with the attention α
   // adapting Pearce–Hall style. β follows the outcome: food teaches fastest.
-  if (base.lastCue && base.lastCueAt && now - base.lastCueAt <= 30_000) {
+  if (outcomeDelivered && base.lastCue && base.lastCueAt !== undefined && now - base.lastCueAt <= CUE_WINDOW_MS) {
     const book = cueBook(next.associations, next.cueMemory);
     reinforceCue(book, base.lastCue, BETA_BY_ACTION[action] ?? 0.5, now);
     next.associations = book.strengths;
     next.cueMemory = book.memory;
+    // An outcome resolves this presentation. Further care needs a fresh cue,
+    // and the completed trial must never expire as an omission later.
+    next.lastCue = undefined;
+    next.lastCueAt = undefined;
   }
 
   // The waking, if there was one, comes first: it is what actually happened.

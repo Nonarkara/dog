@@ -360,12 +360,14 @@ function IllustratedStage(props: Props & {url:string}) {
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
       skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
+      const pivoting=!!atlas&&shownPose==='stand'&&transition===1&&!request&&Math.abs(facingE.v)<.96;
       const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&(zoomies||strolling||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
-      canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';
-      if(movement&&atlas){
+      canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';canvas.dataset.pivoting='false';canvas.dataset.strideBlend='0';
+      if((movement||pivoting)&&atlas){
         const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;motionPhase+=Math.min(.1,Math.abs(delta))/.66;
         let index:number,face=1,scale=1;
-        if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/1.6*32));
+        if(pivoting&&!movement)index=48+Math.min(31,Math.round(faceTarget<0?(1-facingE.v)*8:16+(1+facingE.v)*8));
+        else if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/1.6*32));
         // Three cups: turn until his back is to you (frame 24 of the turn), hold, then turn home.
         else if(kind==='away')index=MOTION_LAYOUT.turnStart+Math.min(24,Math.floor(elapsed/1.2*24));
         else if(kind==='back')index=elapsed>=.5?MOTION_LAYOUT.turnStart:MOTION_LAYOUT.turnStart+24+Math.min(7,Math.floor(elapsed/.5*8));
@@ -378,7 +380,14 @@ function IllustratedStage(props: Props & {url:string}) {
           if(turning)index=48+Math.round((Math.sin(zTime*5)>0?8:24)+(d/.35)*4)%32;
           else{const fast=zoomies||idle==='trotting';index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);face=d>0?-1:1;scale=fast?1.30:1;}
         }
-        index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,from);
+        index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);
+        // Interpolate the leg joints between authored stride drawings, as in
+        // the park: animation advances each display frame without new textures.
+        const cycle=index<32?32:index<48?16:0;
+        const target=from.map(point=>[...point] as [number,number]);
+        if(cycle){const f=motionPhase*cycle,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
+        writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);
+        canvas.dataset.strideBlend=String(cycle?motionPhase*cycle%1:0);canvas.dataset.pivoting=String(pivoting&&!movement);
         uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
         if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
         const ink=art.displayBox;

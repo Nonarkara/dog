@@ -1,7 +1,7 @@
 /**
  * THE MATHEMATICS OF THE CONDITIONED DOG.
  *
- * Three published models, one memory:
+ * A game adaptation of associative-learning models, not a biological predictor:
  *
  *   RESCORLA–WAGNER (1972) — acquisition and extinction. On every pairing,
  *     ΔV = α·β·(λ − V)
@@ -11,16 +11,18 @@
  *   dogs show. When the cue arrives and the outcome does NOT, (λ − V) flips
  *   sign and the same equation extinguishes the association.
  *
- *   PEARCE–HALL (1978) — adaptive attention. α is not fixed: it stays high
+ *   PEARCE–HALL inspired attention (1980; doi:10.1037/0033-295X.87.6.532).
+ *   Adaptive attention α is not fixed: it stays high
  *   while the cue's outcome is still surprising and falls once the outcome
  *   is fully predicted. α_next = floor + (1−floor)·|λ − V_next|. An omitted
  *   outcome is itself surprising, so omission RAISES attention back.
  *
  *   SPONTANEOUS RECOVERY — extinction is not erasure. The cue remembers its
  *   peak (V_peak). After a rest, an extinguished cue partially returns:
- *     V += (V_peak − V)·(1 − e^(−rest/τ))·r
- *   partial (r < 1), never past the remembered peak. This is why a dog who
- *   once knew "dinner" re-answers it after months better than a naive dog.
+ *     target = V_after_trial + (V_peak − V_after_trial)·r
+ *     V += (target − V)·(1 − e^(−rest/τ))
+ *   partial (r < 1), including across repeated clock ticks. This is why a dog who
+ *   once learned a word can recover part of that game association after rest.
  *
  * Persistence is structural: V, peak, α and the timestamps live in the
  * dog's saved state (browser, then cloud), so the memory survives sessions,
@@ -43,8 +45,11 @@ export interface CueMemory {
   lastSeenAt: number;
   /** Reinforced pairings so far. */
   pairings: number;
+  /** Strength after the last trial; anchors the partial recovery ceiling. */
+  recoveryBase?: number;
 }
 
+export const CUE_WINDOW_MS = 30_000;
 export const LAMBDA = 1; // a care outcome fully delivered supports full strength
 export const ALPHA_FLOOR = 0.15;
 export const BETA_EXTINCTION = 0.55;
@@ -54,7 +59,7 @@ export const RECOVERY_FRACTION = 0.35;
 /** Rest needed before spontaneous recovery may act. */
 export const RECOVERY_REST_MINUTES = 45;
 
-/** Outcome efficacy β: food is the strongest unconditioned stimulus there is. */
+/** Authored outcome weights for this game; preferences vary in real dogs. */
 export const BETA_BY_ACTION: Record<string, number> = {
   feed: 1,
   rewardCalm: 0.9,
@@ -117,6 +122,7 @@ export function presentCue(book: CueBook, cue: string, now: number): void {
     lastPairAt: m?.lastPairAt ?? 0,
     lastSeenAt: now,
     pairings: m?.pairings ?? 0,
+    recoveryBase: book.strengths[key] ?? 0,
   };
 }
 
@@ -140,6 +146,7 @@ export function reinforceCue(book: CueBook, cue: string, beta: number, now: numb
     lastPairAt: now,
     lastSeenAt: now,
     pairings: m.pairings + 1,
+    recoveryBase: vNext,
   };
   return vNext - v;
 }
@@ -159,12 +166,13 @@ export function extinguishCue(book: CueBook, cue: string, now: number): number {
     ...m,
     alpha: clamp01(m.alpha + 0.25),
     lastSeenAt: now,
+    recoveryBase: vNext,
   };
   return deltaV;
 }
 
 /**
- * Spontaneous recovery: run once per decayed hour. Cues resting below their
+ * Spontaneous recovery: integrate the elapsed interval. Cues below their
  * remembered peak creep back toward a fraction of it. A cue seen recently
  * (paired or extinguished) does not recover — rest is the condition.
  */
@@ -174,10 +182,16 @@ export function spontaneousRecovery(book: CueBook, hours: number, now: number): 
     const m = book.memory[key];
     const v = book.strengths[key] ?? 0;
     if (v >= m.peak) continue;
-    const sinceSeen = (now - m.lastSeenAt) / 60_000;
-    if (sinceSeen < RECOVERY_REST_MINUTES) continue;
-    const r = (1 - Math.exp(-hours / RECOVERY_TAU_HOURS)) * RECOVERY_FRACTION;
-    book.strengths[key] = Math.min(m.peak, v + (m.peak - v) * r);
+    const restStarts = m.lastSeenAt + RECOVERY_REST_MINUTES * 60_000;
+    const eligibleHours = Math.max(0, (now - Math.max(now - hours * 3_600_000, restStarts)) / 3_600_000);
+    if (eligibleHours <= 0) continue;
+    const baseline = m.recoveryBase ?? v;
+    const target = baseline + (m.peak - baseline) * RECOVERY_FRACTION;
+    // Save the baseline once for old saves too. Repeated ticks then approach
+    // the same partial ceiling as a single long absence.
+    book.memory[key] = {...m, recoveryBase: baseline};
+    const r = 1 - Math.exp(-eligibleHours / RECOVERY_TAU_HOURS);
+    book.strengths[key] = Math.min(m.peak, v + Math.max(0, target - v) * r);
   }
 }
 

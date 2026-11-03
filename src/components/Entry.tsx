@@ -1,8 +1,9 @@
 import React,{lazy,Suspense,useEffect,useState} from 'react';
 import {ArrowRight,Heart,Play,ArrowLeft,Upload,LogIn} from 'lucide-react';
-import {fetchMe,pullIfNewer,signOut,deleteAccount,downloadMyData,type Me} from '../utils/cloud';
+import {fetchMe,pullIfNewer,signOut,deleteAccount,downloadMyData,resolveCloudDog,type Me} from '../utils/cloud';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
 import {dogTheme} from '../data/dogThemes';
+import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {ADOPTION_KEY,readAdoption,cleanDogName} from '../utils/playMode';
 const EmailSignIn=lazy(()=>import('./EmailSignIn').then(m=>({default:m.EmailSignIn})));
 const App=lazy(()=>import('../App').then(m=>({default:m.App})));
@@ -13,13 +14,15 @@ export function Entry(){
  const park=new URLSearchParams(location.search).get('park'),invite=park&&/^[a-z0-9-]{8,40}$/.test(park)?`&park=${park}`:'';
  // Signed in? A newer copy of your dog in the cloud is brought in before the game opens.
  const [me,setMe]=useState<Me|null|undefined>(undefined),[synced,setSynced]=useState(mode!=='own'),[owned,setOwned]=useState(adoption);
+ const [cloudConflict,setCloudConflict]=useState<Me|null>(null),[syncError,setSyncError]=useState('');
  const [dogName,setDogName]=useState(''),[confirmDelete,setConfirmDelete]=useState(false);
- useEffect(()=>{let live=true;fetchMe().then(async m=>{if(!live)return;setMe(m);if(m?.user){try{if(await pullIfNewer(m)==='restored')setOwned(readAdoption());}catch{/* the browser's own dog stays */}}if(live)setSynced(true);});return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;fetchMe().then(async m=>{if(!live)return;setMe(m);if(m?.user){try{const result=await pullIfNewer(m);if(result==='restored')setOwned(readAdoption());if(result==='conflict')setCloudConflict(m);}catch{setSyncError('Account sync could not finish. Your browser’s dog is safe here.');}}if(live)setSynced(true);});return()=>{live=false;};},[]);
  const failed=new URLSearchParams(location.search).get('signin')==='failed';
  const [emailOpen,setEmailOpen]=useState(false);
  const signIn=(provider:string)=>provider==='email'?setEmailOpen(true):location.assign(`/api/auth/${provider}/start?back=${encodeURIComponent(`/?mode=own${invite}`)}`);
  const [choosing,setChoosing]=useState(mode==='own'&&!adoption),[selected,setSelected]=useState(adoption?.dogId??'oreo-frenchie'),[artReady,setArtReady]=useState(false),[error,setError]=useState(''),[restore,setRestore]=useState<{raw:string;name:string}|null>(null);
  if(mode==='own'&&!synced)return <main className="entry-loading" data-workspace-loading="true">Fetching your dog…</main>;
+ if(mode!=='play'&&cloudConflict)return <main className="entry-sync-choice cockpit" style={dogTheme(owned?.dogId||'expo-2021')}><h1>Two homes, two dogs</h1><p>This browser has {owned?.name||'a companion'}. {cloudConflict.dog?`This account has ${cloudConflict.dog.name}. Bringing that dog here replaces the browser copy.`:'This is a different account. Save this browser’s dog here only if it belongs to you.'}</p><button type="button" onClick={()=>{try{downloadOwnedBackup(owned?.name||'local-dog');}catch{setSyncError('Could not download the browser dog. No save was changed.');}}}>Download browser dog</button><button type="button" onClick={async()=>{try{await resolveCloudDog(cloudConflict);setOwned(readAdoption());setCloudConflict(null);setSyncError('');}catch{setSyncError('Could not load the account dog. No upload was made.');}}}>{cloudConflict.dog?'Bring account dog here':'Save this dog to this account'}</button><button type="button" onClick={async()=>{try{await signOut();setMe({...cloudConflict,user:null,dog:null});setCloudConflict(null);}catch{setSyncError('Sign-out did not finish. Please try again.');}}}>Sign out · keep browser dog</button>{syncError&&<p role="alert">{syncError}</p>}</main>;
  if(mode==='play'||mode==='own'&&owned)return <Suspense fallback={<main className="entry-loading" data-study-ready="false" data-workspace-loading="true">Opening Tama-Dog-Chi…</main>}><App/></Suspense>;
  const dog=DEFAULT_DOGS.find(d=>d.id===selected)!;
  const adopt=()=>{try{localStorage.setItem(ADOPTION_KEY,JSON.stringify({dogId:dog.id,at:Date.now(),seed:crypto.randomUUID(),name:cleanDogName(dogName)||dog.name}));location.assign(`/?mode=own${invite}`);}catch{setError('This browser could not save your puppy. Allow browser storage and try again.');}};
@@ -32,10 +35,10 @@ export function Entry(){
     <p className="entry-note">{dog.breed} · Puppy → adult over 7 care days</p>
     <label className="adoption-name"><span>Name</span><input value={dogName} maxLength={24} placeholder={dog.name} onChange={e=>setDogName(e.target.value)} aria-label="Your dog's name"/></label>
     <button type="button" className="entry-choice" onClick={adopt}><Heart size={22}/><span>Bring {cleanDogName(dogName)||dog.name} home<small>One minute of attention earns a care day.</small></span><ArrowRight size={22}/></button>
-    <p className="entry-note">{me?.user?`Saved to your account, so ${cleanDogName(dogName)||dog.name} is there on any phone or laptop.`:'Saved in this browser. Sign in to keep your dog on any phone or laptop.'}</p>
+    <p className="entry-note">{me?.user?`Account sync is on. Your puppy saves here first, then to your account while you play.`:'Saved in this browser. Sign in to keep your dog on any phone or laptop.'}</p>
    </>:<>
     <a href={`/?mode=play${invite}`} className="entry-choice"><Play size={24}/><span>Play<small>Meet the pack. Pet, play, explore.</small></span><ArrowRight size={22}/></a>
-    {adoption?<a href={`/?mode=own${invite}`} className="entry-choice"><Heart size={24}/><span>Continue {cleanDogName(owned?.name)||dog.name}<small>{me?.user?'Saved to your account.':'Your companion lives in this browser.'}</small></span><ArrowRight size={22}/></a>:<button type="button" onClick={()=>setChoosing(true)} className="entry-choice"><Heart size={24}/><span>Own a dog<small>Raise your puppy. Shape a personality.</small></span><ArrowRight size={22}/></button>}
+    {adoption?<a href={`/?mode=own${invite}`} className="entry-choice"><Heart size={24}/><span>Continue {cleanDogName(owned?.name)||dog.name}<small>{me?.user?'Browser save + account sync.':'Your companion lives in this browser.'}</small></span><ArrowRight size={22}/></a>:<button type="button" onClick={()=>setChoosing(true)} className="entry-choice"><Heart size={24}/><span>Own a dog<small>Raise your puppy. Shape a personality.</small></span><ArrowRight size={22}/></button>}
     <div className="entry-footer">{me?.user?<p className="entry-note entry-account">Signed in as {me.user.name} · <button type="button" className="btn-quiet" onClick={async()=>{try{await signOut();setMe({...me,user:null,dog:null});}catch{setError('Sign-out did not finish. Please try again.');}}}>Sign out</button> · <button type="button" className="btn-quiet" onClick={async()=>{try{await downloadMyData();}catch{setError('Your data could not be downloaded. Please try again.');}}}>My data</button> · {confirmDelete?<><button type="button" className="btn-quiet" onClick={async()=>{try{const removed=await deleteAccount();if(removed){setConfirmDelete(false);setMe({...me,user:null,dog:null});if(removed==='pending')setError('Your account data was deleted. Final sign-in cleanup is queued and will retry automatically.');}else setError('Account deletion did not finish. Please try again.');}catch{setError('Account deletion did not finish. Please try again.');}}}>Delete account and cloud copy</button> <button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(false)}>Keep</button></>:<button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(true)}>Delete account</button>}</p>
      :me?.providers?.length?<div className="entry-signin"><p className="entry-note">Sign in to keep your dog on any phone or laptop. We keep your name, verified email when shared, and your dog.</p><div>{me.providers.map(p=><button key={p} type="button" onClick={()=>signIn(p)}><LogIn size={16}/>{p==='apple'?'Apple':p==='line'?'LINE':p==='google'?'Google':p==='email'?'Email':'Test sign-in'}</button>)}</div></div>
      :<p className="entry-note">Your browser, your little world. No account needed.</p>}
@@ -43,7 +46,7 @@ export function Entry(){
     {restore&&<div className="restore-confirm"><p>Restore {restore.name}? This replaces the owned-dog save in this browser. Play stays separate.</p><button type="button" onClick={async()=>{try{const {restoreOwnedBackup}=await import('../utils/progressStore');await restoreOwnedBackup(restore.raw);location.assign('/?mode=own');}catch{setError('Could not restore this backup. The previous save is unchanged.');}}}>Restore {restore.name}</button><button type="button" onClick={()=>setRestore(null)}>Cancel</button></div>}
    </>}
    {emailOpen&&<Suspense fallback={<p role="status">Opening email sign-in…</p>}><EmailSignIn back={`/?mode=own${invite}`} onClose={()=>setEmailOpen(false)}/></Suspense>}
-   {error&&<p role="alert">{error}</p>}
+   {(error||syncError)&&<p role="alert">{error||syncError}</p>}
   </div>
  </main>;
 }

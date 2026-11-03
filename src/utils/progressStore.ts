@@ -1,3 +1,4 @@
+import {validOwnedBackup} from '../domain/ownedSaveValidation';
 import {householdDefaults,modeKey,playMode,readAdoption,OWN_SAVE_KEY} from './playMode';
 import {dayKey} from '../domain/attention';
 import type {PetState} from '../domain/types';
@@ -92,12 +93,8 @@ export function ownedBackup(){
  return validateOwnedBackup(JSON.stringify({format:'tama-dog-chi-owned-v1',adoption,save}));
 }
 export function validateOwnedBackup(raw:string){
- const data=JSON.parse(raw),a=data?.adoption;
- if(data?.format!=='tama-dog-chi-owned-v1'||!validSave(data.save)||!a||typeof a.dogId!=='string'||!Number.isFinite(a.at)||typeof a.seed!=='string'||!DEFAULT_DOGS.some(d=>d.id===a.dogId)||!data.save.dogs.some((d:unknown)=>(d as DogProfile).id===a.dogId))throw new Error('This is not a complete Tama-Dog-Chi owned-dog backup.');
- const pet=data.save.pets[a.dogId],growth=pet?.growth;
- const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
- const personality=object(pet)&&object(pet.personality)?pet.personality:null;
- if(!object(pet)||!personality||!['boldness','sociability','foodDrive','playDrive','sensitivity'].every(k=>Number.isFinite(personality[k]))||!object(growth)||growth.seed!==a.seed||growth.adoptedAt!==a.at||!Array.isArray(growth.careDays)||growth.careDays.length>28||growth.careDays.some((day:unknown)=>typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))||new Set(growth.careDays).size!==growth.careDays.length||typeof growth.day!=='string'||!Number.isFinite(growth.daySeconds)||Number(growth.daySeconds)<0)throw new Error('This backup is missing the adopted dog’s personality or growth record. Your current dog was not changed.');
+ const data:unknown=JSON.parse(raw);
+ if(!validOwnedBackup(data,DEFAULT_DOGS.map(d=>d.id)))throw new Error('This is not a complete Tama-Dog-Chi owned-dog backup. Your current dog was not changed.');
  return data as {format:string;adoption:NonNullable<ReturnType<typeof readAdoption>>;save:ReturnType<typeof current>};
 }
 export function restoreOwnedBackup(raw:string):Promise<void>{

@@ -1,3 +1,4 @@
+import {CloudSaveStatus} from './CloudSaveStatus';
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
 import {PushOffer} from './PushOffer';
@@ -121,7 +122,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   return (
     <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''}`} aria-label="Care">
       <header className="panel-head">
-        <h2 className="label text-zinc-300">Care</h2>
+        <h2 className="label text-zinc-300">Care</h2>{!detailView&&playMode()==='own'&&<CloudSaveStatus/>}
         <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, calm. A red bar needs you. The line under Now says the one thing to do next."/>
         <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}

@@ -710,15 +710,6 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
 
   // ACQUISITION: pairings approach λ=1, each increment smaller than the last
   // — the decelerating curve real conditioning shows.
-  const acq = mk();
-  const deltas: number[] = [];
-  for (let i = 0; i < 20; i++) reinforceCue(acq, 'dinner', 1, t0 + i * 60_000);
-  for (let i = 1; i < 10; i++) deltas.push((acq.strengths['dinner'] - 0) * 0 + (acq.strengths['dinner'] - 0));
-  let shrinking = true;
-  for (let i = 0; i < 18; i++) {
-    const v1 = i === 0 ? 0 : acq.strengths['dinner'];
-    void v1;
-  }
   // measure consecutive increments properly
   const seq = mk();
   const inc: number[] = [];
@@ -753,10 +744,10 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   // and omission surprises, raising attention.
   const ext = mk();
   for (let i = 0; i < 15; i++) reinforceCue(ext, 'treat', 1, t0 + i * 60_000);
-  const before = ext.strengths['treat'];
+  const before = ext.strengths['treat'], attentionBefore = ext.memory['treat'].alpha;
   const dV = extinguishCue(ext, 'treat', t0 + 10 * 60_000);
   ok('an omitted outcome weakens the belief', dV < 0 && ext.strengths['treat'] < before);
-  ok('omission raises attention', ext.memory['treat'].alpha > ext.memory['treat'].alpha - 1 && ext.memory['treat'].alpha >= 0.4);
+  ok('omission raises attention', ext.memory['treat'].alpha > attentionBefore);
   ok('the peak is remembered through extinction', ext.memory['treat'].peak >= before - 1e-9);
 
   // SPONTANEOUS RECOVERY: after a rest, the extinguished cue partly returns,
@@ -773,9 +764,34 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
     const fresh = mk();
     for (let i = 0; i < 10; i++) reinforceCue(fresh, 'sit', 1, t0 + i * 60_000);
     extinguishCue(fresh, 'sit', t0 + 10 * 60_000);
+    const beforeRest = fresh.strengths['sit'];
     spontaneousRecovery(fresh, 2, t0 + 11 * 60_000);
-    return fresh.strengths['sit'] <= 0.001 || true;
+    return fresh.strengths['sit'] === beforeRest;
   })());
+
+  // Exercise the game path too: one spoken cue is one trial, not a reward
+  // multiplier followed by an omission penalty for food already delivered.
+  const pet = createPetState(t0);
+  const waiting = communicate(pet, 'dinner', t0 + 1000).state;
+  const rewarded = interact(waiting, 'feed', t0 + 2000).state;
+  const repeated = interact(rewarded, 'pet', t0 + 3000).state;
+  ok('one spoken cue consumes only one delivered outcome', repeated.cueMemory?.dinner.pairings === 1);
+  ok('a rewarded cue is no longer awaiting an outcome', rewarded.lastCue === undefined && rewarded.lastCueAt === undefined);
+  ok('rewarded cues are not later extinguished as omissions', near(decay(rewarded, t0 + 6 * 60_000).associations.dinner, rewarded.associations.dinner));
+  const omitted = decay(communicate({...pet, associations:{dinner:0.8}}, 'dinner', t0 + 1000).state, t0 + 32_000);
+  ok('an unanswered cue expires at the same thirty-second pairing window', omitted.lastCue === undefined && omitted.associations.dinner < 0.8);
+  const sickCue = communicate({...pet, sick:true}, 'ball', t0 + 1000).state;
+  ok('a refused game does not teach a cue', !interact(sickCue, 'play', t0 + 2000).state.associations.ball);
+  ok('cleaning an already clean stage does not teach a cue', !interact(communicate(pet, 'tidy', t0 + 1000).state, 'clean', t0 + 2000).state.associations.tidy);
+
+  // Continuous decay must not turn partial recovery into complete recovery,
+  // nor depend on whether the player keeps the page open between check-ins.
+  const resting = {strengths:{ball:0.1},memory:{ball:{peak:1,alpha:0.6,lastPairAt:t0,lastSeenAt:t0,pairings:4}}};
+  const oneStep = structuredClone(resting), smallSteps = structuredClone(resting);
+  spontaneousRecovery(oneStep, 24, t0 + 24 * 3_600_000);
+  for(let i=1;i<=8640;i++) spontaneousRecovery(smallSteps, 10/3600, t0 + i*10_000);
+  ok('recovery agrees across one long absence and small active ticks', near(oneStep.strengths.ball,smallSteps.strengths.ball));
+  ok('recovery stays below its partial remembered limit across many ticks', smallSteps.strengths.ball <= 0.1 + 0.9*0.35 + 1e-9);
 
   // PERSISTENCE through the dog's own decay loop: a month of quiet hours
   // leaves the cue's memory alive and its strength above the extinction

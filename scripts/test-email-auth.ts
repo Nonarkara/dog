@@ -22,13 +22,14 @@ globalThis.fetch=async(input,options)=>{fetches++;const url=String(input instanc
 const {handleAccounts,currentUser,providersFor}=await import('../worker/accounts');
 const {emailConfig,emailIdentity,drainEmailDeletions}=await import('../worker/emailAuth');
 class MemoryDB implements D1{
- sql=new DatabaseSync(':memory:');failBatch=false;race=false;
+ sql=new DatabaseSync(':memory:');failBatch=false;race=false;beforeDogWrite:(()=>void)|undefined;
  constructor(){for(const name of readdirSync('migrations').filter(n=>n.endsWith('.sql')).sort())this.sql.exec(readFileSync('migrations/'+name,'utf8'));}
  get users(){return this.sql.prepare('SELECT * FROM users').all();}
  get queue(){const db=this;return{has:(id:string)=>!!db.sql.prepare('SELECT 1 FROM email_deletions WHERE provider_sub=?').get(id),clear:()=>db.sql.exec('DELETE FROM email_deletions')};}
  get completed(){const db=this;return{has:(id:string)=>!!db.sql.prepare('SELECT 1 FROM email_deletions WHERE provider_sub=? AND completed_at IS NOT NULL').get(id)};}
  prepare(sql:string):D1Statement{let values:unknown[]=[];const db=this;return{bind(...v){values=v;return this;},async first<T>(){return (db.sql.prepare(sql).get(...values as never[])??null) as T|null;},async all<T>(){return{results:db.sql.prepare(sql).all(...values as never[]) as T[]};},async run(){
   if(db.race&&sql.startsWith('INSERT INTO users')){db.sql.prepare('INSERT OR IGNORE INTO email_deletions(provider_sub,requested_at) VALUES(?,?)').run(String(values[2]),Date.now());db.sql.exec('DELETE FROM users');}
+  if(sql.startsWith('INSERT INTO dogs')&&db.beforeDogWrite){const interleave=db.beforeDogWrite;db.beforeDogWrite=undefined;interleave();}
   const result=db.sql.prepare(sql).run(...values as never[]);return{meta:{changes:Number(result.changes)}};
  }};}
  async batch(statements:D1Statement[]){if(this.failBatch)throw Error('D1 unavailable');this.sql.exec('BEGIN');try{const out=[];for(const statement of statements)out.push(await statement.run());this.sql.exec('COMMIT');return out;}catch(error){this.sql.exec('ROLLBACK');throw error;}}
@@ -48,7 +49,29 @@ try{
  sessionStatus='revoked';assert.equal(await emailIdentity(request('/api/me',token),env,new URL(origin)),null,'Revoked session rejected despite unexpired JWT');sessionStatus='active';
  const post=request('/api/auth/email/session',token,'POST');const result=await handleAccounts(post,env,new URL(post.url));assert.equal(result?.status,200);assert.equal(db.users.length,1);assert.equal(db.users[0].provider,'email');assert(result?.headers.get('set-cookie')?.includes('Max-Age=0'),'No long-lived cookie minted');
  db.sql.prepare('INSERT INTO dogs(user_id,name,dog_id,revision,backup,updated_at) VALUES(?,?,?,?,?,?)').run(String(db.users[0].id),'Private dog','expo-2021',1,'{}',Date.now());
- const cookieRequest=new Request(origin+'/api/me',{headers:{Cookie:`__clerk_db_jwt=fixture_browser; tdc_email=1; __session=${token}; __client_uat=${Math.floor(Date.now()/1000)}`,Origin:origin}});assert.equal((await currentUser(cookieRequest,env))?.id,db.users[0].id,'Managed cookie authenticates native same-origin requests');
+ const cookieRequest=new Request(origin+'/api/me',{headers:{Cookie:`__clerk_db_jwt=fixture_browser; tdc_email=1; __session=${token}; __client_uat=${JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString()).iat}`,Origin:origin}});assert.equal((await currentUser(cookieRequest,env))?.id,db.users[0].id,'Managed cookie authenticates native same-origin requests');
+ const meResponse=await handleAccounts(request('/api/me',token),env,new URL(origin+'/api/me'));
+ assert.equal((await meResponse!.json() as {user:{id:string}}).user.id,db.users[0].id,'Stable account id distinguishes users with the same display name');
+ const backupFor=(revision:number)=>({format:'tama-dog-chi-owned-v1',adoption:{dogId:'expo-2021',name:'Private dog',seed:'fixture-dog',at:1},save:{version:3,revision,dogs:[{id:'expo-2021'}],pets:{'expo-2021':{needs:{hunger:40,energy:70,hygiene:80},updatedAt:1,trust:50,arousal:20,behaviours:{},personality:{boldness:0,sociability:0,foodDrive:0,playDrive:0,sensitivity:0},growth:{seed:'fixture-dog',adoptedAt:1,careDays:[],day:'2026-11-03',daySeconds:0}}}}});
+ const saveDog=async(revision:number,backup:unknown=backupFor(revision),expectedAccountId?:string)=>{const req=new Request(origin+'/api/dog',{method:'PUT',headers:{Authorization:'Bearer '+token,'X-TDC':'1',Origin:origin},body:JSON.stringify({revision,backup,expectedAccountId})});return handleAccounts(req,env,new URL(req.url));};
+ db.beforeDogWrite=()=>{db.sql.prepare('UPDATE dogs SET revision=21, backup=? WHERE user_id=?').run('newer-device',String(db.users[0].id));};
+ assert.equal((await saveDog(20))?.status,409,'An interleaved newer device save wins atomically');
+ assert.deepEqual(db.sql.prepare('SELECT revision,backup FROM dogs').get(),Object.assign(Object.create(null),{revision:21,backup:'newer-device'}),'Rejected older write preserves the newer dog bytes');
+ assert.equal((await saveDog(21))?.status,200,'Equal revisions retain existing compatibility');
+ assert.equal((await saveDog(22))?.status,200,'Newer revision can save normally');
+ assert.equal((await saveDog(19))?.status,409,'Older sequential revision cannot overwrite');
+ const beforeInvalid=db.sql.prepare('SELECT backup FROM dogs').get()!.backup;
+ const oversized=backupFor(23);(oversized as unknown as Record<string,unknown>).note='犬'.repeat(340_000);
+ assert.equal((await saveDog(23,oversized))?.status,413,'UTF-8 byte limit rejects multibyte payload below one million characters');
+ assert.equal((await saveDog(23,backupFor(23),'different-account'))?.status,409,'A stale tab cannot upload into a newly signed-in account');
+ assert.equal(db.sql.prepare('SELECT backup FROM dogs').get()!.backup,beforeInvalid,'Account mismatch preserves dog bytes');
+ const mismatched=backupFor(23);mismatched.save.revision=22;
+ const missingPet=backupFor(23);delete (missingPet.save.pets as Record<string,unknown>)['expo-2021'];
+ const mismatchedIdentity=backupFor(23);mismatchedIdentity.save.pets['expo-2021'].growth.seed='other-dog';
+ const invalidNeed=backupFor(23);invalidNeed.save.pets['expo-2021'].needs.energy=Infinity;
+ const missingPersonality=backupFor(23);delete (missingPersonality.save.pets['expo-2021'] as Record<string,unknown>).personality;
+ for(const invalid of [{format:'tama-dog-chi-owned-v1',adoption:{dogId:'expo-2021'}},mismatched,missingPet,mismatchedIdentity,invalidNeed,missingPersonality])assert.equal((await saveDog(23,invalid))?.status,400,'Unrestorable backup cannot replace a valid dog');
+ assert.equal(db.sql.prepare('SELECT backup FROM dogs').get()!.backup,beforeInvalid,'Rejected malformed backups preserve saved dog bytes');
  const exported=await handleAccounts(request('/api/export',token),env,new URL(origin+'/api/export'));assert.equal(exported?.status,200);assert.equal((await exported!.json() as {account:{provider:string}}).account.provider,'email');
  assert.equal((await currentUser(request('/api/me',token),env))?.id,db.users[0].id);assert.equal(await currentUser(request('/api/me','bad','GET',{Cookie:'tdc_session=another-account'}),env),null,'Invalid explicit bearer never falls back to another account cookie');
  const blocked=request('/api/auth/email/session',token,'POST',{Origin:'https://attacker.example'});assert.equal((await handleAccounts(blocked,env,new URL(blocked.url)))?.status,403);

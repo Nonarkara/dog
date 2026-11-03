@@ -79,4 +79,10 @@ ${[[-80,-230],[70,-250],[110,-160],[-150,-126],[40,-190]].map(([x,y])=>`<path d=
     floor:floor('#fbfaee',`<path d="M-4000 1H4000" stroke="#fbfaee" stroke-width="4"/>${lines(16,i=>`<path d="M${-320+i*40} 4q20-18 40 0" fill="#fbfaee" stroke="#d6e0e6" stroke-width="2.5"/>`)}${lines(8,i=>`<path d="M${-260+i*70} ${46+(i%2)*26}q16-10 32 0" fill="none" stroke="#d6e0e6" stroke-width="2.5"/>`)}`),
   },
 };
-export const homeScene=(id:HomeId)=>SCENES[id];
+// Inline SVG inherits the selected dog's palette. Keep wood, plants and sky
+// material colors; wall, upholstery and cushions carry the companion's identity.
+export const homeScene=(id:HomeId)=>{
+ const scene=SCENES[id];
+ const dress=(art:string)=>art.replaceAll('#f1e7d2','var(--home-wall, #f1e7d2)').replaceAll('#bbc6a9','var(--home-cloth, #bbc6a9)').replaceAll('#a9b994','var(--home-cloth, #a9b994)').replaceAll('#e2c47c','var(--home-cushion, #e2c47c)');
+ return {wall:dress(scene.wall),floor:dress(scene.floor)};
+};

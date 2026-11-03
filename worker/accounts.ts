@@ -1,3 +1,4 @@
+import {validOwnedBackup} from '../src/domain/ownedSaveValidation';
 import {emailConfig,emailIdentity,emailProfile,finishEmailDeletion,revokeEmailSession,type EmailEnv} from './emailAuth';
 /**
  * ACCOUNTS AND CLOUD-SAVED DOGS.
@@ -360,34 +361,41 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     const providers = providersFor(url, env);
     if (!user) return json({ user: null, dog: null, providers });
     const dog = await env.DB.prepare('SELECT name, dog_id, revision, backup, updated_at FROM dogs WHERE user_id = ?').bind(user.id).first();
-    return json({ user: { name: user.display_name, provider: user.provider }, dog, providers });
+    return json({ user: { id: user.id, name: user.display_name, provider: user.provider }, dog, providers });
   }
 
   if (!user) return json({ error: 'Sign in first.' }, 401);
 
   if (path === '/api/dog' && request.method === 'PUT') {
     const raw = await request.text();
-    if (raw.length > MAX_BACKUP_BYTES) return json({ error: 'That save is too large.' }, 413);
-    let body: { revision?: unknown; backup?: unknown };
+    if (new TextEncoder().encode(raw).byteLength > MAX_BACKUP_BYTES) return json({ error: 'That save is too large.' }, 413);
+    let body: { revision?: unknown; backup?: unknown; expectedAccountId?: unknown };
     try {
       body = JSON.parse(raw);
     } catch {
       return json({ error: 'Not understood.' }, 400);
     }
+    // The cookie may have changed in another tab after this game reconciled.
+    if (body.expectedAccountId !== undefined && body.expectedAccountId !== user.id)
+      return json({ error: 'The signed-in account changed. Reopen Own mode before saving.' }, 409);
     const revision = Number(body.revision);
-    const backup = body.backup as { format?: string; adoption?: { dogId?: string; name?: string }; save?: { revision?: number } } | undefined;
-    if (!Number.isSafeInteger(revision) || revision < 0 || backup?.format !== 'tama-dog-chi-owned-v1' || !DOG_IDS.includes(String(backup.adoption?.dogId)))
+    const backup = body.backup;
+    if (!Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS) || backup.save.revision !== revision)
       return json({ error: 'Not a dog save.' }, 400);
     const name = clean(backup.adoption?.name, 24) || 'Dog';
-    const stored = await env.DB.prepare('SELECT revision FROM dogs WHERE user_id = ?').bind(user.id).first<{ revision: number }>();
-    // A device with an older copy never overwrites a newer one.
-    if (stored && stored.revision > revision) return json({ ok: false, newer: stored.revision }, 409);
-    await env.DB.prepare(
+    // Check the revision inside the write: two devices can pass a separate
+    // SELECT simultaneously, then arrive here in the opposite order.
+    const saved = await env.DB.prepare(
       'INSERT INTO dogs (user_id, name, dog_id, revision, backup, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
-        'ON CONFLICT(user_id) DO UPDATE SET name = excluded.name, dog_id = excluded.dog_id, revision = excluded.revision, backup = excluded.backup, updated_at = excluded.updated_at'
+        'ON CONFLICT(user_id) DO UPDATE SET name = excluded.name, dog_id = excluded.dog_id, revision = excluded.revision, backup = excluded.backup, updated_at = excluded.updated_at ' +
+        'WHERE excluded.revision >= dogs.revision'
     )
       .bind(user.id, name, String(backup.adoption!.dogId), revision, JSON.stringify(backup), Date.now())
       .run();
+    if (!saved.meta?.changes) {
+      const stored = await env.DB.prepare('SELECT revision FROM dogs WHERE user_id = ?').bind(user.id).first<{ revision: number }>();
+      return json({ ok: false, newer: stored?.revision }, 409);
+    }
     return json({ ok: true, revision });
   }
 
