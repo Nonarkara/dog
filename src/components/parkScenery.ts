@@ -1,23 +1,29 @@
 /** Scene pigments reuse the household's credited Wada colors, not UI accents.
- * Forest guardian294: lawn/leaf/ink; Lemon explorer60: water; Biscuit dreamer11: timber. */
+ * Forest guardian294: lawn/leaf/ink; Lemon explorer60: water; Biscuit dreamer11: timber.
+ * Depth is cel, never gradient: pale distant band, mid trees, lit near lobes. */
 export function parkScenery(){return `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="park-scenery" viewBox="-200 -300 400 600">
 <defs>
- <pattern id="lawn" width="173" height="137" patternUnits="userSpaceOnUse"><path d="M19 31l-3-5m3 5l4-6M121 102l-4-5m4 5l4-5M85 45l-2-4" fill="none" stroke="#bbc6a9" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="44" cy="112" rx="2" ry="1.4" fill="#fbfaee"/></pattern>
+ <pattern id="lawn" width="173" height="137" patternUnits="userSpaceOnUse"><path d="M19 31l-3-5m3 5l4-6M121 102l-4-5m4 5l4-5M85 45l-2-4" fill="none" stroke="#c3cdb5" stroke-width="1.2" stroke-linecap="round"/><ellipse cx="44" cy="112" rx="1.8" ry="1.2" fill="#fbfaee"/></pattern>
 </defs>
 <rect x="-5000" y="-5000" width="10000" height="10000" fill="#e1e9d5"/>
 <rect x="-5000" y="-5000" width="10000" height="10000" fill="url(#lawn)"/>
 <g class="park-landmarks" stroke-linecap="round" stroke-linejoin="round">
  <path d="M-850 250C-500 330-240-190-65-145S150 170 440 95S700-110 900-20" stroke="#bbc6a9" stroke-width="91" fill="none"/>
  <path d="M-850 250C-500 330-240-190-65-145S150 170 440 95S700-110 900-20" stroke="#fbfaee" stroke-width="87" fill="none"/>
+ ${[[-560,-196,1],[210,-212,1.25],[560,-176,.9]].map(([x,y,s])=>`<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 26V6" stroke="#a9b994" stroke-width="4"/><circle cy="-8" r="22" fill="#c7d4b4"/><circle cx="-9" cy="-14" r="9" fill="#d3dec2"/></g>`).join('')}
+ <path d="M-900-160q80-30 170-14t180-8 190 10 180-10 190 6" fill="none" stroke="#d9e3c8" stroke-width="22"/>
  <path d="M-520-278Q0-335 520-278" fill="none" stroke="#77624e" stroke-width="5"/>
  ${Array.from({length:19},(_,i)=>{const x=-504+i*56,y=-278-52*Math.sin((i/18)*Math.PI);return `<path d="M${x} ${y-15}v39" stroke="#77624e" stroke-width="4"/>`;}).join('')}
- <path d="M-341 10C-391 54-366 163-285 176S-169 138-185 67S-271-34-341 10Z" fill="#bbc6a9"/>
+ ${[[-190,-64],[46,-108],[300,20]].map(([x,y])=>`<path d="M${x-70} ${y}q36 22 70 6t74 2q-10 34-72 32t-72-40Z" fill="#e9f0dc"/>`).join('')}
+ <path d="M-341 10C-391 54-366 163-285 176S-169 138-185 67S-271-34-341 10Z" fill="#b7c49e"/>
  <path d="M-338 17C-379 55-357 152-285 164S-182 132-196 70S-275-21-338 17Z" fill="#deebed" stroke="#b3c4c5" stroke-width="3"/>
  <path d="M-337 75q24 9 45 0m-30 48q30 9 63-1m-2-77q16 6 28 0" fill="none" stroke="#fbfaee" stroke-width="3"/>
+ <g transform="translate(-212 116)"><circle r="9" fill="#a9b994"/><path d="M2-9L9-2" stroke="#7d8f6c" stroke-width="2"/><circle cx="26" cy="7" r="7" fill="#a9b994"/><path d="M31 1l6 6" stroke="#7d8f6c" stroke-width="2"/><path d="M52-14v-34M52-14q-8-6-9-16M52-14q9-5 10-17M60-20q6-2 9-8" fill="none" stroke="#526449" stroke-width="2.4"/></g>
  <g transform="translate(125 -222) rotate(-7)"><ellipse cy="41" rx="78" ry="13" fill="#bbc6a9"/><path d="M-50 8l-4 37M50 8l4 37" stroke="#614c37" stroke-width="8"/><path d="M-68-24H68M-68-5H68M-68 16H68" stroke="#845a2f" stroke-width="15"/><path d="M-66-26H65M-66-7H65M-66 14H65" stroke="#eadbc0" stroke-width="2"/></g>
- ${[[-270,-210,.9],[310,-75,1.15],[-315,320,1.05],[280,370,.85]].map(([x,y,s])=>`<g transform="translate(${x} ${y}) scale(${s})"><ellipse cy="65" rx="90" ry="20" fill="#bbc6a9"/><path d="M-13 63Q-4 5-16-60H18Q4 6 16 63Z" fill="#77624e" stroke="#614c37" stroke-width="2"/><path d="M-8 3L-43-38M8-5l29-37" stroke="#77624e" stroke-width="9"/><path d="M-83-55C-113-95-62-144-27-132C-2-169 47-154 55-126C105-134 121-76 92-57C105-20 49-4 26-20C-12 6-60-9-63-30C-89-24-102-42-83-55Z" fill="#386344" stroke="#294434" stroke-width="2"/><path d="M-65-79Q-35-125 4-104M24-124q43-5 55 37M-20-32q34 9 52-6" fill="none" stroke="#526449" stroke-width="7"/></g>`).join('')}
+ ${[[-270,-210,.9,'a'],[310,-75,1.15,'b'],[-315,320,1.05,'b'],[280,370,.85,'a']].map(([x,y,s,v])=>`<g transform="translate(${x} ${y}) scale(${s})"><ellipse cy="65" rx="90" ry="20" fill="#bbc6a9"/><path d="M-13 63Q-4 5-16-60H18Q4 6 16 63Z" fill="#77624e" stroke="#614c37" stroke-width="2"/><path d="M-8 3L-43-38M8-5l29-37" stroke="#77624e" stroke-width="9"/><path d="M-83-55C-113-95-62-144-27-132C-2-169 47-154 55-126C105-134 121-76 92-57C105-20 49-4 26-20C-12 6-60-9-63-30C-89-24-102-42-83-55Z" fill="#386344" stroke="#294434" stroke-width="2"/><path d="M-65-79Q-35-125 4-104M24-124q43-5 55 37M-20-32q34 9 52-6" fill="none" stroke="#526449" stroke-width="7"/>${v==='a'?'<path d="M-56-96C-70-118-40-134-16-124C4-132 24-118 16-102C30-92 12-76-8-82C-30-72-50-82-56-96Z" fill="#4a7a55"/><path d="M-30-108q10-8 22-4M6-116q9-4 16 3" fill="none" stroke="#6f9678" stroke-width="4"/>':'<path d="M-42-88C-30-110 2-114 16-98C34-100 46-84 34-72C40-58 20-50 4-58C-16-48-38-64-42-88Z" fill="#4a7a55"/><path d="M-16-92q9-7 20-3M12-82q8-2 12 5" fill="none" stroke="#6f9678" stroke-width="4"/>'}</g>`).join('')}
  <g transform="translate(66 225)"><ellipse rx="29" ry="11" fill="#bbc6a9"/><path d="M-25-6L-20 6Q0 15 20 6L25-6" fill="#77624e"/><ellipse cy="-6" rx="25" ry="9" fill="#deebed" stroke="#614c37" stroke-width="2"/><path d="M-12-7q13-6 24 0" fill="none" stroke="#fbfaee" stroke-width="2"/></g>
  <g transform="translate(30 -8) rotate(-15)"><circle r="10" fill="#bbc6a9" stroke="#526449"/><path d="M-8-5q13 2 13 13M-3-9q-1 11-6 12" fill="none" stroke="#fbfaee" stroke-width="2"/></g>
+ <g transform="translate(392 168)"><ellipse rx="34" ry="12" fill="#b7c49e"/><circle cx="-14" cy="-4" r="5" fill="#e0a9b0"/><circle cx="-14" cy="-4" r="1.8" fill="#fbfaee"/><circle cx="4" cy="-8" r="5" fill="#e8d9a0"/><circle cx="4" cy="-8" r="1.8" fill="#fbfaee"/><circle cx="22" cy="-3" r="4.5" fill="#e0a9b0"/><circle cx="22" cy="-3" r="1.6" fill="#fbfaee"/><path d="M-30 4q36 9 66 0" fill="none" stroke="#526449" stroke-width="2"/></g>
  <g class="park-agility" stroke-linecap="round" stroke-linejoin="round">
   <path d="M-980-296Q-700-336-460-306M-380-318Q-120-346 180-318M300-330Q520-352 940-300" fill="none" stroke="#cdd9b6" stroke-width="26"/>
   <g transform="translate(150 214) rotate(6) scale(.8)"><path d="M-74 44L-8-58H10L-56 44Z" fill="#eadbc0" stroke="#614c37" stroke-width="3"/><path d="M74 44L8-58H-10L56 44Z" fill="#e2d0ae" stroke="#614c37" stroke-width="3"/><path d="M-84 44H84" stroke="#77624e" stroke-width="7"/><path d="M-52 12l6 9M-30-22l6 9M32-20l-6 9M54 10l-6 9" stroke="#845a2f" stroke-width="4"/></g>
