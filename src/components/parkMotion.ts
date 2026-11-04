@@ -50,10 +50,10 @@ export const PARK_VERTEX=VERTEX.replace('varying vec2 vUv;',`varying vec2 vUv;
  if(locomotion>.001){
    vec2 displacement=vec2(0.);float weight=0.;
    for(int j=0;j<16;j++){vec2 d=original-strideFrom[j];float d2=dot(d,d);float w=1./(d2*d2*d2+.00000002);displacement+=(strideTo[j]-strideFrom[j])*w;weight+=w;}
-   p=original+displacement/max(weight,.001);
-   // Keep the commissioned large-headed proportions through the stretched run.
-   float runHead=(1.-smoothstep(runNeck.x-.035,runNeck.x+.065,original.x))*(1.-smoothstep(runNeck.y-.07,runNeck.y+.035,original.y));
-   p=mix(p,runNeck+(p-runNeck)*1.40,runHead*running);
+   // Gait in-betweens belong to the legs, never the face or upper torso.
+   vec2 legShift=clamp(displacement/max(weight,.001),vec2(-.035),vec2(.035));
+   p=original+legShift*smoothstep(.56,.70,original.y);
+   // Preserve the authored head size at every gait; no run-to-idle inflation.
    float chest=(1.-smoothstep(.59,.72,original.y));
    p.y+=sin(time*1.7)*.002*chest*(1.-reduced);
  }
@@ -65,22 +65,9 @@ export function runNeckFor(frame:number):Point {
  const keys:Point[]=[[.36,.72],[.38,.73],[.40,.76],[.40,.72]],q=((frame%32)+32)%32/8,k=Math.floor(q),t=q-k;
  return [keys[k][0]*(1-t)+keys[(k+1)%4][0]*t,keys[k][1]*(1-t)+keys[(k+1)%4][1]*t];
 }
-const smooth=(a:number,b:number,v:number)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
-export function warpMotionPoint(point:Point,frame:number):Point {
- if(frame<0||frame>=32)return [...point];
- const [nx,ny]=runNeckFor(frame),[x,y]=point,m=(1-smooth(nx-.035,nx+.065,x))*(1-smooth(ny-.07,ny+.035,y));
- return [x+(x-nx)*.4*m,y+(y-ny)*.4*m];
-}
-export function unwarpMotionPoint(point:Point,frame:number):Point {
- if(frame<0||frame>=32)return [...point];
- let [x,y]=point;const h=.0001;
- for(let i=0;i<8;i++){
-  const p=warpMotionPoint([x,y],frame),ex=p[0]-point[0],ey=p[1]-point[1];if(Math.abs(ex)+Math.abs(ey)<.00001)break;
-  const px=warpMotionPoint([x+h,y],frame),py=warpMotionPoint([x,y+h],frame),a=(px[0]-p[0])/h,b=(py[0]-p[0])/h,c=(px[1]-p[1])/h,d=(py[1]-p[1])/h,det=a*d-b*c;
-  if(Math.abs(det)<.05)break;x-=(d*ex-b*ey)/det;y-=(-c*ex+a*ey)/det;
- }
- return [x,y];
-}
+/** Rendering preserves the authored face, so pointer coordinates do too. */
+export function warpMotionPoint(point:Point,_frame:number):Point {return [...point];}
+export function unwarpMotionPoint(point:Point,_frame:number):Point {return [...point];}
 /** Keep learned touch preferences meaningful when the dog faces us or turns away. */
 export function motionTouchPart(x:number,y:number,frame:number):'cheeks'|'chest'|'shoulders'|'back'|null {
  const front=()=>y<.54?'cheeks':(x<.35||x>.65)&&y<.72?'shoulders':'chest';
