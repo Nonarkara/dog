@@ -383,11 +383,12 @@ function IllustratedStage(props: Props & {url:string}) {
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);
         // Interpolate the leg joints between authored stride drawings, as in
         // the park: animation advances each display frame without new textures.
-        const cycle=index<32?32:index<48?16:0;
+        const cycle=index<32?32:index<48||index>=80?16:0;
+        const gaitFrame=index>=80?elapsed*22:motionPhase*cycle;
         const target=from.map(point=>[...point] as [number,number]);
-        if(cycle){const f=motionPhase*cycle,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
+        if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
         writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);
-        canvas.dataset.strideBlend=String(cycle?motionPhase*cycle%1:0);canvas.dataset.pivoting=String(pivoting&&!movement);
+        canvas.dataset.strideBlend=String(cycle?gaitFrame%1:0);canvas.dataset.pivoting=String(pivoting&&!movement);
         uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
         if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
         const ink=art.displayBox;

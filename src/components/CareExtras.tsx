@@ -12,7 +12,7 @@ export function CareExtras({kind,dog,state,busy,onClose,onBuy,onFeed,onBed,onPre
   {kind==='food'?<>
    <p className="pantry-balance"><Coins size={18}/><span>{Math.floor(g.coins)} paw coins</span><ShoppingBag size={18}/><span>{g.portions} meals</span></p>
    <div className="care-extra-actions"><button className="btn-quiet" disabled={busy||g.coins<6} onClick={onBuy}><ShoppingBag size={18}/>3 meals · 6 coins</button><button className="btn-accent" disabled={busy||state.needs.hunger>=85||g.portions<1&&state.needs.hunger>=35} onClick={onFeed}><Utensils size={18}/>Serve a meal</button></div>
-   <p>A minute of active time together earns 3 coins. Starter food and an emergency bowl keep basic care within reach.</p>
+   <details className="pantry-guide"><summary>Food &amp; rewards</summary><p>A minute of active time together earns 3 coins. Starter food and an emergency bowl keep basic care within reach. Keep regular meals; use tiny training rewards within the daily allowance.</p></details>
   </>:<>
    <div className="care-extra-actions"><button className="btn-accent" disabled={busy||state.sleep.asleep} onClick={onBed}><Moon size={18}/>Tuck {dog.name} in</button><label>Usual wake time <input type="time" min="04:00" max="10:00" value={time} onChange={e=>{const [h,m]=e.target.value.split(':').map(Number);if(Number.isFinite(h)&&Number.isFinite(m))onPreference(h*60+m,g.wakeBark);}}/></label></div>
    <label className="wake-bark"><input type="checkbox" checked={g.wakeBark} disabled={busy} onChange={e=>onPreference(g.wakeMinute,e.target.checked)}/><Volume2 size={18}/>Bark when {dog.name} wakes</label>

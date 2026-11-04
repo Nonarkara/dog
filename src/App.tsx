@@ -1,3 +1,5 @@
+import {describeAbsence} from './domain/absence';
+import {finishParkOuting} from './domain/parkOuting';
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
 import { startCloudSync } from './utils/cloud';
@@ -30,6 +32,7 @@ import {
   saveActiveDogId,
   calculateDogAge,
   loadPetState,
+  loadStoredPetStates,
 } from './utils/dogCalculators';
 import {mutatePet,mutateDogs,resetProgress,type PetMutation,type DogMutation} from './utils/progressStore';
 import {SAVE_KEY} from './utils/saveFormat';
@@ -37,7 +40,6 @@ import { CommandBar,ControlLegend } from './components/CommandBar';
 import type { CareAction } from './components/CommandBar';
 import { CarePanel } from './components/CarePanel';
 import {DogChooser} from './components/DogChooser';
-import {MeterDeltas} from './components/MeterDeltas';
 import { Help } from './components/Help';
 import { Dog, Plus, X, ChevronDown, RotateCcw, Heart, GraduationCap, BookOpen, Trees, ShieldCheck, Download, Eye } from 'lucide-react';
 import {
@@ -117,14 +119,12 @@ const NOTE_TTL_MS = 7000;
  * not, the frame is the truth.
  */
 function useWide(): boolean {
-  // The dashboard needs WIDTH and HEIGHT. Five regions side by side is a
-  // dashboard; five regions in a 768px-tall window are five letterboxes,
-  // each one scrolling to show what it was built to show. So the switch is
-  // made on the space the frame was actually given, not on the width alone.
+  // The current compact lesson fits ordinary laptop windows. Keep a lower
+  // height bound so a very short landscape view can use the tabbed layout.
   const read = () =>
     typeof window === 'undefined'
       ? true
-      : window.innerWidth >= 1024 && window.innerHeight >= 820;
+      : window.innerWidth >= 1024 && window.innerHeight >= 600;
   const [wide, setWide] = useState(read);
   useEffect(() => {
     const onResize = () => setWide(read());
@@ -145,6 +145,8 @@ export const App: React.FC = () => {
     return()=>observer.disconnect();
   },[]);
   const firstGuide=useFirstPlayTips();
+  const [openingPets]=useState(()=>loadStoredPetStates());
+  const toldAbsence=useRef(new Set<string>());
   const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(householdDefaults()));
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
@@ -239,7 +241,18 @@ export const App: React.FC = () => {
   };
   const regionBeforeChooser=useRef<RegionKey>('care');
   // Park <-> home. Coming home from a real outing credits the walk.
-  const togglePark=()=>{setIsDogMenuOpen(false);setLabelsVisible(false);if(activeRegion==='commons'){const trip={...outing.current};outing.current={distance:0,seconds:0};if(trip.seconds>=10&&trip.distance>=120)void commitPet(base=>completeParkWalk(base,Date.now(),trip.seconds,trip.distance)).then(saved=>{if(saved&&saved.game?.lastOutingAt&&Date.now()-saved.game.lastOutingAt<1500)say('Home from a sniff walk: calmer, closer, less bored. +3 paw coins.');});}setActiveRegion(activeRegion==='commons'?'care':'commons');};
+  const togglePark=()=>{
+    setIsDogMenuOpen(false);setLabelsVisible(false);
+    if(activeRegion==='commons'){
+      const id=activeDogId,trip={...outing.current};outing.current={distance:0,seconds:0};
+      if(trip.seconds>=10&&trip.distance>=120){
+        let report:string|null=null;
+        void commitPet(base=>{const result=finishParkOuting(base,Date.now(),trip.seconds,trip.distance);report=result.note;return result.state;})
+          .then(saved=>{if(saved&&report&&activeDogRef.current===id)say(report);});
+      }
+    }
+    setActiveRegion(activeRegion==='commons'?'care':'commons');
+  };
   const closeDogChooser=()=>{setIsDogMenuOpen(false);setActiveRegion(regionBeforeChooser.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-controls="dog-switcher"]')?.focus());};
   const toggleDogChooser=()=>{
     if(isDogMenuOpen){closeDogChooser();return;}
@@ -429,6 +442,8 @@ export const App: React.FC = () => {
     noteTimer.current = window.setTimeout(() => setNote(null), NOTE_TTL_MS);
   };
 
+  useEffect(()=>{if(toldAbsence.current.has(activeDogId))return;const before=openingPets[activeDogId];if(!before)return;const report=describeAbsence(before,petState);toldAbsence.current.add(activeDogId);if(report)say(report);},[activeDogId]);
+
   useEffect(() => () => {
     if (noteTimer.current) window.clearTimeout(noteTimer.current);
   }, []);
@@ -443,6 +458,7 @@ export const App: React.FC = () => {
   const handleInteract = async (action: CareAction,part?:TouchPart) => {
     if(isAddDogOpen)return;
     if (interactionBusy.current) return;
+    if(action==='walk'&&activeRegion!=='commons'){if(petState.sick||petState.sleep.asleep){say(`${currentDog.name} needs rest before a walk.`);return;}setCareExtra(null);setActiveRegion('commons');say('Tap the ground to walk together. Come home after a little exploring.');return;}
     if(action==='pet'){firstGuide.show('pet');setPetPulse(n=>n+1);}
     interactionBusy.current=true;
     const id=activeDogId;
@@ -477,7 +493,8 @@ export const App: React.FC = () => {
     if(activeDogRef.current!==id)return;
     if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
     setInteractionTrigger(trigger);say(message);
-    if(action==='walk'&&trigger){setCareExtra(null);setActiveRegion('commons');}
+    if(action==='feed'&&/pantry is empty/i.test(message))setCareExtra('food');
+    else if(action==='feed'&&trigger)setCareExtra(null);
     actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);setInteractionTrigger(null);},2000);
   };
 
@@ -620,9 +637,9 @@ export const App: React.FC = () => {
   const renderRegion = (key: RegionKey) => {
     switch (key) {
       case 'care':
-        if(careExtra&&!isDogMenuOpen&&!labelsVisible)return <CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>;
+
         if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
-        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} onHome={home=>void commitPet(s=>({...s,home}))} onPalette={palette=>handleUpdateCurrentDog(dog=>({...dog,avatarConfig:{...dog.avatarConfig,palette}}))}/>;
+        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} extras={careExtra?<CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>:undefined} onPantry={()=>{firstGuide.close();setNote(null);setCareExtra(careExtra==='food'?null:'food');setLabelsVisible(false);setIsDogMenuOpen(false);}} onHome={home=>void commitPet(s=>({...s,home}))} onPalette={palette=>handleUpdateCurrentDog(dog=>({...dog,avatarConfig:{...dog.avatarConfig,palette}}))}/>;
       case 'coach':
         return (
           <Suspense fallback={<RegionLoading label="Coach" />}>
@@ -688,6 +705,7 @@ export const App: React.FC = () => {
 
           </div>
 
+          <div className="header-instruments">
           <button type="button" className={`btn-quiet park-navigation ${activeRegion==='commons'?'park-navigation--home':''}`} aria-label={activeRegion==='commons'?'Back to dog':'Open Commons park'} onClick={()=>togglePark()}><Trees size={20}/><span>{activeRegion==='commons'?'Home':'Park'}</span></button>
           <button type="button" className="btn-quiet companion-toggle" aria-label="Quiet companion view" title="Quiet companion view" aria-pressed={companionView} onClick={()=>{firstGuide.close();setCompanionView(v=>!v);if(activeRegion==='commons')togglePark();else setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}><Eye size={19}/></button>
           {/* The facts about the dog you are with. */}
@@ -708,6 +726,7 @@ export const App: React.FC = () => {
           >
             <RotateCcw size={13} aria-hidden="true" />
           </button>
+          </div>
         </div>
       </header>
 
@@ -735,7 +754,7 @@ export const App: React.FC = () => {
           </h1>
           <div className="panel-body">
             <div className="stage-frame" data-feedback={!!note}>
-            <MeterDeltas petState={petState} dogId={activeDogId}/>
+
               {petState.away&&<div className="stage-away" role="status"><p><strong>{currentDog.name} slipped out.</strong> Three days without care was too long. He's in the park, wary — go and win him back.</p><button type="button" className="btn-accent" onClick={()=>togglePark()}>Go to the park</button></div>}
               <div className="stage-canvas">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>
@@ -790,7 +809,7 @@ export const App: React.FC = () => {
                 on every interaction); a multi-line first-play tip still takes its own row. */}
             <div className={`stage-note-slot ${firstGuide.tip&&!saveError?'stage-note-slot--guide':''}`} data-open={!!stageNote||!!firstGuide.tip}>
             {firstGuide.tip&&!saveError&&<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>}
-            {stageNote && (
+            {stageNote&&(!firstGuide.tip||!!saveError||!!legacyWarning)&&(
               <div className="bar bar--note" role="status" key={stageNote.id}>
                 <p className="text-[12px] leading-snug text-zinc-100 flex-1 min-w-0 truncate" title={stageNote.text}>
                   {stageNote.text}
@@ -960,7 +979,7 @@ export const App: React.FC = () => {
         petState={petState}
         isInteracting={isInteracting||isAddDogOpen}
         pendingAction={pendingAction}
-        onInteract={action=>{if(action==='feed'){setCareExtra('food');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}else void handleInteract(action);}}
+        onInteract={action=>{if(action==='feed'){setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}void handleInteract(action);}}
         onCommunicate={handleCommunicate}
         onBed={()=>{setCareExtra('bed');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}
       />}

@@ -68,6 +68,9 @@ export function whyCalling(state: PetState, now: number = Date.now()): CallReaso
   if (state.sleep?.asleep) return null;
   if (state.sick) return 'sick';
   if(dailyLife(state).bladder>=70)return 'toilet';
+  // Match the Care sentence: a hungry dog can ask for food even when
+  // there is also a mess. Following the visible advice must answer the call.
+  if (state.needs.hunger < 35) return 'hungry';
   if ((state.poopCount ?? 0)+dailyLife(state).peeCount > 0) return 'dirty';
   for (const c of NEED_CALLS) if (state.needs[c.need] < c.below) return c.reason;
   // Legacy save key: an overstimulated dog needs an outlet, not punishment.

@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:domain": "esbuild src/domain/selftest.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/selftest.mjs --log-level=error && node node_modules/.cache/selftest.mjs",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "test:care": "esbuild scripts/test-care-domain.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/care-tests.mjs --log-level=error && node node_modules/.cache/care-tests.mjs",
+    "test:auth": "esbuild scripts/test-email-auth.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/auth-tests.mjs --log-level=error && node node_modules/.cache/auth-tests.mjs"
   },
   "dependencies": {
     "@clerk/backend": "3.26.5",

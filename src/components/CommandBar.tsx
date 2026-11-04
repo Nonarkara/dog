@@ -94,8 +94,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if(document.querySelector('.dog-chooser,.control-reference'))return;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if(document.querySelector('dialog[open],.dog-chooser,.control-reference'))return;
+      if (target && (target.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(target.tagName))) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isSick && (e.key === 'm' || e.key === 'M')) {
         e.preventDefault();
