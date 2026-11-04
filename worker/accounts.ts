@@ -369,7 +369,7 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   if (path === '/api/dog' && request.method === 'PUT') {
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > MAX_BACKUP_BYTES) return json({ error: 'That save is too large.' }, 413);
-    let body: { revision?: unknown; backup?: unknown; expectedAccountId?: unknown };
+    let body: { revision?: unknown; backup?: unknown; expectedAccountId?: unknown; baseRevision?: unknown };
     try {
       body = JSON.parse(raw);
     } catch {
@@ -378,23 +378,30 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     // The cookie may have changed in another tab after this game reconciled.
     if (body.expectedAccountId !== undefined && body.expectedAccountId !== user.id)
       return json({ error: 'The signed-in account changed. Reopen Own mode before saving.' }, 409);
+    const hasBase=body.baseRevision!==undefined;
+    const baseRevision=body.baseRevision;
+    if(hasBase&&baseRevision!==null&&(!Number.isSafeInteger(baseRevision)||Number(baseRevision)<0))
+      return json({error:'Not a valid save base.'},400);
     const revision = Number(body.revision);
     const backup = body.backup;
     if (!Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS) || backup.save.revision !== revision)
       return json({ error: 'Not a dog save.' }, 400);
     const name = clean(backup.adoption?.name, 24) || 'Dog';
     // Check the revision inside the write: two devices can pass a separate
-    // SELECT simultaneously, then arrive here in the opposite order.
+    // SELECT simultaneously, then arrive here in the opposite order. New
+    // clients also compare their observed server base: equal local counters
+    // can represent different care. An older client with no base may only
+    // create the initial row or retry exact bytes; otherwise it must reload.
     const saved = await env.DB.prepare(
       'INSERT INTO dogs (user_id, name, dog_id, revision, backup, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
         'ON CONFLICT(user_id) DO UPDATE SET name = excluded.name, dog_id = excluded.dog_id, revision = excluded.revision, backup = excluded.backup, updated_at = excluded.updated_at ' +
-        'WHERE excluded.revision >= dogs.revision'
+        'WHERE excluded.revision >= dogs.revision AND ((? = 1 AND dogs.revision = ?) OR (excluded.revision = dogs.revision AND excluded.backup = dogs.backup))'
     )
-      .bind(user.id, name, String(backup.adoption!.dogId), revision, JSON.stringify(backup), Date.now())
+      .bind(user.id, name, String(backup.adoption!.dogId), revision, JSON.stringify(backup), Date.now(), hasBase?1:0, baseRevision??-1)
       .run();
     if (!saved.meta?.changes) {
       const stored = await env.DB.prepare('SELECT revision FROM dogs WHERE user_id = ?').bind(user.id).first<{ revision: number }>();
-      return json({ ok: false, newer: stored?.revision }, 409);
+      return json({ ok: false, newer: stored?.revision, error:'The cloud copy changed. Reopen Own mode before saving.' }, 409);
     }
     return json({ ok: true, revision });
   }
