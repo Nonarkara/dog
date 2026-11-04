@@ -216,8 +216,8 @@ export function IllustratedPark(props:Props){
     const desiredHeading=moving?Math.atan2(a.ty-a.y,a.tx-a.x):a.heading;
     const error=Math.atan2(Math.sin(desiredHeading-a.heading),Math.cos(desiredHeading-a.heading));
     a.heading=turnAngle(a.heading,desiredHeading,dt*4.4);
-    const playSpeed=a.mode==='chase'?126:a.mode==='flee'?112:a.mode==='visit'||a.mode==='walkto'?62:null;
-    const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?52:distance>100*unit||dx||dy?118:76):40))*unit*(PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error)):0;
+    const playSpeed=a.mode==='chase'?90:a.mode==='flee'?80:a.mode==='visit'||a.mode==='walkto'?48:null;
+    const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?40:distance>100*unit||dx||dy?78:58):30))*unit*Math.min(1.08,PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error)):0;
     a.speed+=(wantedSpeed-a.speed)*(1-Math.exp(-dt*(moving?7:11)));
     if(!moving&&(now<a.petUntil||now<a.sniffUntil||now<a.bowUntil||still(a.mode)||(a.own&&resting)))a.speed=0;
     const step=moving?Math.min(distance,a.speed*dt):0;let traveled=0;
@@ -260,7 +260,7 @@ export function IllustratedPark(props:Props){
     // Park tails spool like stage tails: quick to speed up, slow to settle.
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
-    a.mesh.renderOrder=Math.round(a.y+1000);if(r){const size=animated?a.w/.80*(a.motionFrame<32?1.30:1):a.w/(r.right-r.left);a.h=size*(r.bottom-r.top)+(animated&&a.motionFrame<32?size*.09:0);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
+    a.mesh.renderOrder=Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
      for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
     if(a.own){canvas.dataset.paws=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));canvas.dataset.gaitBlend=String(a.blend);}

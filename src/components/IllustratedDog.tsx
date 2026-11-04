@@ -93,7 +93,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const p=latest.current;if(!readyRef.current||p.petState.sick||p.petState.sleep?.asleep||p.pose&&p.pose!=='stand')return;
     if(!fromGame&&(!canPlay()||gameRef.current||findingRef.current))return;
     if(funTimer.current)clearTimeout(funTimer.current);if(!fromGame)setFetchConfused(false);
-    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?3100:kind==='turn'?1600:kind==='away'?60000:kind==='back'?600:2400)};
+    const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?4000:kind==='turn'?2000:kind==='away'?60000:kind==='back'?600:2400)};
     fun.current=next;setTrick(next);
     const text=kind==='highfive'?'Tap my paw!':kind==='bow'?'Come on, let’s play!':kind==='zoomies'?(dog.id==='paolo-pug'?'Tiny pug zoomies!':'Zoomies!'):kind==='tilt'?'Did you say… treat?':kind==='come'?'Let me have a sniff!':kind==='turn'?'A little look around.':personality.greeting;
     if(!findingRef.current&&kind!=='away'&&kind!=='back')showCheer(text);
@@ -346,16 +346,15 @@ function IllustratedStage(props: Props & {url:string}) {
       uniforms.reduced.value=reduced.matches?1:0;uniforms.time.value=reduced.matches?0:t;
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
-      const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*personality.pace:0;
-      // THE TURN, NOT THE MIRROR: when the catch game sends him the other
-      // way, his facing eases through edge-on instead of flipping — a dog
-      // pivots, he does not reflect.
-      const faceTarget=lesson?.facing??(zoom>.2?(Math.cos(zTime*5)>0?-1:1):leap.current.direction===1?-1:1);
+      const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*Math.min(1,personality.pace):0;
+      // Facing progress selects authored turn views. It never squeezes the
+      // mesh through zero width, including when an atlas is unavailable.
+      const faceTarget=lesson?.facing??(zoom>.2?(Math.cos(zTime*2.2)>0?-1:1):leap.current.direction===1?-1:1);
       facingE.v+=(faceTarget-facingE.v)*(1-Math.exp(-dt*10));
       const growth=growthStage(p.petState);uniforms.puppy.value=1-growth.progress;outgoingUniforms.puppy.value=uniforms.puppy.value;
       const size=growth.scale*(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
-      const runX=Math.sin(zTime*5)*Math.min(.4,room)*zoom;
-      skin.scale.set(facingE.v*size,size,1);
+      const runX=Math.sin(zTime*2.2)*Math.min(.4,room)*zoom;
+      skin.scale.set((faceTarget<0?-1:1)*size,size,1);
       const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
       driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
       skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
@@ -367,24 +366,24 @@ function IllustratedStage(props: Props & {url:string}) {
         const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;motionPhase+=Math.min(.1,Math.abs(delta))/.66;
         let index:number,face=1,scale=1;
         if(pivoting&&!movement)index=48+Math.min(31,Math.round(faceTarget<0?(1-facingE.v)*8:16+(1+facingE.v)*8));
-        else if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/1.6*32));
+        else if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/2*32));
         // Three cups: turn until his back is to you (frame 24 of the turn), hold, then turn home.
         else if(kind==='away')index=MOTION_LAYOUT.turnStart+Math.min(24,Math.floor(elapsed/1.2*24));
         else if(kind==='back')index=elapsed>=.5?MOTION_LAYOUT.turnStart:MOTION_LAYOUT.turnStart+24+Math.min(7,Math.floor(elapsed/.5*8));
         else if(kind==='come'){
-          const approach=Math.min(1,elapsed/1.5);scale=.90+.10*approach;
-          index=elapsed<1.5?MOTION_LAYOUT.towardStart+Math.floor(elapsed*22)%16:elapsed<2.2?56:48+Math.round(8*(1-Math.min(1,(elapsed-2.2)/.7)));
+          const approach=Math.min(1,elapsed/2);scale=.90+.10*approach;
+          index=elapsed<2?MOTION_LAYOUT.towardStart+Math.floor(elapsed*14)%16:elapsed<2.7?56:48+Math.round(8*(1-Math.min(1,(elapsed-2.7)/.9)));
         }else{
-          const d=zoomies?Math.cos(zTime*5):delta;
+          const d=zoomies?Math.cos(zTime*2.2):delta;
           const turning=zoomies&&Math.abs(d)<.35;
-          if(turning)index=48+Math.round((Math.sin(zTime*5)>0?8:24)+(d/.35)*4)%32;
-          else{const fast=zoomies||idle==='trotting';index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);face=d>0?-1:1;scale=fast?1.30:1;}
+          if(turning)index=48+Math.round((Math.sin(zTime*2.2)>0?8:24)+(d/.35)*4)%32;
+          else{const fast=zoomies||idle==='trotting';index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);face=d>0?-1:1;scale=1;}
         }
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);
         // Interpolate the leg joints between authored stride drawings, as in
         // the park: animation advances each display frame without new textures.
         const cycle=index<32?32:index<48||index>=80?16:0;
-        const gaitFrame=index>=80?elapsed*22:motionPhase*cycle;
+        const gaitFrame=index>=80?elapsed*14:motionPhase*cycle;
         const target=from.map(point=>[...point] as [number,number]);
         if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
         writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);

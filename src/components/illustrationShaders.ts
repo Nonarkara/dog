@@ -14,7 +14,8 @@ export const VERTEX = `
   void main(){
     vUv=uv;
     vec2 original=vec2(uv.x,1.-uv.y),p=original;
-    float head=(1.-smoothstep(headPivot.y-.04,headPivot.y+.09,p.y))*(1.-smoothstep(headPivot.x+.03,headPivot.x+.14,p.x));
+    // The face moves as one region; blend only through the neck, below the jaw.
+    float head=(1.-smoothstep(headPivot.y+.08,headPivot.y+.18,p.y))*(1.-smoothstep(headPivot.x+.08,headPivot.x+.18,p.x));
     float torso=smoothstep(.29,.45,p.y)*(1.-smoothstep(.64,.80,p.y));
     float legs=smoothstep(legStart,legStart+.14,p.y);
     float nearFront=band(p.x,feet.x,.05)*legs;
@@ -36,18 +37,13 @@ export const VERTEX = `
     p.y+=(bodyBreath+walk*abs(sin(phase))*.008)*torso*(1.-legs);
     p.x+=more.z*sin(time*27.)*.0025*(torso+head)*(1.-reduced);
     p.x=.47+(p.x-.47)*profile.x;
-    p.y+=profile.y*mix((.91-p.y)*.16,.08,head);
+    p.y+=profile.y*(.91-p.y)*.16*(1.-head);
     // Sitting and resting anatomy comes from authored poses, not a flattened standing skin.
     p.y+=(settling*.028)*torso;
 
     float bow=motion.w*.035*(1.-reduced);
     p.y+=bow*head;
-    // A BLINK: the fur of the brow dips down over each eye for a beat. The
-    // band is computed in original coordinates so it rides the head turn.
-    float exx=min(abs(original.x-eyes.x),abs(original.x-eyes.z));
-    float eyy=original.y-eyes.y;
-    float lid=step(0.,eyy)*(1.-smoothstep(0.,.045,eyy))*(1.-smoothstep(.045,.095,exx));
-    p.y-=lid*blink*.028;
+    // Blink only at the eyes above; a broad lid band would tug the cheeks.
     float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
     vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
     // A real dog nods at stride frequency — the head leads each forepaw's landing.
@@ -69,7 +65,11 @@ export const VERTEX = `
     if(morphAmount>.001){
       vec2 shift=vec2(0.);float total=0.;
       for(int i=0;i<8;i++){float d=distance(original,morphFrom[i]);float w=1./(d*d*d*d+.00008);shift+=(morphTo[i]-morphFrom[i])*w;total+=w;}
-      p+=shift/max(total,.001)*morphAmount;
+      // Different drawings must not pull the eyes and muzzle apart. Translate
+      // the complete face by its eye-center delta; bound the body's residual.
+      vec2 faceShift=((morphTo[0]+morphTo[1])-(morphFrom[0]+morphFrom[1]))*.5;
+      vec2 bodyShift=clamp(shift/max(total,.001),vec2(-.035),vec2(.035));
+      p+=mix(bodyShift,faceShift,head)*morphAmount;
     }
     gl_Position=projectionMatrix*modelViewMatrix*vec4((p.x-.5)*2.,(.5-p.y)*2.,0.,1.);
   }
