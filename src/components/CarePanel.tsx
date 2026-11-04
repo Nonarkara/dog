@@ -1,3 +1,4 @@
+import {MeterDeltas} from './MeterDeltas';
 import {CloudSaveStatus} from './CloudSaveStatus';
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
@@ -15,13 +16,15 @@ import { happiness, readiness, sickCause, temperament } from '../domain/pet';
 import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
 import {ILLUSTRATIONS} from '../data/dogIllustrations';
 import {PhotoBooth} from './PhotoBooth';
-import {Camera} from 'lucide-react';
+import {Camera,ShoppingBag} from 'lucide-react';
 import {THEME_CHOICES} from '../data/dogThemes';
 
 interface CarePanelProps {
   dog: DogProfile;
   petState: PetState;
   detailView?:boolean;
+  extras?:React.ReactNode;
+  onPantry?:()=>void;
   onHome?:(home:HomeId)=>void;
   onPalette?:(palette:string)=>void;
 }
@@ -68,7 +71,7 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, onHome, onPalette }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette }) => {
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const [booth,setBooth]=useState(false);
@@ -120,13 +123,14 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   };
 
   return (
-    <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''}`} aria-label="Care">
+    <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''} ${extras?'care-console--extras':''}`} aria-label="Care">
       <header className="panel-head">
         <h2 className="label text-zinc-300">Care</h2>{!detailView&&playMode()==='own'&&<CloudSaveStatus/>}
         <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, calm. A red bar needs you. The line under Now says the one thing to do next."/>
         <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}
         </span>
+        {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
         {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
         {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
       </header>
@@ -173,6 +177,9 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
             );
           })}
         </div>
+
+        {!detailView&&<MeterDeltas petState={petState} dogId={dog.id}/>}
+        {extras}
 
         {/* The sentence: advice, health, discipline and time together */}
         <div className="care-now border-hairline-t">

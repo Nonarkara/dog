@@ -1233,3 +1233,40 @@ html {font-synthesis:none;}
 /* A short lesson earns its own height, not the remaining desktop column. */
 .cockpit-workspace--wide .desktop-detail>.region-coach{flex:0 1 auto;height:auto;max-height:100%;}
 .cockpit-workspace--wide .desktop-detail>.region-coach>.panel-body{flex:0 1 auto;}
+
+/* Explicit pantry/bedtime tasks stay beside the readout; never over the dog. */
+.care-console--extras .care-now{display:none;}
+.care-console>.care-body>.care-extras{height:auto;flex:none;border:0;border-top:1px solid var(--border-dim);}
+.care-console .care-extras .panel-head{padding-inline:0;}
+.care-pantry-toggle{min-width:28px;min-height:28px;padding:4px;}
+.care-console>.care-body>.meter-deltas{position:static;transform:none;max-width:100%;flex-direction:row;justify-content:flex-start;min-height:0;gap:2px 6px;}
+.care-console .meter-delta{padding:0;border:0;background:transparent;font-size:12px;}
+@media(max-width:339px){.park-drawers{flex-wrap:wrap;}.park-drawers .park-camera{margin-left:auto;}.park-selected-inline{min-width:0;}}
+.pantry-guide{font-size:13px;line-height:1.35;}.pantry-guide summary{cursor:pointer;min-height:24px;}.pantry-guide p{padding-block:4px;}
+@media(prefers-reduced-motion:reduce){.care-console .meter-delta{animation:none;}}
+/* Keep the command cluster together when a player enlarges the handwriting. */
+.cockpit>header>div{height:auto;min-height:44px;flex-wrap:wrap;row-gap:0;}
+.header-instruments{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0;}
+@media(max-width:639px){.header-instruments{flex:0 0 auto;margin-left:auto;gap:6px;}}
+.care-pantry-toggle{min-width:34px;min-height:34px;}
+@media(max-width:339px){
+ .park-drawers{flex-wrap:nowrap;gap:2px;padding-inline:2px;}
+ .park-drawers>button:nth-of-type(2)>span{display:none;}
+ .park-selected-inline>button{width:32px;min-width:32px;}
+}
+/* One task header, one meter row: a short-phone pantry cannot become a second hero. */
+.care-console--extras>.panel-head{display:none;}
+.care-console .care-extras .panel-head{padding-block:1px;}
+.care-console .care-extras .panel-head button{min-height:32px;padding-block:2px;}
+@container dog-care (min-width:280px){.care-console:not(.care-detail-view) .care-meter-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;}}
+@media(max-width:639px){.header-instruments .park-navigation{padding-inline:6px;}}
+@media(max-width:339px){
+ .command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent){width:32px;min-width:32px;height:32px;min-height:32px;padding:2px;}
+ .command-bar.icon-commands,.command-bar.icon-commands>div:first-child{gap:2px;}
+}
+/* Commands may wrap into meaningful rows instead of hiding the last skill. */
+.cockpit-workspace--wide [data-practice-behaviour]>div:first-child{flex-wrap:wrap;overflow:visible;}
+@media(max-width:300px){
+ .cockpit:has(.cockpit-workspace--park) .companion-toggle{display:none;}
+ .cockpit:has(.cockpit-workspace--park) .park-navigation--home span{display:none;}
+}

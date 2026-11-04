@@ -13,6 +13,7 @@ import {dayKey, whyCalling, type CallReason} from './attention';
 import {decay} from './pet';
 import {captureOf, LEARN_ORDER, LEARNED} from './capture';
 import {growthStage} from './growth';
+import {gameState} from './companionGame';
 
 export type CareKind='feed'|'play'|'pet'|'walk'|'train'|'cups'|'answered'|'missed';
 export type CareLog=Partial<Record<CareKind,number>>;
@@ -70,8 +71,10 @@ export const WISH_TRUST=3, WISH_COINS=5;
 export function grantWish(s:PetState,kind:WishKind,now:number):{state:PetState;granted:boolean}{
   const w=wishFor(s,now);
   if(w.done||w.kind!==kind)return {state:s.wish?.day===w.day?s:{...s,wish:w},granted:false};
-  const coins=Math.min(200,(s.game?.coins??18)+WISH_COINS);
-  return {state:{...s,wish:{...w,done:true},trust:Math.min(100,s.trust+WISH_TRUST),game:s.game?{...s.game,coins}:s.game},granted:true};
+  // Fresh and older saves may not yet have a materialized pantry. Award
+  // the promised coins without losing active-time income awaiting collection.
+  const game=gameState(s),coins=Math.min(200,game.coins+WISH_COINS);
+  return {state:{...s,wish:{...w,done:true},trust:Math.min(100,s.trust+WISH_TRUST),game:{...game,coins}},granted:true};
 }
 
 /* -------------------------------------------------------------- birthday */

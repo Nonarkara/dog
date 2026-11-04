@@ -341,7 +341,7 @@ function decayStep(state:PetState,now:number):PetState {
   const daily=advanceDailyLife(state,factor*60,now);
   const mess=(state.poopCount??0)+dailyLife(state).peeCount;
   const poopAcc=1+mess*1.5;
-  const nextHygiene=clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor);
+  const nextHygiene=Math.max(Math.min(state.needs.hygiene,12),clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor));
   let isSick=state.sick??false,sickSince=state.sickSince;
   if(!isSick&&((daily.poopCount+daily.life.peeCount>=2&&nextHygiene<25)||daily.life.lowFullnessMinutes>=180)){
     isSick=true;sickSince=now;
