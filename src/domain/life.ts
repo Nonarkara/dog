@@ -99,12 +99,12 @@ export function outOfQuietHours(t:number):number{
   morning.setUTCHours(7,0,0,0);return morning.getTime()-7*3_600_000;
 }
 /** When he would next call, if nobody opened the app. At least two hours away. */
-export function nextCallAt(s:PetState,now:number):{at:number;reason:CallReason}|null{
+export function nextCallAt(s:PetState,now:number,adjustTime:((at:number)=>number)=outOfQuietHours):{at:number;reason:CallReason}|null{
   let state=s;
   for(let t=now+STEP;t<=now+AHEAD;t+=STEP){
     state=decay(state,t);
     const r=whyCalling(state,t);
-    if(r&&PUSHABLE.includes(r))return {at:outOfQuietHours(Math.max(t,now+MIN_GAP)),reason:r};
+    if(r&&PUSHABLE.includes(r))return {at:adjustTime(Math.max(t,now+MIN_GAP)),reason:r};
   }
   return null;
 }

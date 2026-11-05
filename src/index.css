@@ -1272,3 +1272,9 @@ html {font-synthesis:none;}
  .cockpit:has(.cockpit-workspace--park) .companion-toggle{display:none;}
  .cockpit:has(.cockpit-workspace--park) .park-navigation--home span{display:none;}
 }
+/* Reminder choices live with care details; no new stage chrome. */
+.push-offer-controls{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;}
+.push-offer-controls .btn-quiet{display:inline-flex;align-items:center;gap:5px;min-height:34px;}
+.push-offer-controls label{display:inline-flex;align-items:center;gap:5px;min-height:34px;cursor:pointer;}
+.push-offer>p{margin-top:3px;line-height:1.35;}
+.care-console--extras .push-offer{display:none;}

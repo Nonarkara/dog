@@ -11,7 +11,7 @@
     "deploy": "vite build && wrangler deploy",
     "test:care": "esbuild scripts/test-care-domain.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/care-tests.mjs --log-level=error && node node_modules/.cache/care-tests.mjs",
     "test:auth": "esbuild scripts/test-email-auth.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/auth-tests.mjs --log-level=error && node node_modules/.cache/auth-tests.mjs",
-    "test:push": "esbuild scripts/test-push-schedules.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/push-tests.mjs --log-level=error && node node_modules/.cache/push-tests.mjs"
+    "test:push": "node scripts/test-push.cjs"
   },
   "dependencies": {
     "@clerk/backend": "3.26.5",
