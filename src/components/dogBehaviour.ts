@@ -8,17 +8,25 @@ export function behaviourPool(state:PetState):DogBehaviour[]{
  const mood=dailyMood(state);
  if(mood==='sleeping')return ['sleeping'];if(mood==='sick')return ['resting','sighing'];
  if(mood==='tired')return ['resting','yawning','sighing'];
- if(mood==='hungry'||state.call?.reason==='lonely')return ['paw-screen','nose-nudge','looking'];
  if(mood==='toilet')return ['sniffing','wandering'];
- if(mood==='bored')return ['paw-screen','head-tilt','sighing','nose-nudge'];
+ // A call is the loudest thing in the room. He acts it out: he paws at the
+ // screen, he noses your hand, he looks at you and waits. He still walks —
+ // a dog that has called you does not then stand there like furniture.
+ if(state.call)return ['paw-screen','nose-nudge','looking','head-tilt','wandering','sniffing'];
+ if(mood==='hungry')return ['paw-screen','nose-nudge','looking','wandering'];
+ if(mood==='bored')return ['paw-screen','head-tilt','sighing','nose-nudge','wandering'];
  const pool:DogBehaviour[]=['watching','looking','sniffing','wandering','sitting','ear-twitch','head-tilt','tail-wag','yawning','nose-nudge'];
  if(state.needs.hygiene<70)pool.push('scratch','shake');else pool.push('shake');
  if(state.needs.energy>45&&state.trust>50)pool.push('stretching','play-bow','trotting');
  if(state.needs.energy<65)pool.push('resting','sighing');
  return pool;
 }
+/** Give walking enough weight to appear between quiet acts. */
+const behaviourWeight=(k:DogBehaviour)=>k==='wandering'||k==='trotting'?4:k==='watching'||k==='sitting'||k==='looking'?1:2;
 export function chooseBehaviour(state:PetState,previous:DogBehaviour,random=Math.random):{kind:DogBehaviour;duration:number}{
  const candidates=behaviourPool(state),pool=candidates.length>1?candidates.filter(k=>k!==previous):candidates;
- const kind=pool[Math.min(pool.length-1,Math.floor(random()*pool.length))];
+ const total=pool.reduce((n,k)=>n+behaviourWeight(k),0);
+ let roll=random()*total,kind=pool[pool.length-1];
+ for(const k of pool){roll-=behaviourWeight(k);if(roll<0){kind=k;break;}}
  return {kind,duration:kind==='wandering'||kind==='resting'?5.5:kind==='watching'?4:3};
 }

@@ -70,15 +70,18 @@ export async function sendDuePushes(env: PushEnv): Promise<number> {
   // Installs untouched for a month are gone; this keeps the table small.
   await env.DB.prepare('DELETE FROM push_subs WHERE updated_at < ?').bind(now - 30 * 86_400_000).run();
   // Free plan: about 50 subrequests per run, so 40 at a time; the rest go next run.
-  const { results } = await env.DB.prepare('SELECT endpoint FROM push_subs WHERE due_at > 0 AND due_at <= ? ORDER BY due_at LIMIT 40').bind(now).all<{ endpoint: string }>();
+  const { results } = await env.DB.prepare('SELECT endpoint, due_at, updated_at FROM push_subs WHERE due_at > 0 AND due_at <= ? ORDER BY due_at LIMIT 40').bind(now).all<{ endpoint: string; due_at: number; updated_at: number }>();
   const key = await crypto.subtle.importKey('jwk', JSON.parse(env.VAPID_PRIVATE_JWK), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   let sent = 0;
-  for (const { endpoint } of results) {
+  for (const { endpoint, due_at, updated_at } of results) {
     const res = await fetch(endpoint, { method: 'POST', redirect: 'manual', headers: { Authorization: await vapid(endpoint, env, key), TTL: '3600', Urgency: 'normal', 'Content-Length': '0' } }).catch(() => null);
     // Network error, 429 or 5xx: leave it due and try next run.
     if (!res || res.status === 429 || res.status >= 500) continue;
-    if (res.status === 404 || res.status === 410) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(endpoint).run();
-    else await env.DB.prepare('UPDATE push_subs SET due_at = 0 WHERE endpoint = ?').bind(endpoint).run();
+    // A return, disable or new absence may arrive while the provider is replying.
+    // A response belongs only to the schedule selected above; never consume or
+    // delete a newer schedule on that same subscription.
+    if (res.status === 404 || res.status === 410) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ? AND due_at = ? AND updated_at = ?').bind(endpoint, due_at, updated_at).run();
+    else await env.DB.prepare('UPDATE push_subs SET due_at = 0 WHERE endpoint = ? AND due_at = ? AND updated_at = ?').bind(endpoint, due_at, updated_at).run();
     if (res.ok) sent++;
   }
   if (results.length) console.log(`push: ${sent}/${results.length} delivered`);

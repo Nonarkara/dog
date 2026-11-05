@@ -212,8 +212,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           'btn px-2 text-[11px] whitespace-nowrap shrink-0',
           asleep ? 'btn-accent opacity-100' : 'btn-quiet border-hairline',
         ].join(' ')}
-        aria-label={asleep ? `${dog.name} is asleep` : `Put ${dog.name} to bed`}
-        title={asleep ? `${dog.name} is asleep` : 'Put him to bed (6)'}
+        aria-label={`Bedtime and wake options for ${dog.name}`}
+        title={asleep ? `${dog.name} is asleep · Bedtime options` : 'Bedtime and wake options (6)'}
       >
         <Moon size={21} aria-hidden="true" /><span className="sr-only">{asleep ? 'Asleep' : 'Bed'}</span>
       </button>
