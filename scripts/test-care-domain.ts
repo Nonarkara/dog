@@ -2,3 +2,4 @@
 import './test-care-loop';
 import './test-park-rewards';
 import './test-return-summary';
+import './test-call-announcement';

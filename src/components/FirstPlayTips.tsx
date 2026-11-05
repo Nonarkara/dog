@@ -42,7 +42,7 @@ export function useFirstPlayTips(){
   if(/Teach fetch|^Lure$/.test(label)){show('coach');return;}
   if(/3 meals/.test(label)){show('coins');return;}
   if(/Serve a meal|^Feed /.test(label)){show('feed');return;}
-  if(/Tuck .+ in|^Put .+ to bed/.test(label)){show('bed');return;}
+  if(/Tuck .+ in|^Put .+ to bed|^Bedtime and wake options/.test(label)){show('bed');return;}
   if(/^Pet /.test(label)){show('pet');return;}
   if(/^Clean|^Groom/.test(label)){show('clean');return;}
   if(/^Walk /.test(label)){show('walk');return;}

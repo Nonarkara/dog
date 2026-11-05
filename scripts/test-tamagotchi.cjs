@@ -35,7 +35,8 @@ fs.mkdirSync(out, { recursive: true });
   const metrics = [];
   for (const [w, h] of [[390,844], [1024,768], [1440,900], [1280,720]]) {
     await page.setViewportSize({ width: w, height: h });
-    await page.waitForFunction(() => document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide') === (innerWidth >= 1024 && innerHeight >= 820));
+      // Ordinary laptop windows must use the desktop column; this is the product contract.
+    await page.waitForFunction(() => document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide') === (innerWidth >= 1024 && innerHeight >= 600));
     await page.waitForTimeout(300);
     console.log('Viewport',w);
     const geometry = await page.evaluate(() => {

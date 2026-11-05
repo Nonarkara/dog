@@ -667,6 +667,8 @@
 .dog-daily-status>span,.dog-daily-status>button {display:inline-flex;align-items:center;gap:5px;padding:4px 7px;background:var(--bg-surface);max-width:100%;}
 .dog-daily-status>button {pointer-events:auto;min-height:36px;border:1px solid var(--border-dim);}
 .dog-daily-status--sick {color:#9b3347;}
+/* A waiting call uses one steady accent; motion belongs to the dog. */
+.dog-daily-status--call>span,.dog-daily-status--call>button {background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent-hover);}
 .dog-ambient-caption {position:absolute;bottom:8px;left:8px;right:95px;font-size:11px;line-height:1.2;pointer-events:none;color:var(--text-muted);}
 .illustration-puddle {position:absolute;top:calc(var(--dog-floor,90%) - 12px);padding:2px;min-width:48px;min-height:36px;z-index:4;}
 .illustration-mess {top:calc(var(--dog-floor,90%) - 18px);bottom:auto;z-index:4;}
@@ -701,7 +703,7 @@
 .care-history-times {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 10px;}
 .care-history-times>div {gap:4px;}
 .care-history-times dd {font-size:10px;}
-@container dog-care (min-width:600px){.care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));}}
+@container dog-care (min-width:37.5em){.care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));}}
 @container dog-care (max-width:279px){.care-history-times {grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 /* Action feedback owns a row below the canvas, never the dog's floor. */
@@ -1040,7 +1042,7 @@ html {font-synthesis:none;}
 .cockpit main>[role=tablist]>[role=tab],.cockpit .desktop-region-tabs>[role=tab] {min-height:32px;padding-block:2px;}
 .cockpit main>[role=tablist]>[role=tab] svg {width:18px;height:18px;}
 /* Six meters in one row whenever they fit: icon, number, bar. The bar says "percent". */
-@container dog-care (min-width:340px){.care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 8px;}}
+@container dog-care (min-width:21.25em){.care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 8px;}}
 .care-console:not(.care-detail-view) .care-meter-value .text-faint {display:none;}
 .care-console:not(.care-detail-view) .care-meter-value>.data {font-size:15px;}
 .care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:15px;height:15px;}
@@ -1190,7 +1192,7 @@ html {font-synthesis:none;}
 .training-pictures li{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.55;border-bottom:2px solid transparent;}
 .training-pictures li[data-current=true]{opacity:1;border-color:var(--accent);}
 .training-pictures svg{width:100%;height:60px;max-width:112px;}
-.training-pictures span{font-size:13px;white-space:nowrap;}
+.training-pictures span{font-size:13px;white-space:normal;overflow-wrap:anywhere;}
 .capture-status{min-height:1.35em;margin:2px 0;font-size:13px;}
 .capture-actions .capture-primary{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;}
 .practice-attempts--fold{display:block;flex:none;min-height:0;overflow:auto;}
@@ -1258,7 +1260,7 @@ html {font-synthesis:none;}
 .care-console--extras>.panel-head{display:none;}
 .care-console .care-extras .panel-head{padding-block:1px;}
 .care-console .care-extras .panel-head button{min-height:32px;padding-block:2px;}
-@container dog-care (min-width:280px){.care-console:not(.care-detail-view) .care-meter-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;}}
+@container dog-care (min-width:17.5em){.care-console:not(.care-detail-view) .care-meter-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;}}
 @media(max-width:639px){.header-instruments .park-navigation{padding-inline:6px;}}
 @media(max-width:339px){
  .command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent){width:32px;min-width:32px;height:32px;min-height:32px;padding:2px;}
