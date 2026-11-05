@@ -83,11 +83,17 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(new Set(fingerprints).size,5);
   // A visible target governs the score. Five correct choices must always win.
   const trustBeforeGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
+  // A dog who has never practised fetch does not play catch (he bows and asks
+  // to be taught). Give every dog the lesson, as a player who had taught it.
+  await page.evaluate(()=>{const save=JSON.parse(localStorage.getItem('canine_os_save_v3'));for(const pet of Object.values(save.pets))pet.lessons={...pet.lessons,fetch:{...(pet.lessons&&pet.lessons.fetch),stage:1,skill:.6}};localStorage.setItem('canine_os_save_v3',JSON.stringify(save));});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
   await page.getByRole('group',{name:'Care controls'}).getByRole('button', {name:/^Play/}).click();
   for(let round=1;round<=5;round++) {
-    await page.waitForFunction(r => document.querySelector('.catch-hud')?.textContent.includes(`Round ${r}/5`),round);
-    const text = await page.locator('.catch-hud').innerText();
-    await page.getByRole('button',{name:text.includes('BALL ◀ LEFT') ? '◀ Left' : 'Right ▶', exact:true}).click();
+    // Read the round and the ball's side in one step: the HUD re-renders on its
+    // own clock, so a wait followed by a separate read can see the next round.
+    const side = await (await page.waitForFunction(r => { const t = document.querySelector('.catch-hud')?.textContent || ''; return t.includes(`Round ${r}/5`) ? (/ball ◀ left/i.test(t) ? 'left' : 'right') : false; }, round)).jsonValue();
+    await page.getByRole('button',{name:side === 'left' ? '◀ Left' : 'Right ▶', exact:true}).click();
     await page.waitForTimeout(950);
   }
   assert.equal(await page.locator('.catch-hud').count(),0);
@@ -150,7 +156,7 @@ fs.mkdirSync(out, { recursive: true });
   assert.equal(hachiku.breed,'Akita Inu'); assert.equal(hachiku.avatarConfig.baseColor,'#e2d6bb');
   assert.deepEqual(hachiku.distinctiveMarks,['Owner’s Hachiku note']);
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust),savedTrust);
-  assert.equal(dogs.length,7); // Five requested dogs plus two preserved companions.
+  assert.equal(dogs.length,5); // A fresh browser starts with the five household dogs; there are no older companions to preserve.
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/measurements.json`,JSON.stringify(metrics,null,2));
   console.log('PASS: four viewports, five avatars, deterministic catch, close cleanup, dog isolation, coat persistence; zero runtime errors.');
