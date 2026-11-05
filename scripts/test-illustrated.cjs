@@ -9,7 +9,10 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{rec
  const cdp=await p.context().newCDPSession(p);const shot=async name=>{const{data}=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,...p.viewportSize(),scale:1},captureBeyondViewport:true});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const facts=[];
  for(const[w,h]of[[390,844],[1024,768],[1440,900],[1280,720]]){
-  await p.setViewportSize({width:w,height:h});await p.waitForFunction(()=>document.querySelector('.cockpit-workspace').classList.contains('cockpit-workspace--wide')===(innerWidth>=1024&&innerHeight>=820));
+  await p.setViewportSize({width:w,height:h});
+  // The app decides what the wide frame is; the test reads that decision
+  // instead of repeating a threshold that can drift out of date.
+  await p.waitForFunction(v=>{const c=document.querySelector('.cockpit');if(!c||c.dataset.vw!==String(v))return false;const wide=c.dataset.wide==='true';return c.querySelector('.cockpit-workspace').classList.contains('cockpit-workspace--wide')===wide;},w);
   await p.waitForTimeout(4500);
   const m=await p.evaluate(()=>{const c=document.querySelector('canvas'),a=document.querySelector('.command-bar').getBoundingClientRect(),s=document.querySelector('.stage-frame').getBoundingClientRect();return{w:innerWidth,h:innerHeight,pageW:document.documentElement.scrollWidth,pageH:document.documentElement.scrollHeight,fps:+c.dataset.fps,renderer:c.dataset.renderer,triangles:+c.dataset.triangles,calls:+c.dataset.drawCalls,stageW:s.width,stageH:s.height,actionBottom:a.bottom};});
   assert.equal(m.pageW,w);assert.equal(m.pageH,h);assert(m.actionBottom<=h+1);assert(m.stageH>=240);

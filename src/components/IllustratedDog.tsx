@@ -36,6 +36,20 @@ export {ILLUSTRATIONS} from '../data/dogIllustrations';
 // character per authored pose; motion between display frames comes from the rig.
 export {VERTEX,FRAGMENT} from './illustrationShaders';
 
+/**
+ * Scratch vectors. The render loop runs sixty times a second, and a vector
+ * allocated per channel per frame made the collector interrupt the animation
+ * — which reads on screen as stutter. These are written, read, and dropped.
+ */
+const v4a=new THREE.Vector4(),v4b=new THREE.Vector4(),v2a=new THREE.Vector2();
+
+/** Walking pace in world units per second, and the same for a trot. */
+const PACE_WALK=0.78,PACE_TROT=1.34;
+/** How long a turn takes. The authored pivot frames cover the whole turn. */
+const TURN_MS=420;
+/** Behaviours with no visible motion beyond breathing: thirty frames is enough. */
+const STILL_BEHAVIOURS=['watching','looking','sitting','resting','sighing'];
+
 export function IllustratedDog(props: Props) {
   const starter=DEFAULT_DOGS.find(d=>d.id===props.dog.id);
   const fields=['pattern','baseColor','secondaryColor','maskColor','pointColor','furFluff','earShape','tailShape'] as const;
@@ -209,14 +223,23 @@ function IllustratedStage(props: Props & {url:string}) {
     let pixels:Uint8ClampedArray|null=null,imageW=0,imageH=0;
     const masks=new Map<ArtPose,{pixels:Uint8ClampedArray,w:number,h:number}>();
     const loader=new THREE.TextureLoader();
-    let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0;const facingE={v:1};
+    let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0,motionTravel=0;
+    // The widest the dog ever draws, measured once from the atlas. The floor
+    // he stands on is fixed to that, so the clamp never moves from under his
+    // feet and a stride always advances by the ground he truly covered.
+    const floorBox={min:0,max:1};
+    const facingE={v:1};
     const artName=url.split('/').pop()!.replace('.webp','') as MotionArtName;
     // Load optional movement after the base dog is usable; actions never rebuild
     // the renderer or wait for this atlas, and a failed atlas preserves care.
     const atlasTimer=setTimeout(()=>loader.load(`/dogs/motion/${artName}-motion${renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,texture=>{
       if(disposed){texture.dispose();return;}texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;
       const image=texture.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=480;mask.height=576;const context=mask.getContext('2d');
-      if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};setMotionReady(true);
+      if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};
+      // Measure how wide he ever draws, once, so the floor he stands on is fixed.
+      let lo=1,hi=0;
+      for(let i=0;i<MOTION_LAYOUT.frames;i++){const ink=frameArt(artName,i).displayBox;if(ink[0]<lo)lo=ink[0];if(ink[0]+ink[2]>hi)hi=ink[0]+ink[2];}
+      floorBox.min=lo;floorBox.max=hi;setMotionReady(true);
     },undefined,()=>{/* Optional movement never replaces the approved base dog. */}),1200);
     for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow','sick'] as const){
       const source=key==='stand'?url:url.replace('.webp',`-${key}.webp`);
@@ -255,15 +278,22 @@ function IllustratedStage(props: Props & {url:string}) {
     const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))petAt(event);};
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
-    let renders=0,last=0,next=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
+    let renders=0,last=0,next=0,lastInterval=0,start=performance.now();
+    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let driftX=0,paceX=0,paceGoal=1,paceDir=1,pacePhase='idle',paceTurnUntil=0,fitRatio=1,strideShown=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       // Spend frames on motion. Quiet breathing needs fewer; hidden tabs render none.
-      const state=latest.current,active=!!state.interactionTrigger||!!state.poseRequest||!!fun.current||!!gameRef.current||!!findingRef.current||now<reaction.current.petUntil||now-poseChangedAt<transitionDuration||['wandering','trotting','stretching','yawning'].includes(dailyAct)||now-blinkStarted<220;
-      const targetFps=reduced.matches?6:state.petState.sleep?.asleep?12:active?60:30;
+      const state=latest.current;
+      // A still dog only breathes, and breathing survives thirty frames a
+      // second. Everything else — every expression, every step — runs at
+      // sixty, so a movement is never sampled twice on the same beat.
+      const still=!state.interactionTrigger&&!state.poseRequest&&!fun.current&&!gameRef.current&&!findingRef.current&&now>=reaction.current.petUntil&&now-poseChangedAt>=transitionDuration&&STILL_BEHAVIOURS.includes(dailyAct)&&now-blinkStarted>=220;
+      const targetFps=reduced.matches?6:state.petState.sleep?.asleep?12:still?30:60;
       const interval=1000/targetFps;canvas.dataset.targetFps=String(targetFps);
       if(!next)next=now;
+      // A change of rate must not cost a frame: re-grid the schedule instead
+      // of waiting out the interval the previous rate left behind.
+      if(interval!==lastInterval){lastInterval=interval;next=now;}
       if(now+.5<next)return;
       const dt=last?Math.min((now-last)/1000,.1):1/60;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
@@ -286,6 +316,9 @@ function IllustratedStage(props: Props & {url:string}) {
       if(free&&t>=dailyUntil){const act=chooseBehaviour(p.petState,dailyAct);dailyAct=act.kind;dailyUntil=t+act.duration/personality.pace;}
       let idle:string=free?(mood==='sleeping'?'sleeping':mood==='sick'?'sick':toilet?'toileting':mood==='toilet'?'toilet':t-wakeStarted<2.3?'stretching':t-wakeStarted<4.6?'yawning':dailyAct):'watching';
       if(reduced.matches&&!['sleeping','sick','resting','sitting'].includes(idle))idle='watching';
+      // A tired dog lies down and dozes where he stands: eyes closed, still
+      // awake — anything that needs him brings him straight up.
+      if(free&&mood==='tired'&&!asleep&&['resting','sighing','yawning'].includes(idle)){uniforms.blink.value=1;outgoingUniforms.blink.value=1;}
       const actEase=Math.min(1,Math.max(0,Math.min(dailyUntil-t,1)))*(!free||asleep||p.petState.sick||reduced.matches?0:1);
       // DREAMING: a sleeping dog twitches — an ear, a jowl, a paw — every few
       // seconds, because real dogs dream. The ear channel carries it; the
@@ -293,20 +326,20 @@ function IllustratedStage(props: Props & {url:string}) {
       let dreamEase=0;
       if(asleep&&now>nextDream){nextDream=now+3000+Math.random()*5000;dreamEase=1;}
       if(!asleep)nextDream=Math.min(nextDream,now+2500);
-      uniforms.lifeAct.value.lerp(new THREE.Vector4(idle==='yawning'?actEase:0,idle==='ear-twitch'?actEase:dreamEase,idle==='scratch'?actEase:0,idle==='shake'?actEase:0),1-Math.exp(-dt*(asleep?9:5)));
+      uniforms.lifeAct.value.lerp(v4a.set(idle==='yawning'?actEase:0,idle==='ear-twitch'?actEase:dreamEase,idle==='scratch'?actEase:0,idle==='shake'?actEase:0),1-Math.exp(-dt*(asleep?9:5)));
       if(ambientLabel!==idle){ambientLabel=idle;setAmbient(idle);}
       const strolling=free&&!reduced.matches&&(idle==='wandering'||idle==='trotting'||idle==='toilet');
       const sniffing=free&&(idle==='sniffing'||idle==='toilet');
-      const kind=activeFun?.kind,zoomies=kind==='zoomies',wiggling=kind==='wiggle';
+      const kind=activeFun?.kind,zoomies=kind==='zoomies',wiggling=kind==='wiggle',fastGait=zoomies||idle==='trotting';
       const petting=now<reaction.current.petUntil||action==='pet'||wiggling;
-      uniforms.fun.value.lerp(new THREE.Vector4(wiggling||idle==='tail-wag'?personality.wag:0,zoomies?1:0,kind==='tilt'||idle==='head-tilt'?1:0,personality.pace),1-Math.exp(-dt*9));
+      uniforms.fun.value.lerp(v4a.set(wiggling||idle==='tail-wag'?personality.wag:0,zoomies?1:0,kind==='tilt'||idle==='head-tilt'?1:0,personality.pace),1-Math.exp(-dt*9));
       const play=!!gameRef.current||action==='play';
-      const target=new THREE.Vector4(petting?1:0,(action==='walk'&&!p.petState.sick)||zoomies||strolling?(idle==='trotting'?1.6:1):0,action==='feed'?1:0,play||idle==='stretching'||idle==='play-bow'?1:0);
-      uniforms.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*3));
+      const target=v4b.set(petting?1:0,(action==='walk'&&!p.petState.sick)||zoomies||strolling?(idle==='trotting'?1.6:1):0,action==='feed'?1:0,play||idle==='stretching'||idle==='play-bow'?1:0);
+      uniforms.temperament.value.lerp(v4a.set(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*3));
       uniforms.motion.value.lerp(target,1-Math.exp(-dt*10));
-      uniforms.more.value.lerp(new THREE.Vector4(action==='groom'||idle==='shake'?1:0,action==='communicate'||action==='medicine'||sniffing||idle==='nose-nudge'?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
-      uniforms.gaze.value.lerp(new THREE.Vector2(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),1-Math.exp(-dt*4.9));
-      if(idle==='looking')uniforms.gaze.value.lerp(new THREE.Vector2(Math.sin(t*.9)*.8,Math.sin(t*.6)*.3),1-Math.exp(-dt*2.2));
+      uniforms.more.value.lerp(v4a.set(action==='groom'||idle==='shake'?1:0,action==='communicate'||action==='medicine'||sniffing||idle==='nose-nudge'?1:0,p.petState.sick?1:0,0),1-Math.exp(-dt*9));
+      uniforms.gaze.value.lerp(v2a.set(asleep?0:reaction.current.aimX,asleep?0:reaction.current.aimY),1-Math.exp(-dt*4.9));
+      if(idle==='looking')uniforms.gaze.value.lerp(v2a.set(Math.sin(t*.9)*.8,Math.sin(t*.6)*.3),1-Math.exp(-dt*2.2));
       // The tail spools: tempo rises fast when excitement arrives, and coasts
       // down slowly after it passes — a real tail never jumps between speeds.
       const wagTarget=uniforms.motion.value.x>.1||uniforms.fun.value.x>.05?13:3+uniforms.temperament.value.y*5;
@@ -322,7 +355,7 @@ function IllustratedStage(props: Props & {url:string}) {
       if(complete&&step!==shownPose&&textures.has(step)){
         outgoingUniforms.art.value=uniforms.art.value;setRig(outgoingUniforms,shownPose);
         register(outgoingUniforms,shownPose,step);register(uniforms,step,shownPose);
-        transitionDuration=shownPose==='pet'||step==='pet'?260:420;
+        transitionDuration=shownPose==='pet'||step==='pet'?230:330;
         shownPose=step;uniforms.art.value=textures.get(shownPose)!;setRig(uniforms,shownPose);poseChangedAt=now;
         outgoing.visible=!reduced.matches;
         const m=masks.get(shownPose);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}
@@ -340,31 +373,69 @@ function IllustratedStage(props: Props & {url:string}) {
       // A single opaque drawing carries each frame. Corresponding joints move
       // continuously; no transparent duplicate face or paws cross-fade.
       outgoing.visible=transition<1&&eased<.5;skin.visible=!outgoing.visible;
-      uniforms.settling.value=transition<1?Math.sin(transition*Math.PI)*.5:0;
+      uniforms.settling.value=transition<1?Math.sin(transition*Math.PI)*.28:0;
       outgoingUniforms.settling.value=uniforms.settling.value;
       outgoingUniforms.fun.value.copy(uniforms.fun.value);outgoingUniforms.motion.value.copy(uniforms.motion.value);outgoingUniforms.more.value.copy(uniforms.more.value);outgoingUniforms.lifeAct.value.copy(uniforms.lifeAct.value);outgoingUniforms.temperament.value.copy(uniforms.temperament.value);outgoingUniforms.gaze.value.copy(uniforms.gaze.value);outgoingUniforms.wagT.value=uniforms.wagT.value;
       uniforms.reduced.value=reduced.matches?1:0;uniforms.time.value=reduced.matches?0:t;
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
       const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*Math.min(1,personality.pace):0;
-      // Facing progress selects authored turn views. It never squeezes the
-      // mesh through zero width, including when an atlas is unavailable.
-      const faceTarget=lesson?.facing??(zoom>.2?(Math.cos(zTime*2.2)>0?-1:1):leap.current.direction===1?-1:1);
-      facingE.v+=(faceTarget-facingE.v)*(1-Math.exp(-dt*10));
       const growth=growthStage(p.petState);uniforms.puppy.value=1-growth.progress;outgoingUniforms.puppy.value=uniforms.puppy.value;
       const size=growth.scale*(1-zoom*.12)*(lesson?.scale??1),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       const runX=Math.sin(zTime*2.2)*Math.min(.4,room)*zoom;
-      skin.scale.set((faceTarget<0?-1:1)*size,size,1);
-      const wanderTarget=strolling?Math.sin(t*personality.pace*(idle==='trotting'?2.5:.8))*Math.min(idle==='trotting'?.3:.18,room):0;
-      driftX+=(wanderTarget-driftX)*(1-Math.exp(-dt*3));
-      skin.position.x=THREE.MathUtils.clamp(leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room,-room,room);
+      // THE PACE. He owns a stretch of floor: he turns to face the way he is
+      // going, walks to a spot, turns, and walks back. A stride advances by
+      // distance travelled and never by a clock, so his feet cannot slide —
+      // his speed alone sets his cadence.
+      const paceSpeed=(idle==='trotting'?PACE_TROT:PACE_WALK)*Math.min(1.3,.55+.55*personality.pace);
+      // The floor he can actually walk on: the stage, less his own width,
+      // less the toy basket. Too short and he turns before a stride is done.
+      const paceSpan=Math.max(0,(camera.right-camera.left)-1.66*size-barSpace-.12);
+      const pacing=strolling&&paceSpan>.5;
+      if(pacing){
+        // He turns before he sets off. A dog that starts walking without
+        // turning flips his face in a single frame, and that frame is a pop.
+        if(pacePhase==='idle'){pacePhase='turn';paceTurnUntil=now+TURN_MS;paceGoal=Math.random()<.5?1:-1;paceDir=paceGoal>0?1:-1;}
+        if(pacePhase==='turn'){if(now>=paceTurnUntil)pacePhase='walk';}
+        else{
+          const reach=Math.min(paceSpan*.42,Math.max((fastGait?.46:.30)*2*size*fitRatio*1.4,.3)),goalX=paceGoal*reach,dx=goalX-paceX;
+          if(Math.abs(dx)<=paceSpeed*dt){paceX=goalX;paceGoal=-paceGoal;paceDir=-paceDir;pacePhase='turn';paceTurnUntil=now+TURN_MS;}
+          else paceX+=Math.sign(dx)*paceSpeed*dt;
+        }
+        driftX=paceX;
+      }else if(!strolling){pacePhase='idle';paceX*=1-Math.exp(-dt*6);driftX=paceX;}
+      // Facing progress selects authored turn views. It never squeezes the
+      // mesh through zero width, including when an atlas is unavailable.
+      // He keeps the side he is on unless something asks him to change it:
+      // a turn he did not ask for is a pop, not a movement.
+      const faceTarget=lesson?.facing??(zoom>.2?(Math.cos(zTime*2.2)>0?-1:1):pacing?(paceDir>0?-1:1):(facingE.v>=0?1:-1));
+      facingE.v+=(faceTarget-facingE.v)*(1-Math.exp(-dt*10));
+      // Where he wants to be, and where the floor actually lets him stand.
+      // The floor is fixed to the widest he ever draws, so it never moves
+      // from under his feet mid-stride.
+      const rawX=leap.current.direction*Math.sin(jump*Math.PI)*Math.min(.24,room)+runX+driftX+(lesson?.x??0)*room;
+      const inkHalf=atlas?Math.max(Math.abs(floorBox.min-.5),Math.abs(floorBox.max-.5))*2*size*fitRatio:0;
+      const floorLo=atlas?camera.left+inkHalf+.05:camera.left;
+      const floorHi=atlas?camera.right-barSpace-inkHalf:camera.right-barSpace;
+      // The mirror follows the smoothed facing, never the raw target. A flip
+      // mid-stride is a pop; a flip during the authored turn is hidden by the
+      // front view the turn passes through.
+      skin.scale.set((facingE.v<0?-1:1)*size,size,1);
+      skin.position.x=THREE.MathUtils.clamp(rawX,floorLo,Math.max(floorLo,floorHi));
       skin.position.y=(leap.current.direction&&!reduced.matches?Math.sin(jump*Math.PI)*Math.min(.2,Math.max(0,camera.top-.94*size)):0)+Math.abs(Math.sin(zTime*7))*.055*zoom*personality.bounce-.82*(1-size);
-      const pivoting=!!atlas&&shownPose==='stand'&&transition===1&&!request&&Math.abs(facingE.v)<.96;
-      const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&(zoomies||strolling||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
+      const turning=pacing&&pacePhase==='turn';
+      const pivoting=!!atlas&&shownPose==='stand'&&transition===1&&!request&&(Math.abs(facingE.v)<.96||turning);
+      const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&!turning&&(zoomies||strolling||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
       canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';canvas.dataset.pivoting='false';canvas.dataset.strideBlend='0';
       if((movement||pivoting)&&atlas){
-        const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;motionPhase+=Math.min(.1,Math.abs(delta))/.66;
-        let index:number,face=1,scale=1;
+        const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;
+        // The stride is measured against the drawing, not against a guess: the
+        // park advances a walk by 0.30 of a tile's width and a run by 0.46.
+        // A stride is advanced by distance travelled and never by a clock, so
+        // his feet cannot slide and his speed alone sets his cadence.
+        motionPhase+=Math.min(.1,Math.abs(delta))/((fastGait?.46:.30)*2*size*fitRatio);
+        strideShown=(fastGait?.46:.30)*2*size*fitRatio;
+        let index:number,face=facingE.v<0?-1:1,scale=1;
         if(pivoting&&!movement)index=48+Math.min(31,Math.round(faceTarget<0?(1-facingE.v)*8:16+(1+facingE.v)*8));
         else if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/2*32));
         // Three cups: turn until his back is to you (frame 24 of the turn), hold, then turn home.
@@ -377,8 +448,11 @@ function IllustratedStage(props: Props & {url:string}) {
           const d=zoomies?Math.cos(zTime*2.2):delta;
           const turning=zoomies&&Math.abs(d)<.35;
           if(turning)index=48+Math.round((Math.sin(zTime*2.2)>0?8:24)+(d/.35)*4)%32;
-          else{const fast=zoomies||idle==='trotting';index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);face=d>0?-1:1;scale=1;}
+          else{const fast=fastGait;index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);scale=1;}
         }
+        // The toward and away drawings face the viewer: a mirror on them is a
+        // ghost, not a turn.
+        if(index>=MOTION_LAYOUT.towardStart)face=1;
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const art=frameArt(artName,index),from=sourceRig(artName,index);
         // Interpolate the leg joints between authored stride drawings, as in
         // the park: animation advances each display frame without new textures.
@@ -394,11 +468,13 @@ function IllustratedStage(props: Props & {url:string}) {
         const verticalFit=(camera.top+.82-.07)/(2*(.90625-ink[1]));
         const horizontalFit=(camera.right-camera.left-barSpace-.10)/(2*ink[2]);
         scale=Math.min(size*scale,verticalFit,horizontalFit);
+        fitRatio=scale/size;
         skin.scale.set(face*scale,scale,1);skin.position.y=-.82+(.90625-.5)*2*scale;
-        const minX=((face>0?ink[0]:1-ink[0]-ink[2])-.5)*2*scale,maxX=minX+ink[2]*2*scale;
-        const lo=camera.left-minX+.05,hi=camera.right-maxX-barSpace;skin.position.x=THREE.MathUtils.clamp(skin.position.x,lo,Math.max(lo,hi));
         hitAtlasFrame=index;canvas.dataset.motionFrame=String(index);
       }
+      // The distance he actually covered on the floor, after the floor has
+      // clamped it. Advancing the stride from the unclamped intent makes his
+      // feet slide exactly when he reaches the edge of the room.
       lastMotionX=skin.position.x;
       outgoing.position.copy(skin.position);outgoing.scale.copy(skin.scale);
       const pickup=request?.pose==='fetch'&&poseRun.settledAt!==null?(now-poseRun.settledAt)/1800:0;
@@ -416,7 +492,7 @@ function IllustratedStage(props: Props & {url:string}) {
       times.push(now);while(times.length&&now-times[0]>3000)times.shift();
       canvas.dataset.frames=String(++renders);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.drawCalls=String(renderer.info.render.calls);
       canvas.dataset.fps=times.length>2?((times.length-1)*1000/(now-times[0])).toFixed(1):'0';
-      canvas.dataset.growth=growth.name;canvas.dataset.growthScale=growth.scale.toFixed(3);canvas.dataset.touchResponse=touchRef.current;canvas.dataset.dailyWeight=uniforms.lifeAct.value.length().toFixed(3);canvas.dataset.mood=mood;canvas.dataset.behaviour=toilet?'toileting':idle;canvas.dataset.travelX=driftX.toFixed(3);canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);
+      canvas.dataset.growth=growth.name;canvas.dataset.growthScale=growth.scale.toFixed(3);canvas.dataset.touchResponse=touchRef.current;canvas.dataset.dailyWeight=uniforms.lifeAct.value.length().toFixed(3);canvas.dataset.mood=mood;canvas.dataset.behaviour=toilet?'toileting':idle;canvas.dataset.travelX=driftX.toFixed(3);canvas.dataset.trick=kind||'idle';canvas.dataset.personality=String(personality.pace);canvas.dataset.transitionMs=String(transitionDuration);canvas.dataset.transition=transition<1?transition.toFixed(3):'0';canvas.dataset.artPose=shownPose;canvas.dataset.action=action||'idle';canvas.dataset.pose=asleep?'sleep':p.pose||'stand';canvas.dataset.reduced=String(reduced.matches);canvas.dataset.facing=facingE.v.toFixed(3);canvas.dataset.turning=String(turning);canvas.dataset.stride=strideShown.toFixed(3);canvas.dataset.phase=motionPhase.toFixed(3);canvas.dataset.fit=fitRatio.toFixed(3);canvas.dataset.x=skin.position.x.toFixed(4);
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
@@ -435,11 +511,25 @@ function IllustratedStage(props: Props & {url:string}) {
     dirty:{Icon:Broom,text:'A little cleanup?',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as 'clean'|'groom'},
     content:{Icon:Heart,text:'',action:undefined},
   }[mood];
+  // A CALL IS LOUDER THAN A MOOD. When he asks for something, the stage says
+  // so in his own words and offers the one thing that would answer him.
+  const callNeeds={
+    hungry:{Icon:Utensils,text:'Hungry — feed me',action:'feed' as Interaction},
+    dirty:{Icon:Broom,text:'Messy — clean me',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as Interaction},
+    lonely:{Icon:Heart,text:'Where are you?',action:'pet' as Interaction},
+    sick:{Icon:Thermometer,text:'I do not feel well',action:'medicine' as Interaction},
+    tantrum:{Icon:Wind,text:'Too wound up!',action:'walk' as Interaction},
+    toilet:{Icon:Footprints,text:'I need to go out',action:'walk' as Interaction},
+    bored:{Icon:Bone,text:'Bored — play with me',action:'play' as Interaction},
+  };
+  const call=props.petState.call,calling=call?callNeeds[call.reason]:null;
+  const status=calling??(mood==='content'?null:needs);
+  const StatusIcon=status?.Icon as React.ElementType;
   const ambientText:Record<string,string>={looking:'What was that?',yawning:'A little yawn…','ear-twitch':'Did I hear you?','head-tilt':'Hmm?','tail-wag':'Happy you’re here',shake:'Shake it off!',scratch:'An itchy spot…','paw-screen':'Are you there?','nose-nudge':'Hello, you.','play-bow':'Come play!',watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
   return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
     {(()=>{const s=homeScene(isHome(props.petState.home)?props.petState.home:'house');return <div className="home-scene" aria-hidden="true"><div className="home-wall" dangerouslySetInnerHTML={{__html:s.wall}}/><div className="home-floor" dangerouslySetInnerHTML={{__html:s.floor}}/></div>;})()}
     <div ref={mount} className="dog-art-layer w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
-    {!ready&&<p data-workspace-loading="true" role="status" className="absolute inset-0 flex items-center justify-center label">Loading {dog.name}’s illustration</p>}
+    {!ready&&<p data-workspace-loading="true" role="status" className="absolute inset-x-0 top-10 flex justify-center pointer-events-none"><span className="label">{dog.name} is waking up…</span></p>}
     {game&&dock(<div className="catch-hud flex items-center justify-between text-[11px]">
       <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
       <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
@@ -455,7 +545,7 @@ function IllustratedStage(props: Props & {url:string}) {
     {!game&&!finding&&<div className="dog-toys" role="group" aria-label="Dog tricks and toys" data-open={toysOpen}><button type="button" className="btn-quiet toy-disclosure" aria-label="Tricks and toys" title="Tricks and toys" aria-expanded={toysOpen} onClick={()=>setToysOpen(o=>!o)}>{toysOpen?<X size={19}/>:<Shapes size={19}/>}</button>{toysOpen&&<>{([{kind:'highfive',label:'High five',Icon:Hand},{kind:'bow',label:'Play bow',Icon:ChevronsDown},{kind:'wiggle',label:'Happy wiggle',Icon:Music2},{kind:'zoomies',label:'Zoomies',Icon:Wind},{kind:'come',label:'Come closer',Icon:Footprints},{kind:'turn',label:'Turn around',Icon:RotateCw}] as const).map(({kind,label,Icon})=><button key={kind} type="button" className="btn-quiet" aria-label={label} title={label} disabled={!canPlay()||((kind==='come'||kind==='turn')&&!motionReady)} aria-pressed={trick?.kind===kind} onClick={()=>runTrick(kind)}><Icon size={19} aria-hidden="true"/></button>)}<button type="button" className="btn-quiet" aria-label="Find the treat" title="Find the treat" disabled={!canPlay()} onClick={startFinding}><Bone size={20} aria-hidden="true"/></button></>}</div>}
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
-    {!game&&!finding&&!cheer&&mood!=='content'&&<div className={`dog-daily-status dog-daily-status--${mood}`} role="status">{needs.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(needs.action!)}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><needs.Icon size={16} aria-hidden="true"/>{needs.text}</button>:<span><needs.Icon size={16} aria-hidden="true"/>{needs.text}</span>}</div>}
+    {!game&&!finding&&!cheer&&status&&<div className={`dog-daily-status dog-daily-status--${calling?'call':mood}`} role="status">{status.action?<button type="button" disabled={!!props.interactionTrigger} onClick={()=>latest.current.onCare?.(status.action!)}><StatusIcon size={16} aria-hidden="true"/>{status.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><StatusIcon size={16} aria-hidden="true"/>{status.text}</button>:<span><StatusIcon size={16} aria-hidden="true"/>{status.text}</span>}</div>}
     {!game&&!finding&&!cheer&&!trick&&<span className="dog-ambient-caption" aria-live="off">{touchMessage|| (toileting?'Oops…':ambientText[ambient])}</span>}
     {toileting&&!asleep&&!props.petState.sick&&<span className="dog-pee-drops" aria-label="Having a wee"><Droplets size={20}/></span>}
     {asleep&&<svg className="dog-blanket" viewBox="0 0 300 90" aria-label="Tucked into a blanket"><path d="M12 25 Q80 8 142 24 Q216 5 286 30 L280 82 L18 82 Z" fill="var(--bg-elevated)" stroke="var(--border-strong)" strokeWidth="2"/><path d="M14 33 Q90 17 147 34 Q218 16 284 38 M58 39 L64 76 M234 39 L230 76" fill="none" stroke="var(--border-dim)" strokeWidth="2"/></svg>}

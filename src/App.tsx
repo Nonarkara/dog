@@ -82,12 +82,12 @@ const RiggedAvatar = lazy(() =>
 const CommonsPanel = lazy(() =>
   import('./components/CommonsPanel').then((m) => ({ default: m.CommonsPanel }))
 );
-const CoachPanel = lazy(() =>
-  import('./components/CoachPanel').then((m) => ({ default: m.CoachPanel }))
-);
-const RecordPanel = lazy(() =>
-  import('./components/RecordPanel').then((m) => ({ default: m.RecordPanel }))
-);
+const loadCoach = () =>
+  import('./components/CoachPanel').then((m) => ({ default: m.CoachPanel }));
+const CoachPanel = lazy(loadCoach);
+const loadRecord = () =>
+  import('./components/RecordPanel').then((m) => ({ default: m.RecordPanel }));
+const RecordPanel = lazy(loadRecord);
 
 /** Coat starting points for a new dog; every colour can then be changed. */
 const COAT_PRESETS: { label: string; coat: { pattern: CoatPattern; base: string; light: string; dark: string; point: string } }[] = [
@@ -409,6 +409,21 @@ export const App: React.FC = () => {
     document.title = petState.call ? `● ${currentDog.name} is calling — ${base}` : base;
   }, [petState.call, currentDog.name]);
 
+  // THE BEEP. He calls, and the app says so out loud — the way a Tamagotchi
+  // says it, without ever raising its voice. A call that was already waiting
+  // when you arrived is not news; a call that starts while you are here is.
+  const calledSince=useRef(0);
+  useEffect(()=>{
+    const call=petState.call;
+    if(!call){calledSince.current=0;return;}
+    if(calledSince.current===call.since)return;
+    calledSince.current=call.since;
+    if(Date.now()-call.since>45_000)return;
+    if(document.visibilityState!=='visible')return;
+    sound.attention();
+    navigator.vibrate?.([28,70,28]);
+  },[petState.call]);
+
   // Who he became, his month-birthdays and today's wish: said once, when they happen.
   const announced=useRef((()=>{try{return localStorage.getItem('dog-announced')??'';}catch{return '';}})());
   useEffect(()=>{
@@ -431,6 +446,10 @@ export const App: React.FC = () => {
 
   // An open call shows on the home-screen icon, when installed.
   useEffect(()=>{const n=navigator as Navigator&{setAppBadge?:(n:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};void (petState.call?n.setAppBadge?.(1):n.clearAppBadge?.())?.catch(()=>{});},[petState.call]);
+
+  // Coach and Record are where an owner goes next. Fetch them once the stage
+  // has settled, so tapping them opens a panel instead of a spinner.
+  useEffect(()=>{const t=window.setTimeout(()=>{void loadCoach();void loadRecord();},1500);return()=>window.clearTimeout(t);},[]);
 
   const priorSleep=useRef({id:activeDogId,asleep:petState.sleep.asleep});
   useEffect(()=>{const prev=priorSleep.current;if(prev.id===activeDogId&&prev.asleep&&!petState.sleep.asleep&&gameState(petState,activeDogId).wakeBark&&document.visibilityState==='visible')sound.bark();priorSleep.current={id:activeDogId,asleep:petState.sleep.asleep};},[activeDogId,petState.sleep.asleep,petState.game?.wakeBark]);
@@ -678,7 +697,7 @@ export const App: React.FC = () => {
   const stageNote=saveError?{text:saveError,id:-1}:legacyWarning?{text:'An older dog tab is open. Reload it before playing there; this tab’s progress is protected.',id:-2}:note;
 
   return (
-    <div className={`cockpit ${companionView?'cockpit--companion':''}`} onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id, currentDog.avatarConfig.palette)} data-dog-theme={currentDog.avatarConfig.palette||currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth}>
+    <div className={`cockpit ${companionView?'cockpit--companion':''}`} onClickCapture={firstGuide.capture} style={dogTheme(currentDog.id, currentDog.avatarConfig.palette)} data-dog-theme={currentDog.avatarConfig.palette||currentDog.id} data-vw={typeof window === 'undefined' ? 0 : window.innerWidth} data-wide={isWide?'true':'false'}>
       {/* ---- one band of chrome -------------------------------------------- */}
       <header className="border-hairline-b bg-surface shrink-0 no-print">
         <div className="h-11 px-2 sm:px-3 flex items-center gap-2 sm:gap-3">

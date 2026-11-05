@@ -35,7 +35,9 @@ fs.mkdirSync(out, { recursive: true });
   const metrics = [];
   for (const [w, h] of [[390,844], [1024,768], [1440,900], [1280,720]]) {
     await page.setViewportSize({ width: w, height: h });
-    await page.waitForFunction(() => document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide') === (innerWidth >= 1024 && innerHeight >= 820));
+    // The app decides what the wide frame is; the test reads that decision
+    // instead of repeating a threshold that can drift out of date.
+    await page.waitForFunction((v)=>{const c=document.querySelector('.cockpit');if(!c||c.dataset.vw!==String(v))return false;const wide=c.dataset.wide==='true';return c.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide')===wide;},w);
     await page.waitForTimeout(300);
     console.log('Viewport',w);
     const geometry = await page.evaluate(() => {

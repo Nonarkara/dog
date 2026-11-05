@@ -667,6 +667,11 @@
 .dog-daily-status>span,.dog-daily-status>button {display:inline-flex;align-items:center;gap:5px;padding:4px 7px;background:var(--bg-surface);max-width:100%;}
 .dog-daily-status>button {pointer-events:auto;min-height:36px;border:1px solid var(--border-dim);}
 .dog-daily-status--sick {color:#9b3347;}
+/* A CALL is not a mood. It is him asking. It gets the accent and a slow
+   breath, so it reads as waiting for you and never as decoration. */
+.dog-daily-status--call>span,.dog-daily-status--call>button {background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent-hover);animation:call-breathe 2.4s ease-in-out infinite;}
+@keyframes call-breathe {0%,100%{opacity:1}50%{opacity:.74}}
+@media(prefers-reduced-motion:reduce){.dog-daily-status--call>span,.dog-daily-status--call>button {animation:none;}}
 .dog-ambient-caption {position:absolute;bottom:8px;left:8px;right:95px;font-size:11px;line-height:1.2;pointer-events:none;color:var(--text-muted);}
 .illustration-puddle {position:absolute;top:calc(var(--dog-floor,90%) - 12px);padding:2px;min-width:48px;min-height:36px;z-index:4;}
 .illustration-mess {top:calc(var(--dog-floor,90%) - 18px);bottom:auto;z-index:4;}

@@ -7,13 +7,19 @@
  * Nothing about the dog, the owner or the reason comes here: the push carries
  * no payload, and the phone's service worker reads the words it saved itself.
  *
- * One push per absence: once sent, `due_at` is cleared until the app is
- * opened and closed again. A gone subscription (404/410) is deleted.
+ * He may call twice in one absence: the first at the moment he needs you, and
+ * once more an hour and a half later if you are still gone. After that he
+ * waits — three knocks on a closed door is manners, not nagging. A new
+ * absence resets the count; coming back clears the subscription's due time.
  *
  *   POST /api/push   {endpoint, at}   → upsert; at = 0 clears; at = null deletes
  */
 interface Stmt { bind(...v: unknown[]): Stmt; run(): Promise<unknown>; first<T>(): Promise<T | null>; all<T>(): Promise<{ results: T[] }> }
 export interface PushEnv { DB: { prepare(sql: string): Stmt }; VAPID_PUBLIC?: string; VAPID_PRIVATE_JWK?: string }
+
+/** How long he waits before calling again, and how many times in all. */
+const REPEAT_MS = 90 * 60_000;
+const MAX_CALLS = 2;
 
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)$/;
 const MAX_ROWS = 5000;
@@ -48,7 +54,7 @@ export async function handlePush(request: Request, env: PushEnv, url: URL): Prom
   const rows = await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subs').first<{ n: number }>();
   const known = await env.DB.prepare('SELECT 1 AS k FROM push_subs WHERE endpoint = ?').bind(body.endpoint).first();
   if (!known && (rows?.n ?? 0) >= MAX_ROWS) return json({ error: 'Full' }, 503);
-  await env.DB.prepare('INSERT INTO push_subs (endpoint, due_at, updated_at) VALUES (?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET due_at = excluded.due_at, updated_at = excluded.updated_at')
+  await env.DB.prepare('INSERT INTO push_subs (endpoint, due_at, updated_at, sent) VALUES (?, ?, ?, 0) ON CONFLICT(endpoint) DO UPDATE SET due_at = excluded.due_at, updated_at = excluded.updated_at, sent = 0')
     .bind(body.endpoint, Math.round(at), now).run();
   return json({ ok: true });
 }
@@ -63,7 +69,7 @@ async function vapid(endpoint: string, env: PushEnv, key: CryptoKey): Promise<st
   return `vapid t=${unsigned}.${b64url(sig)}, k=${env.VAPID_PUBLIC}`;
 }
 
-/** Every 15 minutes: send the calls that are due, once each. */
+/** Every 15 minutes: send the calls that are due, and re-arm the ones he may call again. */
 export async function sendDuePushes(env: PushEnv): Promise<number> {
   if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE_JWK) return 0;
   const now = Date.now();
@@ -78,7 +84,17 @@ export async function sendDuePushes(env: PushEnv): Promise<number> {
     // Network error, 429 or 5xx: leave it due and try next run.
     if (!res || res.status === 429 || res.status >= 500) continue;
     if (res.status === 404 || res.status === 410) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(endpoint).run();
-    else await env.DB.prepare('UPDATE push_subs SET due_at = 0 WHERE endpoint = ?').bind(endpoint).run();
+    else {
+      // He may call again while you are still away — once, and then he waits.
+      // If the counter column is not there yet, the old one-shot behaviour
+      // still holds rather than the call being lost.
+      try {
+        await env.DB.prepare('UPDATE push_subs SET due_at = CASE WHEN sent < ? THEN ? ELSE 0 END, sent = sent + 1 WHERE endpoint = ?')
+          .bind(MAX_CALLS - 1, now + REPEAT_MS, endpoint).run();
+      } catch {
+        await env.DB.prepare('UPDATE push_subs SET due_at = 0 WHERE endpoint = ?').bind(endpoint).run();
+      }
+    }
     if (res.ok) sent++;
   }
   if (results.length) console.log(`push: ${sent}/${results.length} delivered`);
