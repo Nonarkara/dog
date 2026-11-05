@@ -15,6 +15,9 @@ fs.mkdirSync(out, { recursive: true });
   console.log('Opening',url);
   await page.goto(url,{waitUntil:'domcontentloaded'});
   await page.bringToFront();
+  // The root asks which world you want. Enter the playground the way a visitor
+  // does, or the test waits for a canvas that the entry screen never draws.
+  if(!(await page.locator('canvas').count())){await page.getByRole('link',{name:/Play/}).first().click();await page.waitForLoadState('domcontentloaded');}
   console.log('DOM loaded');
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles).catch(async e => { console.error(await page.evaluate(() => ({visibility:document.visibilityState,text:document.body.innerText.slice(0,800),canvas:[...document.querySelectorAll('canvas')].map(c=>c.dataset)}))); throw e; });
   console.log('Avatar ready');
@@ -37,6 +40,9 @@ fs.mkdirSync(out, { recursive: true });
     await page.setViewportSize({ width: w, height: h });
       // Ordinary laptop windows must use the desktop column; this is the product contract.
     await page.waitForFunction(() => document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide') === (innerWidth >= 1024 && innerHeight >= 600));
+    // The app publishes the decision it made; the stylesheet hangs off the
+    // class, so the two must agree.
+    assert.equal(await page.evaluate(() => document.querySelector('.cockpit')?.dataset.wide === 'true' ? document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide') : !document.querySelector('.cockpit-workspace')?.classList.contains('cockpit-workspace--wide')), true, 'The published layout decision and the class the CSS hangs off must agree');
     await page.waitForTimeout(300);
     console.log('Viewport',w);
     const geometry = await page.evaluate(() => {
