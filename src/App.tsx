@@ -435,9 +435,10 @@ export const App: React.FC = () => {
   // Leaving: tell the server when he will next need you. Back: nothing pending.
   const leaving=useRef({state:petState,name:currentDog.name});leaving.current={state:petState,name:currentDog.name};
   useEffect(()=>{
-    const seen=()=>{if(document.visibilityState==='hidden')scheduleCall(leaving.current.state,leaving.current.name);else clearCall();};
-    document.addEventListener('visibilitychange',seen);void rememberEndpoint().then(clearCall);
-    return()=>document.removeEventListener('visibilitychange',seen);
+    const seen=()=>{if(document.visibilityState==='hidden')void scheduleCall(leaving.current.state,leaving.current.name);else void clearCall();};
+    const visibility=()=>{if(document.visibilityState==='hidden')seen();else void rememberEndpoint().then(seen);};
+    document.addEventListener('visibilitychange',visibility);void rememberEndpoint().then(seen);
+    return()=>document.removeEventListener('visibilitychange',visibility);
   },[]);
 
   // An open call shows on the home-screen icon, when installed.
