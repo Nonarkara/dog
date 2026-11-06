@@ -222,6 +222,8 @@ function IllustratedStage(props: Props & {url:string}) {
     cells.sort((a,b)=>a.order-b.order);geometry.setIndex(cells.flatMap(c=>c.indices));
     let pixels:Uint8ClampedArray|null=null,imageW=0,imageH=0;
     const masks=new Map<ArtPose,{pixels:Uint8ClampedArray,w:number,h:number}>();
+    const maskCanvas=document.createElement('canvas');maskCanvas.width=maskCanvas.height=192;
+    const maskCtx=maskCanvas.getContext('2d',{willReadFrequently:true});
     const loader=new THREE.TextureLoader();
     let atlas:{texture:THREE.Texture;alpha:Uint8ClampedArray;width:number;tile:number}|null=null,hitAtlasFrame=-1,motionPhase=0,lastMotionX=0;
     // The widest the dog ever draws, measured once from the atlas. The floor
@@ -249,9 +251,8 @@ function IllustratedStage(props: Props & {url:string}) {
       const source=key==='stand'?url:url.replace('.webp',`-${key}.webp`);
       loader.load(source,t=>{
         if(disposed){t.dispose();return;}t.colorSpace=THREE.SRGBColorSpace;renderer.initTexture(t);textures.set(key,t);
-        const image=t.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=image.width;mask.height=image.height;
-        const context=mask.getContext('2d',{willReadFrequently:true});
-        if(context){context.drawImage(image,0,0);masks.set(key,{pixels:context.getImageData(0,0,image.width,image.height).data,w:image.width,h:image.height});}
+        const image=t.image as HTMLImageElement;
+        if(maskCtx){maskCtx.clearRect(0,0,192,192);maskCtx.drawImage(image,0,0,192,192);const rgba=maskCtx.getImageData(0,0,192,192).data,alpha=new Uint8ClampedArray(192*192);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];masks.set(key,{pixels:alpha,w:192,h:192});}
         if(key==='stand'){uniforms.art.value=t;const m=masks.get(key);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}setReady(true);}
       },undefined,()=>{if(!disposed)setFailed(true);});
     }
@@ -264,7 +265,7 @@ function IllustratedStage(props: Props & {url:string}) {
       const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
       if(x<0||x>1||y<0||y>1||!pixels)return false;
       if(hitAtlasFrame>=0&&atlas){const ox=(hitAtlasFrame%MOTION_LAYOUT.columns)*atlas.tile,oy=Math.floor(hitAtlasFrame/MOTION_LAYOUT.columns)*atlas.tile;return atlas.alpha[(Math.min(atlas.tile-1,Math.floor(y*atlas.tile))+oy)*atlas.width+Math.min(atlas.tile-1,Math.floor(x*atlas.tile))+ox]>24;}
-      return pixels[(Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW)))*4+3]>24;
+      return pixels[Math.min(imageH-1,Math.floor(y*imageH))*imageW+Math.min(imageW-1,Math.floor(x*imageW))]>24;
     };
     const petAt=(event:PointerEvent)=>{
       const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);

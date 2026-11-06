@@ -754,6 +754,8 @@
 .cockpit .dog-choice {display:flex;align-items:center;gap:6px;width:100%;min-height:32px;padding:4px 6px;text-align:left;border:0;font-size:13px;line-height:1.25;}
 .dog-choice[aria-selected="true"] {background:var(--stage-ground);color:var(--accent);}
 .dog-choice-check {width:14px;flex:none;}
+.dog-choice-thumb {width:20px;height:20px;object-fit:contain;flex:none;}
+.dog-choice-swatch {width:12px;height:12px;border:1px solid var(--border-strong);flex:none;}
 .dog-choice strong {font-weight:600;}
 .dog-choice-breed {margin-left:auto;font-size:11px;color:var(--text-muted);}
 @container dog-choice (min-width:500px){.dog-choices {grid-template-columns:repeat(2,minmax(0,1fr));}}

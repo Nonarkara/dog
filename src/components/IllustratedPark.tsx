@@ -29,6 +29,7 @@ interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:numb
 const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
 const NS='http://www.w3.org/2000/svg';
 const attr=(element:Element,name:string,value:string)=>{if(element.getAttribute(name)!==value)element.setAttribute(name,value);};
+const v3a=new THREE.Vector3(),v4a=new THREE.Vector4(),v4Tile=new THREE.Vector4(1,1,0,0);
 /** An illustrated fallback visitor, not a pretend mesh of the friend's real dog. */
 function visitorArt(d:MetaverseNeighborDog){
  const coat=d.avatarColors.base,cream=d.avatarColors.secondary||'#fbfaee',mask=d.avatarColors.mask||'#294434',short=/corgi|pug/i.test(d.breed),fluffy=/chow/i.test(d.breed);
@@ -56,16 +57,16 @@ export function IllustratedPark(props:Props){
   const cleanup=document.createElement('button');cleanup.type='button';cleanup.className='park-cleanup';cleanup.setAttribute('aria-label','Clean up after your dog');cleanup.title='Clean up after your dog';cleanup.hidden=true;cleanup.innerHTML='<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><path d="M13 33q-9-5 0-11q-1-7 8-9q6-3 3-8q15 6 9 15q13 4 7 12q9 8-3 10H12q-14-2-5-9Z" fill="#a77a4a" stroke="#614c37" stroke-width="2"/><path d="M15 23h16M12 33h24" fill="none" stroke="#614c37" stroke-width="2"/></svg>';cleanup.querySelectorAll('path').forEach(path=>path.classList.add('park-poop'));cleanup.querySelector('svg')!.insertAdjacentHTML('beforeend','<path class="park-pee" d="M7 30Q3 23 15 24Q11 13 25 18Q40 11 38 23Q51 26 39 35Q19 43 7 30Z" fill="#dfc577" stroke="#9b7a36" stroke-width="2"/>');cleanup.onclick=()=>latest.current.onClean?.();host.append(cleanup);
 
   const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-200,200,300,-300,.1,50);camera.position.z=10;
-  const geometry=new THREE.PlaneGeometry(2,2,48,48),rasters=new Map<string,Promise<Raster>>();
+  const geometry=new THREE.PlaneGeometry(2,2,48,48),rasters=new Map<string,Promise<Raster>>(),scratch=document.createElement('canvas'),scratchCtx=scratch.getContext('2d',{willReadFrequently:true});
   const raster=(url:string,atlasMask=false)=>{let found=rasters.get(url);if(found)return found;
    found=new Promise<Raster>((resolve,reject)=>{const image=new Image();image.onload=()=>{
     if(disposed){reject(new Error('Park closed'));return;}
-    const scratch=document.createElement('canvas');scratch.width=atlasMask?480:image.width;scratch.height=atlasMask?576:image.height;const context=scratch.getContext('2d');if(!context){reject(new Error('Could not read dog artwork'));return;}
-    context.drawImage(image,0,0,scratch.width,scratch.height);const rgba=context.getImageData(0,0,scratch.width,scratch.height).data;let pixels=rgba,left=0,right=scratch.width-1,top=0,bottom=scratch.height-1;if(atlasMask){pixels=new Uint8ClampedArray(scratch.width*scratch.height);for(let i=0;i<pixels.length;i++)pixels[i]=rgba[i*4+3];}else{left=image.width;right=0;top=image.height;bottom=0;
-    for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++)if(pixels[(y*image.width+x)*4+3]>32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+    scratch.width=atlasMask?480:192;scratch.height=atlasMask?576:192;if(!scratchCtx){reject(new Error('Could not read dog artwork'));return;}
+    scratchCtx.clearRect(0,0,scratch.width,scratch.height);scratchCtx.drawImage(image,0,0,scratch.width,scratch.height);const rgba=scratchCtx.getImageData(0,0,scratch.width,scratch.height).data,pixels=new Uint8ClampedArray(scratch.width*scratch.height);for(let i=0;i<pixels.length;i++)pixels[i]=rgba[i*4+3];let left=0,right=scratch.width-1,top=0,bottom=scratch.height-1;if(!atlasMask){left=scratch.width;right=0;top=scratch.height;bottom=0;
+    for(let y=0;y<scratch.height;y++)for(let x=0;x<scratch.width;x++)if(pixels[y*scratch.width+x]>32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
     }
     const texture=new THREE.Texture(image);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;texture.userData.asset=url;
-    const result={texture,pixels,w:scratch.width,h:scratch.height,alphaOnly:atlasMask,left:left/scratch.width,right:(right+1)/scratch.width,top:top/scratch.height,bottom:(bottom+1)/scratch.height};
+    const result={texture,pixels,w:scratch.width,h:scratch.height,alphaOnly:true,left:left/scratch.width,right:(right+1)/scratch.width,top:top/scratch.height,bottom:(bottom+1)/scratch.height};
     if(disposed){texture.dispose();reject(new Error('Park closed'));return;}resolve(result);
    };image.onerror=()=>reject(new Error('Dog artwork could not load'));image.src=url;});rasters.set(url,found);return found;};
   type Actor={id:string;name:string;artId:string;source:string;own:boolean;phase:number;heading:number;speed:number;stride:number;strideSize:number;nextBlink:number;blinkStarted:number;motionFile:MotionArtName|null;motionFrames:Raster[];motionFrame:number;hasWalked:boolean;blend:number;baseRaster:Raster|null;poseRaster:Raster|null;contacts:SVGEllipseElement[];x:number;y:number;homeX:number;homeY:number;tx:number;ty:number;facing:number;until:number;petUntil:number;lastPet:number;sniffUntil:number;pose:ArtPose;poseAt:number;requestedPose:ArtPose;mode:'wander'|'visit'|'chase'|'flee'|'rest'|'sit'|'feed'|'nap'|'walkto';then:'sit'|'feed'|'nap'|null;partner:string|null;remote:boolean;grown:number;remoteAsleep:boolean;remoteHungry:boolean;bowUntil:number;bubble:SVGGElement|null;raster:Raster|null;mesh:THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>;label:SVGTextElement;shadow:SVGEllipseElement;heart:SVGPathElement;w:number;h:number;};
@@ -113,7 +114,7 @@ export function IllustratedPark(props:Props){
   let width=1,height=1;
   let pendingResize=false;const resize=()=>{pendingResize=false;const w=host.clientWidth,h=host.clientHeight;if(w===width&&h===height)return;width=w;height=h;renderer.setSize(width,height);};const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(host);resize();
   const point=(e:PointerEvent)=>{const b=canvas.getBoundingClientRect();return {x:cx+(e.clientX-b.left-width/2)/zoom,y:cy+(e.clientY-b.top-height/2)/zoom};};
-  const hit=(p:{x:number;y:number})=>[...actors.values()].sort((a,b)=>b.y-a.y).find(a=>{if(!a.raster)return false;const v=a.mesh.worldToLocal(new THREE.Vector3(p.x,-p.y,0)),[x,y]=unwarpMotionPoint([(v.x+1)/2,(1-v.y)/2],a.motionFrame),r=a.raster;if(x<0||x>1||y<0||y>1)return false;return r.pixels[((Math.min(r.h-1,Math.floor(y*r.h))+(r.originY||0))*(r.pixelWidth||r.w)+Math.min(r.w-1,Math.floor(x*r.w))+(r.originX||0))*(r.alphaOnly?1:4)+(r.alphaOnly?0:3)]>32;});
+  const hit=(p:{x:number;y:number})=>[...actors.values()].sort((a,b)=>b.y-a.y).find(a=>{if(!a.raster)return false;const v=a.mesh.worldToLocal(v3a.set(p.x,-p.y,0)),[x,y]=unwarpMotionPoint([(v.x+1)/2,(1-v.y)/2],a.motionFrame),r=a.raster;if(x<0||x>1||y<0||y>1)return false;return r.pixels[((Math.min(r.h-1,Math.floor(y*r.h))+(r.originY||0))*(r.pixelWidth||r.w)+Math.min(r.w-1,Math.floor(x*r.w))+(r.originX||0))*(r.alphaOnly?1:4)+(r.alphaOnly?0:3)]>32;});
   const pointers=new Map<number,{x:number;y:number;startX:number;startY:number;moved:boolean}>();let pinching=false,pinch=0,strokeId:string|null=null;
   const down=(e:PointerEvent)=>{if(!pointers.size){pinching=false;strokeId=null;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false});canvas.setPointerCapture(e.pointerId);if(pointers.size>1){pinching=true;strokeId=null;const[a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);return;}const a=hit(point(e));if(a){strokeId=a.id;pet(a.id);}};
   const move=(e:PointerEvent)=>{if(!pointers.has(e.pointerId))return;const prior=pointers.get(e.pointerId)!;pointers.set(e.pointerId,{...prior,x:e.clientX,y:e.clientY,moved:prior.moved||Math.hypot(e.clientX-prior.startX,e.clientY-prior.startY)>=15});if(pointers.size===2){const[a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch&&d)latest.current.onZoom(zoom*d/pinch);pinch=d;}else if(!pinching&&strokeId&&hit(point(e))?.id===strokeId)pet(strokeId);};
@@ -185,8 +186,11 @@ export function IllustratedPark(props:Props){
    if(a.mode==='chase'||a.mode==='flee'){if(partner&&partner.partner===a.id)settle(partner,now);}
    choose(a,now);
   };
-  let ambientZoom=props.zoom,lastIntentKey='',lastIntentAt=-Infinity;
-  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=1000/60;if(next<now-1000/60)next=now+1000/60;
+  let ambientZoom=props.zoom,lastIntentKey='',lastIntentAt=-Infinity,lastInterval=0,lastPawsJson='';
+  let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}
+   let active=keys.size>0||pointers.size>0;if(!active)for(const a of actors.values())if(a.speed>.5||Math.hypot(a.tx-a.x,a.ty-a.y)>2||now<a.petUntil||now<a.sniffUntil||now<a.bowUntil){active=true;break;}
+   const targetFps=reduced.matches?6:active?60:30,interval=1000/targetFps;canvas.dataset.targetFps=String(targetFps);
+   if(!next||interval!==lastInterval){lastInterval=interval;next=now;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=interval;if(next<now-interval)next=now+interval;
    if(pendingResize)resize();{const tall=height>width*1.15;roamX=tall?210:400;roamTop=-240;roamBottom=tall?620:380;}const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
    const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
    let dx=0,dy=0;if(!resting){if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;}if(keys.size&&!dx&&!dy)stopKeyboard();if(dx||dy){own.tx=Math.max(-420*unit,Math.min(420*unit,own.x+dx*50));own.ty=Math.max(-280*unit,Math.min(400*unit,own.y+dy*50));}
@@ -253,17 +257,17 @@ export function IllustratedPark(props:Props){
      if(petting){motionPoints[0][0]+=.006;motionPoints[0][1]+=.003;}
      writeRig(u.strideFrom.value,u.strideTo.value,from,motionPoints);u.locomotion.value=1;u.morphAmount.value=0;
     }else{a.motionFrame=-1;a.raster=a.poseRaster||a.raster;u.locomotion.value=0;u.running.value=0;}
-    const r=a.raster;if(r){u.art.value=r.texture;u.artTile.value.copy(r.tile||new THREE.Vector4(1,1,0,0));}
+    const r=a.raster;if(r){u.art.value=r.texture;u.artTile.value.copy(r.tile||v4Tile);}
     u.profile.value.set(a.artId==='mali-2022'?1.08:a.artId==='paolo-pug'?1.05:1,a.artId==='mali-2022'&&a.pose==='stand'?.65:0);u.morphAmount.value=animated||reduced.matches?0:Math.max(0,1-(now-a.poseAt)/420);u.time.value=reduced.matches?0:now/1000+a.phase;u.reduced.value=reduced.matches?1:0;u.puppy.value=1-growth.progress;
-    u.motion.value.lerp(new THREE.Vector4(petting?1:0,moving?1:0,0,0),1-Math.exp(-dt*7));u.more.value.lerp(new THREE.Vector4(0,now<a.sniffUntil?1:0,a.own&&p.petState?.sick?1:0,0),1-Math.exp(-dt*5));
-    const personality=PLAY_PERSONALITIES[a.artId]||PLAY_PERSONALITIES['expo-2021'];u.fun.value.set(petting?personality.wag*.65:0,0,!moving&&(now+a.phase*1000)%12000<2200?.4:0,personality.pace);if(a.own&&p.petState)u.temperament.value.lerp(new THREE.Vector4(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*4));
+    u.motion.value.lerp(v4a.set(petting?1:0,moving?1:0,0,0),1-Math.exp(-dt*7));u.more.value.lerp(v4a.set(0,now<a.sniffUntil?1:0,a.own&&p.petState?.sick?1:0,0),1-Math.exp(-dt*5));
+    const personality=PLAY_PERSONALITIES[a.artId]||PLAY_PERSONALITIES['expo-2021'];u.fun.value.set(petting?personality.wag*.65:0,0,!moving&&(now+a.phase*1000)%12000<2200?.4:0,personality.pace);if(a.own&&p.petState)u.temperament.value.lerp(v4a.set(p.petState.trust/100,p.petState.arousal/100,1-p.petState.needs.energy/100,1-p.petState.needs.hunger/100),1-Math.exp(-dt*4));
     // Park tails spool like stage tails: quick to speed up, slow to settle.
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
     a.mesh.renderOrder=Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
      for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
-    if(a.own){canvas.dataset.paws=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));canvas.dataset.gaitBlend=String(a.blend);}
+    if(a.own){const pawsJson=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));if(pawsJson!==lastPawsJson){lastPawsJson=pawsJson;canvas.dataset.paws=pawsJson;}canvas.dataset.gaitBlend=String(a.blend);}
     attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit));attr(a.shadow,'opacity',a.raster?'.12':'0');
     attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit));attr(a.label,'font-size',String(14*unit));attr(a.label,'opacity',a.raster?'1':'0');
     attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit})`);attr(a.heart,'opacity',petting?'1':'0');

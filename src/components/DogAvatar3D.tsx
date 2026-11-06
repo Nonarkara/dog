@@ -896,6 +896,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     let nextBlink = 2 + Math.random() * 3;
     let blink = 0;
     const camLocal = new THREE.Vector3();
+    const scratchVec3 = new THREE.Vector3();
 
     let idle=newIdle();
     let renders=0;
@@ -905,11 +906,15 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
       const frameNow = performance.now();
-      if (document.hidden || frameNow - lastFrame < (reducedMotion ? 100 : 32)) return;
+      const ps = petStateRef.current;
+      const asleep = ps.sleep?.asleep ?? false;
+      const act = interactionState.current;
+      const busy = act.timer > 0 || gameLeap.current.dir !== null || (petting.spot !== null && frameNow < petting.until) || !!performanceRef.current.poseRequest;
+      const minInterval = reducedMotion ? 100 : asleep && !busy ? 80 : 32;
+      if (document.hidden || frameNow - lastFrame < minInterval) return;
       lastFrame = frameNow;
       const dt = Math.min(clock.getDelta(), 0.05);
       const t = clock.getElapsedTime();
-      const ps = petStateRef.current;
 
       const trust = ps.trust / 100;
       const arousal = ps.arousal / 100;
@@ -918,15 +923,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const friendly = Math.max(0, trust * 0.7 + (1 - hunger * 0.5) * 0.3);
       const alert = Math.min(1, arousal * 0.6 + trust * 0.4);
       const tired = 1 - energy;
-      const asleep = ps.sleep?.asleep ?? false;
       const isSick = ps.sick ?? false;
-      const act = interactionState.current;
       if (act.timer > 0) act.timer -= dt;
       const acting = act.timer > 0 ? act.type : 'idle';
 
       // Sickness Aura
       const targetSickAura = isSick && !asleep ? 1 : 0.001;
-      sickAura.scale.lerp(new THREE.Vector3(targetSickAura, targetSickAura, targetSickAura), 0.15);
+      sickAura.scale.lerp(scratchVec3.setScalar(targetSickAura), 0.15);
       sickAura.visible = sickAura.scale.x > 0.05;
       if (sickAura.visible) {
         sickAura.rotation.y = t * 1.5;
@@ -935,13 +938,13 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
 
       // Bolster Bed Cushion under chin when asleep
       const targetBolsterScale = asleep ? 1 : 0.001;
-      bolsterGroup.scale.lerp(new THREE.Vector3(targetBolsterScale, targetBolsterScale, targetBolsterScale), 0.12);
+      bolsterGroup.scale.lerp(scratchVec3.setScalar(targetBolsterScale), 0.12);
       bolsterGroup.visible = bolsterGroup.scale.x > 0.05;
 
       // 3D Food Bowl Feasting
       const isFeeding = acting === 'feed'||poseRef.current==='reward';
       const targetBowlScale = isFeeding ? 1 : 0.001;
-      bowlGroup.scale.lerp(new THREE.Vector3(targetBowlScale, targetBowlScale, targetBowlScale), 0.15);
+      bowlGroup.scale.lerp(scratchVec3.setScalar(targetBowlScale), 0.15);
       bowlGroup.visible = bowlGroup.scale.x > 0.05;
       if (isFeeding) {
         kibbleMeshes.forEach((km, idx) => {
@@ -958,7 +961,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       poopMeshes.forEach((pGrp, idx) => {
         const shouldShow = idx < currentPoops;
         const targetScale = shouldShow ? 1 : 0.001;
-        pGrp.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
+        pGrp.scale.lerp(scratchVec3.setScalar(targetScale), 0.15);
         pGrp.visible = pGrp.scale.x > 0.05;
         if (pGrp.visible) {
           const fly = pGrp.userData.fly as THREE.Mesh;
@@ -1175,21 +1178,23 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
         }
       }
 
-      heartsGroup.children.slice().forEach((h) => {
+      for (let i = heartsGroup.children.length - 1; i >= 0; i--) {
+        const h = heartsGroup.children[i];
         h.position.y += h.userData.vy * dt;
         h.userData.life -= dt * 0.9;
         h.scale.setScalar(Math.max(0.01, h.userData.life));
         if (h.userData.life <= 0) { heartsGroup.remove(h); const m = h as THREE.Mesh; m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
-      });
+      }
 
-      sparksGroup.children.slice().forEach((s) => {
+      for (let i = sparksGroup.children.length - 1; i >= 0; i--) {
+        const s = sparksGroup.children[i];
         s.position.x += s.userData.vx * dt;
         s.position.y += s.userData.vy * dt;
         s.position.z += s.userData.vz * dt;
         s.userData.life -= dt * 1.5;
         s.scale.setScalar(Math.max(0.01, s.userData.life));
         if (s.userData.life <= 0) { sparksGroup.remove(s); const m = s as THREE.Mesh; m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
-      });
+      }
 
       trainingToy.visible=!!lesson?.toy;
       if(trainingToy.visible)trainingToy.position.set(lesson?.carrying?dogRoot.position.x-.3:.65,lesson?.carrying ? .8 : .12,.25);

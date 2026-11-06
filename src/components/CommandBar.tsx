@@ -102,6 +102,15 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         onInteract('medicine');
         return;
       }
+      if (e.key === '6') {
+        if (!isInteracting) { e.preventDefault(); onBed(); }
+        return;
+      }
+      if (e.key === '?') {
+        e.preventDefault();
+        onToggleLabels();
+        return;
+      }
       const hit = BASE_ACTIONS.find((a) => a.key === e.key);
       if (!hit) return;
       e.preventDefault();
@@ -113,7 +122,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onInteract, isSick, poops]);
+  }, [onInteract, onBed, onToggleLabels, isInteracting, isSick, poops]);
 
   return (
     <div className={`command-bar no-print icon-commands ${labelsVisible?'labels-visible':''}`} role="group" aria-label="Care controls">
