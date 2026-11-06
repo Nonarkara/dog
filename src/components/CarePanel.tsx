@@ -80,11 +80,14 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   const disciplineVal = Math.round(petState.discipline ?? 60);
 
   const meters: Meter[] = [
-    { key: 'fullness', label: 'Fullness', value: petState.needs.hunger, lowMeans: 'hungry' },
+    /* lowMeans words render inside the value slot of a 49px-wide meter cell,
+       so they stay short: a long word would wrap and change the care
+       console's height, reflowing the whole cockpit below it. */
+    { key: 'fullness', label: 'Fullness', value: petState.needs.hunger, lowMeans: 'empty' },
     { key: 'energy', label: 'Energy', value: petState.needs.energy, lowMeans: 'tired' },
     { key: 'hygiene', label: 'Hygiene', value: petState.needs.hygiene, lowMeans: 'dirty' },
     { key: 'happiness', label: 'Happiness', value: happiness(petState), lowMeans: isSick ? 'sick' : 'low' },
-    { key: 'trust', label: 'Trust', value: petState.trust, lowMeans: 'distrustful' },
+    { key: 'trust', label: 'Trust', value: petState.trust, lowMeans: 'wary' },
     { key: 'arousal', label: 'Arousal', value: petState.arousal, lowMeans: 'flat', inverted: true },
   ];
 
@@ -148,17 +151,20 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
               <div key={m.key} className="care-meter care-meter-reading min-w-0">
                 <div className="care-meter-symbols">
                   <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
-                  {isLow && (
-                    <span className="label text-rose-400 truncate">{warningLabel}</span>
-                  )}
                 </div>
+                {/* A low meter reads as its word, in the value's own slot. The
+                    word never takes a second row: a taller meter would change
+                    the care console's height and reflow the record below. The
+                    exact number stays on the bar and in the meter's aria-label. */}
                 <div className="care-meter-value flex items-baseline gap-1">
-                  <span
-                    className={`data text-[17px] leading-none ${isLow ? 'text-rose-400' : 'text-zinc-100'}`}
-                  >
-                    {value}
-                  </span>
-                  <span className="data text-[10px] leading-none text-faint">%</span>
+                  {isLow ? (
+                    <span className="label text-rose-400 truncate" title={warningLabel}>{warningLabel}</span>
+                  ) : (
+                    <>
+                      <span className="data text-[17px] leading-none text-zinc-100">{value}</span>
+                      <span className="data text-[10px] leading-none text-faint">%</span>
+                    </>
+                  )}
                 </div>
                 <div
                   role="progressbar"
