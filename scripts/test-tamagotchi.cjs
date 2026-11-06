@@ -1,3 +1,4 @@
+const {openPlay}=require('./fixtures/open-play.cjs');
 /* Rendered regression checks. Run with Playwright installed or NODE_PATH set. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -7,24 +8,22 @@ const out = process.env.DOG_EVIDENCE || '/tmp/dog-tamagotchi-evidence';
 fs.mkdirSync(out, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', args: process.env.DOG_NATIVE_GL ? [] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.clock.setFixedTime(new Date(2026,9,30,12));
   page.setDefaultTimeout(60000);
   page.on('pageerror', e => { errors.push(e.message); console.error('Browser error:',e.message); });
   console.log('Opening',url);
-  await page.goto(url,{waitUntil:'domcontentloaded'});
-  await page.bringToFront();
-  // The root asks which world you want. Enter the playground the way a visitor
-  // does, or the test waits for a canvas that the entry screen never draws.
-  if(!(await page.locator('canvas').count())){await page.getByRole('link',{name:/Play/}).first().click();await page.waitForLoadState('domcontentloaded');}
+  await openPlay(page,url);
   console.log('DOM loaded');
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles).catch(async e => { console.error(await page.evaluate(() => ({visibility:document.visibilityState,text:document.body.innerText.slice(0,800),canvas:[...document.querySelectorAll('canvas')].map(c=>c.dataset)}))); throw e; });
   console.log('Avatar ready');
   const choose = async name => {
     await page.locator('[aria-controls="dog-switcher"]').click();
     await page.getByRole('option').filter({ hasText: new RegExp('^' + name) }).click();
-    await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
+    const id=({'Expo':'expo-2021','Mali':'mali-2022','Oreo':'oreo-frenchie','Paolo':'paolo-pug','Hachiku':'shiba-chai'})[name];
+    await page.waitForFunction(id=>{const c=document.querySelector('canvas');return c?.dataset.dog===id&&+c.dataset.frames>5&&document.querySelector('[aria-controls=dog-switcher]')?.getAttribute('aria-expanded')==='false';},id);
   };
   // Continuous WebGL motion can prevent Playwright's screenshot stability wait.
   // Capture the actual frame through CDP, as scripts/shots.py already does.
@@ -85,28 +84,44 @@ fs.mkdirSync(out, { recursive: true });
   const trustBeforeGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
   // A dog who has never practised fetch does not play catch (he bows and asks
   // to be taught). Give every dog the lesson, as a player who had taught it.
-  await page.evaluate(()=>{const save=JSON.parse(localStorage.getItem('canine_os_save_v3'));for(const pet of Object.values(save.pets))pet.lessons={...pet.lessons,fetch:{...(pet.lessons&&pet.lessons.fetch),stage:1,skill:.6}};localStorage.setItem('canine_os_save_v3',JSON.stringify(save));});
+  await page.evaluate(()=>{const save=JSON.parse(localStorage.getItem('canine_os_save_v3'));for(const pet of Object.values(save.pets))pet.lessons={...pet.lessons,fetch:{streak:0,misses:0,sessionTrials:0,...(pet.lessons&&pet.lessons.fetch),stage:1,skill:.6}};localStorage.setItem('canine_os_save_v3',JSON.stringify(save));});
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
   await page.getByRole('group',{name:'Care controls'}).getByRole('button', {name:/^Play/}).click();
-  for(let round=1;round<=5;round++) {
-    // Read the round and the ball's side in one step: the HUD re-renders on its
-    // own clock, so a wait followed by a separate read can see the next round.
-    const side = await (await page.waitForFunction(r => { const t = document.querySelector('.catch-hud')?.textContent || ''; return t.includes(`Round ${r}/5`) ? (/ball ◀ left/i.test(t) ? 'left' : 'right') : false; }, round)).jsonValue();
-    await page.getByRole('button',{name:side === 'left' ? '◀ Left' : 'Right ▶', exact:true}).click();
-    await page.waitForTimeout(950);
-  }
-  assert.equal(await page.locator('.catch-hud').count(),0);
+  const readRound=async round=>await(await page.waitForFunction(r=>{
+      const hud=document.querySelector('.catch-hud'),text=hud?.textContent??'';
+      const turn=text.match(/Round\s+(\d+)\/5/),score=text.match(/Score\s+(\d+)/);
+      const target=text.match(/ball\s+(◀\s+left|right\s+▶)/i);
+      if(!hud||!turn||+turn[1]!==r||!score||!target||[...hud.querySelectorAll('button')].some(b=>b.disabled))return false;
+      return{side:/left/i.test(target[1])?'left':'right',score:+score[1]};
+    },round)).jsonValue();
+  const catchRound=async round=>{
+    const status=await readRound(round);
+    assert.equal(status.score,round-1,`Every correct choice must score: round${round}`);
+    await page.getByRole('button',{name:status.side==='left'?'◀ Left':'Right ▶',exact:true}).click();
+    await page.waitForFunction(expected=>{
+      const h=document.querySelector('.catch-hud');
+      return h&&new RegExp(`Score\\s+${expected}(?![0-9])`).test(h.textContent)&&h.textContent.includes('Caught!');
+    },round);
+  };
+  for(let round=1;round<=5;round++)await catchRound(round);
+  await page.locator('.catch-hud').waitFor({state:'hidden'});
+  await page.waitForFunction(before=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust>=Math.min(100,before+6.9),trustBeforeGame);
   const trustAfterGame = await page.evaluate(() => JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['shiba-chai'].trust);
   assert(trustAfterGame >= Math.min(100, trustBeforeGame + 6.9), 'Play +2 and catch victory +5 reach persisted state');
-  // New-game reset and close invalidate pending round callbacks.
-  await page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:/^Play/}).click();
-  await page.getByRole('button',{name:'◀ Left',exact:true}).click();
-  await page.getByTitle('Close mini-game').click();
-  await page.waitForTimeout(1100);
-  assert.equal(await page.locator('.catch-hud').count(),0);
-  await page.waitForTimeout(1100);
-  // Dog state never crosses identities, including during an active game.
+  const rewards=()=>page.evaluate(()=>Object.fromEntries(Object.entries(JSON.parse(localStorage.getItem('canine_os_save_v3')).pets).map(([id,p])=>[id,{trust:p.trust,weight:p.weightKg,coins:p.game?.coins??null,plays:p.careLog?.play??0}])));
+  const play=page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:/^Play/});
+  // Cancel while the fifth catch's reward is pending, not merely after a
+  // harmless first-round callback. Opening Play is included in the baseline.
+  await play.click();for(let r=1;r<5;r++)await catchRound(r);
+  const beforeClose=await rewards();await catchRound(5);
+  await page.getByTitle('Close mini-game').click();await page.waitForTimeout(1100);
+  assert.equal(await page.locator('.catch-hud').count(),0);assert.deepEqual(await rewards(),beforeClose,'Closing cannot grant a delayed victory');
+  // Switch identity during the final pending callback as an actual player can.
+  await play.click();for(let r=1;r<5;r++)await catchRound(r);
+  const beforeSwitch=await rewards();await catchRound(5);await choose('Expo');await page.waitForTimeout(1100);
+  assert.equal(await page.locator('.catch-hud').count(),0);assert.deepEqual(await rewards(),beforeSwitch,'Switching cannot reward either dog from a cancelled game');
+  // Feeding one dog remains isolated from the others.
   await page.evaluate(()=>{const states=JSON.parse(localStorage.getItem('canine_os_save_v3')).pets;states['expo-2021'].needs.hunger=40;localStorage.setItem('canine_os_save_v3',JSON.stringify({...JSON.parse(localStorage.getItem('canine_os_save_v3')),pets:states}));});
   await choose('Expo');
   await page.getByRole('button',{name:/^Feed/}).click();
@@ -161,5 +176,5 @@ fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(`${out}/measurements.json`,JSON.stringify(metrics,null,2));
   console.log('PASS: four viewports, five avatars, deterministic catch, close cleanup, dog isolation, coat persistence; zero runtime errors.');
   console.log(JSON.stringify(metrics));
-  await browser.close();
+  } finally {await browser.close();}
 })().catch(e=>{console.error(e); process.exit(1)});

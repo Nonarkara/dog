@@ -1,3 +1,4 @@
+const{openPlay}=require('./fixtures/open-play.cjs');
 const{chromium}=require('playwright');const fs=require('node:fs');const assert=require('node:assert/strict');
 const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{recursive:true});
 (async()=>{
@@ -12,10 +13,7 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{rec
  // Midday: this test judges the awake render budget, and a dog asleep at
  // night is drawn at twelve frames a second by design.
  await p.clock.setFixedTime(new Date(2026,10,4,12));
- await p.goto(process.env.DOG_URL||'http://127.0.0.1:4178',{waitUntil:'domcontentloaded'});await p.bringToFront();
- // The root asks which world you want. Enter the playground the way a visitor
- // does, or the test waits for a canvas that the entry screen never draws.
- if(!(await p.locator('canvas').count())){await p.getByRole('link',{name:/Play/}).first().click();await p.waitForLoadState('domcontentloaded');}
+ await openPlay(p,process.env.DOG_URL||'http://127.0.0.1:4178');
  await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.renderer==='illustrated-2d'&&+document.querySelector('canvas').dataset.frames>10);
  const cdp=await p.context().newCDPSession(p);const shot=async name=>{const{data}=await cdp.send('Page.captureScreenshot',{format:'png',clip:{x:0,y:0,...p.viewportSize(),scale:1},captureBeyondViewport:true});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const facts=[];
@@ -56,6 +54,5 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{rec
 
  assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/report.json`,JSON.stringify(facts,null,2));
  await b.close();
- const rb=await chromium.launch({channel:'chrome'}),rp=await rb.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});await rp.goto(process.env.DOG_URL||'http://127.0.0.1:4178',{waitUntil:'domcontentloaded'});await rp.bringToFront();
-  if(!(await rp.locator('canvas').count())){await rp.getByRole('link',{name:/Play/}).first().click();await rp.waitForLoadState('domcontentloaded');}await rp.waitForFunction(()=>document.querySelector('canvas')?.dataset.reduced==='true');await rp.waitForTimeout(3500);const fps=await rp.locator('canvas').first().evaluate(c=>+c.dataset.fps);assert(fps<=7,'Reduced motion render budget');await rb.close();console.log('PASS: illustrated identity, four viewport fps/geometry, all core care motions, touch, sleep, simulated visibility pause and reduced motion.');
+ const rb=await chromium.launch({channel:'chrome'}),rp=await rb.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});await openPlay(rp,process.env.DOG_URL||'http://127.0.0.1:4178');await rp.waitForFunction(()=>document.querySelector('canvas')?.dataset.reduced==='true');await rp.waitForTimeout(3500);const fps=await rp.locator('canvas').first().evaluate(c=>+c.dataset.fps);assert(fps<=7,'Reduced motion render budget');await rb.close();console.log('PASS: illustrated identity, four viewport fps/geometry, all core care motions, touch, sleep, simulated visibility pause and reduced motion.');
 })().catch(e=>{console.error(e);process.exit(1)});
