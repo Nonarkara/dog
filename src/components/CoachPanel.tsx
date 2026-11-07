@@ -377,8 +377,13 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
         <PracticeDeck dog={dog} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose ?? (async () => null)} requestedBehaviour={requestedBehaviour} busy={busy} petPulse={petPulse??0}/>
       ) : (
       <div className="panel-body coach-log">
-        {/* ---- all eight behaviours ----------------------------------------- */}
-        <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
+        {/* ---- all eight behaviours -----------------------------------------
+            Eight words in a row that wraps leave one alone on the last line.
+            The columns come from the count instead — eight divides by four
+            and by eight — and the panel's own width decides which, because
+            the panel is what the words have to fit inside. */}
+        <div className="@container shrink-0 px-2 py-1.5">
+          <div className="grid grid-cols-4 gap-1 @2xl:grid-cols-8">
           {BEHAVIOURS.map((b) => {
             const active = b.name === behaviourName;
             return (
@@ -393,6 +398,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* ---- the marker timer --------------------------------------------- */}

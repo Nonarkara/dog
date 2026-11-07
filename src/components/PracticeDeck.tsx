@@ -234,7 +234,18 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-practice-phase={phase} data-practice-behaviour={name}>
-      <div className="flex shrink-0 flex-wrap items-center gap-1 px-2 py-1.5">
+      {/* The dog's eight words, as a GRID and not as a row that wraps.
+
+          Eight chips in a flex row that wraps leave one chip alone on the
+          last line — a hole in the vocabulary, and the reader has to work
+          out which word was pushed away. So the columns are chosen from the
+          count: eight divides by four and by eight, never by seven. The
+          panel's own width decides how many, because the panel is what the
+          words have to fit inside — four columns of two rows in a narrow
+          coach panel, one row of eight when the panel is wide enough to
+          hold them. */}
+      <div className="@container shrink-0 px-2 py-1.5">
+        <div className="grid grid-cols-4 gap-1 @2xl:grid-cols-8">
         {BEHAVIOURS.map((b) => {
           const behind=lockedBehind(petState,b.name);
           return (
@@ -250,6 +261,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
             {!behind&&isLearned(petState,b.name)?'✓ ':''}{b.label}
           </button>
         );})}
+        </div>
       </div>
 
       {!proofing?<><CaptureGame busy={busy} dogName={dog.name} name={name} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose} petPulse={petPulse} unavailable={asleep?`${dog.name} is asleep.`:calmNeed(petState,'training')}/>{isLearned(petState,name)&&<button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(true)} title="Lure, signal, word, then distance, duration and distraction">Proof it →</button>}</>:<>

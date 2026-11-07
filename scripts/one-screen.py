@@ -157,7 +157,13 @@ PROBE = """
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') continue;
     const r = a.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) continue;
-    const control = /^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.getAttribute('role') === 'button';
+    const control =
+      /^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(a.tagName) ||
+      a.getAttribute('role') === 'button' ||
+      // A LINK IS SOMETHING YOU CAN DO. The entry screen's first way in is
+      // "Play", which is an anchor, and a check that only counts buttons
+      // would report the second choice as the first.
+      (a.tagName === 'A' && a.hasAttribute('href'));
     if (!control) continue;
     const y = r.top + (window.scrollY || 0);
     if (firstAction === null || y < firstAction.y) {
@@ -296,7 +302,13 @@ def open_page(browser, url, width, height, attempts=3):
         page.set_default_timeout(60000)
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_selector(".panel", timeout=60000)
+            # The app's own signal: it has drawn SOMETHING. The site has two
+            # surfaces — the entry screen in front of the door, and the
+            # cockpit behind it — so the signal is either a region of the
+            # cockpit or the entry itself. A page that failed to render has
+            # neither, and a measurement of nothing looks exactly like a
+            # measurement of a perfect page.
+            page.wait_for_selector(".panel, .entry", timeout=60000)
             # The cockpit's regions are code-split, so the screen is only
             # finished when its chunks have landed. A chunk that failed to
             # load leaves a region missing, and a missing region is not a
@@ -466,10 +478,19 @@ def run(url, viewports, out_path):
                 print(f"  REGION {label}: {'fits' if not problems else '; '.join(problems)}", flush=True)
 
             # ---- sweep the record's five tabs -----------------------------
+            # A surface that has no record at all (the entry screen, in
+            # front of the door) is not a failure: there is nothing to
+            # sweep. A surface that HAS a record and cannot open it IS a
+            # failure — a panel that will not show its content is exactly
+            # the defect this check exists to catch.
+            has_record_region = page.locator(".region-record").count() > 0
             if not open_record(page):
-                line = f"{width}x{height}: the record could not be opened, so its tabs went unmeasured"
-                failures.append(line)
-                print("  TAB FAILED " + line, flush=True)
+                if has_record_region:
+                    line = f"{width}x{height}: the record could not be opened, so its tabs went unmeasured"
+                    failures.append(line)
+                    print("  TAB FAILED " + line, flush=True)
+                else:
+                    print("  no record on this surface — nothing to sweep", flush=True)
             else:
                 for tab in RECORD_TABS:
                     selector = f"#record-tab-{tab}"

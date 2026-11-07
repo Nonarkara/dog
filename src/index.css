@@ -1270,8 +1270,10 @@ html {font-synthesis:none;}
  .command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent){width:32px;min-width:32px;height:32px;min-height:32px;padding:2px;}
  .command-bar.icon-commands,.command-bar.icon-commands>div:first-child{gap:2px;}
 }
-/* Commands may wrap into meaningful rows instead of hiding the last skill. */
-.cockpit-workspace--wide [data-practice-behaviour]>div:first-child{flex-wrap:wrap;overflow:visible;}
+/* The eight behaviours are a GRID whose columns divide the count, so the
+   last chip is never left alone on a row of its own. The rule that used to
+   let that row wrap is gone with it: a row that wraps strands a word, and
+   a vocabulary with a hole in it is a vocabulary you have to read twice. */
 @media(max-width:300px){
  .cockpit:has(.cockpit-workspace--park) .companion-toggle{display:none;}
  .cockpit:has(.cockpit-workspace--park) .park-navigation--home span{display:none;}

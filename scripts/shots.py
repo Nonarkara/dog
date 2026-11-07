@@ -6,7 +6,7 @@
    loop, and Playwright's screenshot() waits for a stable frame that never comes.
    CDP captures whatever is on screen right now, which is what we want to audit.
 """
-import base64, json, sys, os
+import json, sys, os
 from playwright.sync_api import sync_playwright
 
 label = sys.argv[1] if len(sys.argv) > 1 else "current"
@@ -40,22 +40,28 @@ PROBE = """() => {
 }"""
 
 
-def cdp_shot(page, path, full_page=False):
-    """Capture via CDP directly — no stability wait."""
-    cdp = page.context.new_cdp_session(page)
-    params = {"format": "png", "captureBeyondViewport": bool(full_page)}
-    if full_page:
-        params["clip"] = {
-            "x": 0,
-            "y": 0,
-            "width": page.viewport_size["width"],
-            "height": page.evaluate("() => document.documentElement.scrollHeight"),
-            "scale": 1,
-        }
-    res = cdp.send("Page.captureScreenshot", params)
-    with open(path, "wb") as f:
-        f.write(base64.b64decode(res["data"]))
-    cdp.detach()
+def shot(page, path):
+    """Capture what the reader would see.
+
+    PLAYWRIGHT'S OWN SCREENSHOT, NOT RAW CDP.
+
+    Two different captures of the same live page disagreed, and the CDP one
+    was wrong. `Page.captureScreenshot` clips against the COMPOSITOR
+    SURFACE, which in this headless browser is shorter than the viewport: it
+    returned a black band along the bottom of every photograph, from the
+    entry screen to the park. A plain viewport screenshot of the same page
+    had no band at all — the pixels there are cream.
+
+    A band that is not in the product is the worst kind of evidence: it is
+    convincing, it is specific, and it sends you to fix a defect that does
+    not exist. So the capture uses the path that agrees with the DOM, and
+    if it cannot, the run says so instead of writing a file.
+
+    The old reason for CDP was that the app ran a continuous WebGL rAF loop
+    and `screenshot()` waited for a stable frame that never came. The scenes
+    are illustrations now, and the capture completes.
+    """
+    page.screenshot(path=path, timeout=30000)
 
 
 with sync_playwright() as p:
@@ -88,8 +94,7 @@ with sync_playwright() as p:
         print(f"\n=== {w}x{h} === ({title})")
         print(json.dumps(facts, indent=2))
 
-        cdp_shot(page, os.path.join(out, f"{w}.png"), full_page=True)
-        cdp_shot(page, os.path.join(out, f"{w}-fold.png"), full_page=False)
+        shot(page, os.path.join(out, f"{w}.png"))
         page.close()
     browser.close()
 print(f"\nwrote {out}/")
