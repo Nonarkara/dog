@@ -13,17 +13,22 @@
     278,
     279,
     280,
-    296,
-    297,
-    298,
+    281,
+    299,
+    300,
+    301,
     329,
     330,
     331,
+    338,
+    339,
+    340,
+    341,
+    358,
+    359,
     360,
-    390,
-    419,
-    420,
-    421,
+    478,
+    479,
     480,
     499,
     500,
@@ -34,12 +39,13 @@
     599,
     600,
     601,
-    617,
-    618,
-    619,
+    638,
     639,
     640,
     641,
+    671,
+    672,
+    673,
     767,
     768,
     769,
@@ -49,11 +55,9 @@
     1279,
     1280,
     1281,
-    1440,
     1535,
     1536,
-    1537,
-    1920
+    1537
   ],
   "limits": {
     "deadGap": 72,
@@ -77,10 +81,10 @@
   },
   "exempt": [],
   "provenance": {
-    "measuredAt": "2026-10-30T08:29:18.526Z",
-    "measurements": 132,
+    "measuredAt": "2026-11-07T07:42:50.609Z",
+    "measurements": 144,
     "routes": 3,
-    "widths": 44,
+    "widths": 48,
     "measuredTogether": true,
     "carriedOver": []
   },
@@ -158,7 +162,7 @@
           "share": 0.2
         }
       },
-      "296": {
+      "281": {
         "findings": [],
         "firstAction": {
           "y": 812,
@@ -182,7 +186,7 @@
           "share": 0.2
         }
       },
-      "297": {
+      "299": {
         "findings": [],
         "firstAction": {
           "y": 812,
@@ -206,7 +210,31 @@
           "share": 0.2
         }
       },
-      "298": {
+      "300": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "301": {
         "findings": [],
         "firstAction": {
           "y": 812,
@@ -302,6 +330,150 @@
           "share": 0.2
         }
       },
+      "338": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "339": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "340": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "341": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "358": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "359": {
+        "findings": [],
+        "firstAction": {
+          "y": 812,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
       "360": {
         "findings": [],
         "firstAction": {
@@ -326,10 +498,10 @@
           "share": 0.2
         }
       },
-      "390": {
+      "478": {
         "findings": [],
         "firstAction": {
-          "y": 816,
+          "y": 813,
           "sel": "input.sr-only"
         },
         "chrome": {
@@ -350,58 +522,10 @@
           "share": 0.2
         }
       },
-      "419": {
+      "479": {
         "findings": [],
         "firstAction": {
-          "y": 815,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
-      "420": {
-        "findings": [],
-        "firstAction": {
-          "y": 815,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
-      "421": {
-        "findings": [],
-        "firstAction": {
-          "y": 815,
+          "y": 813,
           "sel": "input.sr-only"
         },
         "chrome": {
@@ -662,58 +786,10 @@
           "share": 0.2
         }
       },
-      "617": {
+      "638": {
         "findings": [],
         "firstAction": {
-          "y": 965,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
-      "618": {
-        "findings": [],
-        "firstAction": {
-          "y": 965,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
-      "619": {
-        "findings": [],
-        "firstAction": {
-          "y": 965,
+          "y": 964,
           "sel": "input.sr-only"
         },
         "chrome": {
@@ -786,6 +862,78 @@
         "findings": [],
         "firstAction": {
           "y": 964,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "671": {
+        "findings": [],
+        "firstAction": {
+          "y": 963,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "672": {
+        "findings": [],
+        "firstAction": {
+          "y": 963,
+          "sel": "input.sr-only"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 1,
+          "share": 0.2
+        }
+      },
+      "673": {
+        "findings": [],
+        "firstAction": {
+          "y": 963,
           "sel": "input.sr-only"
         },
         "chrome": {
@@ -1022,30 +1170,6 @@
           "share": 0.2
         }
       },
-      "1440": {
-        "findings": [],
-        "firstAction": {
-          "y": 852,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
       "1535": {
         "findings": [],
         "firstAction": {
@@ -1095,30 +1219,6 @@
         }
       },
       "1537": {
-        "findings": [],
-        "firstAction": {
-          "y": 852,
-          "sel": "input.sr-only"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 1,
-          "share": 0.2
-        }
-      },
-      "1920": {
         "findings": [],
         "firstAction": {
           "y": 852,
@@ -1147,13 +1247,13 @@
       "278": {
         "findings": [],
         "firstAction": {
-          "y": 559,
+          "y": 600,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1162,8 +1262,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1171,13 +1271,13 @@
       "279": {
         "findings": [],
         "firstAction": {
-          "y": 559,
+          "y": 600,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1186,8 +1286,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1195,13 +1295,13 @@
       "280": {
         "findings": [],
         "firstAction": {
-          "y": 559,
+          "y": 600,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1210,22 +1310,22 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
       },
-      "296": {
+      "281": {
         "findings": [],
         "firstAction": {
-          "y": 579,
+          "y": 600,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1234,22 +1334,22 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
       },
-      "297": {
+      "299": {
         "findings": [],
         "firstAction": {
-          "y": 579,
+          "y": 625,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1258,22 +1358,46 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
       },
-      "298": {
+      "300": {
         "findings": [],
         "firstAction": {
-          "y": 579,
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "301": {
+        "findings": [],
+        "firstAction": {
+          "y": 625,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 81,
+          "topPct": 9.6,
           "bottom": 0,
           "bottomPct": 0,
           "stacked": 1,
@@ -1282,8 +1406,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1291,23 +1415,23 @@
       "329": {
         "findings": [],
         "firstAction": {
-          "y": 579,
-          "sel": "button.flex-1.min-h-9"
+          "y": null,
+          "sel": null
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 0,
+          "topPct": 0,
           "bottom": 0,
           "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
+          "stacked": 0,
+          "topSel": null,
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
           "peers": 0,
           "share": 0
         }
@@ -1315,7 +1439,7 @@
       "330": {
         "findings": [],
         "firstAction": {
-          "y": 579,
+          "y": 663,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1330,8 +1454,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1339,7 +1463,55 @@
       "331": {
         "findings": [],
         "firstAction": {
-          "y": 579,
+          "y": 663,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 81,
+          "topPct": 9.6,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "338": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "339": {
+        "findings": [],
+        "firstAction": {
+          "y": 663,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1354,8 +1526,104 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "340": {
+        "findings": [],
+        "firstAction": {
+          "y": 623,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "341": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "358": {
+        "findings": [],
+        "firstAction": {
+          "y": 661,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "359": {
+        "findings": [],
+        "firstAction": {
+          "y": 661,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 45,
+          "topPct": 5.3,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1363,31 +1631,31 @@
       "360": {
         "findings": [],
         "firstAction": {
-          "y": 617,
-          "sel": "button.flex-1.min-h-9"
+          "y": null,
+          "sel": null
         },
         "chrome": {
           "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
+          "top": 0,
+          "topPct": 0,
           "bottom": 0,
           "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
+          "stacked": 0,
+          "topSel": null,
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
           "peers": 0,
           "share": 0
         }
       },
-      "390": {
+      "478": {
         "findings": [],
         "firstAction": {
-          "y": 617,
+          "y": 661,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1402,16 +1670,16 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
       },
-      "419": {
+      "479": {
         "findings": [],
         "firstAction": {
-          "y": 617,
+          "y": 661,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1426,56 +1694,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "420": {
-        "findings": [],
-        "firstAction": {
-          "y": 617,
-          "sel": "button.flex-1.min-h-9"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "421": {
-        "findings": [],
-        "firstAction": {
-          "y": 617,
-          "sel": "button.flex-1.min-h-9"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 45,
-          "topPct": 5.3,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1483,7 +1703,7 @@
       "480": {
         "findings": [],
         "firstAction": {
-          "y": 617,
+          "y": 661,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1498,8 +1718,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1507,7 +1727,7 @@
       "499": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1522,8 +1742,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1531,7 +1751,7 @@
       "500": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1546,8 +1766,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1555,7 +1775,7 @@
       "501": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1570,8 +1790,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1579,7 +1799,7 @@
       "519": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1594,8 +1814,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1603,7 +1823,7 @@
       "520": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1618,8 +1838,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1627,7 +1847,7 @@
       "521": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1642,8 +1862,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1651,7 +1871,7 @@
       "599": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1666,8 +1886,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1675,7 +1895,7 @@
       "600": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1690,8 +1910,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1699,7 +1919,7 @@
       "601": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1714,16 +1934,16 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
       },
-      "617": {
+      "638": {
         "findings": [],
         "firstAction": {
-          "y": 773,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1738,56 +1958,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "618": {
-        "findings": [],
-        "firstAction": {
-          "y": 773,
-          "sel": "button.flex-1.min-h-9"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 45,
-          "topPct": 4.5,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "619": {
-        "findings": [],
-        "firstAction": {
-          "y": 773,
-          "sel": "button.flex-1.min-h-9"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 45,
-          "topPct": 4.5,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1795,23 +1967,23 @@
       "639": {
         "findings": [],
         "firstAction": {
-          "y": 803,
-          "sel": "button.flex-1.min-h-9"
+          "y": null,
+          "sel": null
         },
         "chrome": {
           "vh": 1000,
-          "top": 45,
-          "topPct": 4.5,
+          "top": 0,
+          "topPct": 0,
           "bottom": 0,
           "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
+          "stacked": 0,
+          "topSel": null,
           "bottomSel": null
         },
         "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
           "peers": 0,
           "share": 0
         }
@@ -1819,7 +1991,7 @@
       "640": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1834,8 +2006,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1843,7 +2015,7 @@
       "641": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1858,8 +2030,80 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "671": {
+        "findings": [],
+        "firstAction": {
+          "y": 817,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 45,
+          "topPct": 4.5,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "672": {
+        "findings": [],
+        "firstAction": {
+          "y": null,
+          "sel": null
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 0,
+          "largest": 0,
+          "ratio": null,
+          "peers": 0,
+          "share": 0
+        }
+      },
+      "673": {
+        "findings": [],
+        "firstAction": {
+          "y": 817,
+          "sel": "button.flex-1.min-h-9"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 45,
+          "topPct": 4.5,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 1,
+          "topSel": "header.border-hairline-b.bg-surface",
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 15,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1867,7 +2111,7 @@
       "767": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1882,8 +2126,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1891,7 +2135,7 @@
       "768": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1906,8 +2150,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1915,7 +2159,7 @@
       "769": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1930,8 +2174,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1939,7 +2183,7 @@
       "1023": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 817,
           "sel": "button.flex-1.min-h-9"
         },
         "chrome": {
@@ -1954,8 +2198,8 @@
         },
         "hierarchy": {
           "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
+          "largest": 15,
+          "ratio": 1,
           "peers": 0,
           "share": 0
         }
@@ -1963,8 +2207,8 @@
       "1024": {
         "findings": [],
         "firstAction": {
-          "y": 195,
-          "sel": "button"
+          "y": 162,
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 1000,
@@ -1987,8 +2231,8 @@
       "1025": {
         "findings": [],
         "firstAction": {
-          "y": 195,
-          "sel": "button"
+          "y": 162,
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 1000,
@@ -2012,7 +2256,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2036,7 +2280,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2060,31 +2304,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 45,
-          "topPct": 5,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "1440": {
-        "findings": [],
-        "firstAction": {
-          "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2108,7 +2328,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2132,7 +2352,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2156,31 +2376,7 @@
         "findings": [],
         "firstAction": {
           "y": 162,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 45,
-          "topPct": 5,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 1,
-          "topSel": "header.border-hairline-b.bg-surface",
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 15,
-          "largest": 17,
-          "ratio": 0.88,
-          "peers": 0,
-          "share": 0
-        }
-      },
-      "1920": {
-        "findings": [],
-        "firstAction": {
-          "y": 162,
-          "sel": "button"
+          "sel": "button.btn.min-h-0"
         },
         "chrome": {
           "vh": 900,
@@ -2205,7 +2401,7 @@
       "278": {
         "findings": [],
         "firstAction": {
-          "y": 487,
+          "y": 460,
           "sel": "button"
         },
         "chrome": {
@@ -2223,13 +2419,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "279": {
         "findings": [],
         "firstAction": {
-          "y": 487,
+          "y": 460,
           "sel": "button"
         },
         "chrome": {
@@ -2247,13 +2443,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "280": {
         "findings": [],
         "firstAction": {
-          "y": 487,
+          "y": 460,
           "sel": "button"
         },
         "chrome": {
@@ -2271,13 +2467,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "296": {
+      "281": {
         "findings": [],
         "firstAction": {
-          "y": 515,
+          "y": 489,
           "sel": "button"
         },
         "chrome": {
@@ -2295,13 +2491,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "297": {
+      "299": {
         "findings": [],
         "firstAction": {
-          "y": 539,
+          "y": 513,
           "sel": "button"
         },
         "chrome": {
@@ -2319,13 +2515,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "298": {
+      "300": {
         "findings": [],
         "firstAction": {
-          "y": 539,
+          "y": 532,
           "sel": "button"
         },
         "chrome": {
@@ -2343,13 +2539,37 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
+        }
+      },
+      "301": {
+        "findings": [],
+        "firstAction": {
+          "y": 532,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
         }
       },
       "329": {
         "findings": [],
         "firstAction": {
-          "y": 578,
+          "y": 532,
           "sel": "button"
         },
         "chrome": {
@@ -2367,13 +2587,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "330": {
         "findings": [],
         "firstAction": {
-          "y": 578,
+          "y": 532,
           "sel": "button"
         },
         "chrome": {
@@ -2391,13 +2611,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "331": {
         "findings": [],
         "firstAction": {
-          "y": 615,
+          "y": 569,
           "sel": "button"
         },
         "chrome": {
@@ -2415,13 +2635,157 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
+        }
+      },
+      "338": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "339": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "340": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "341": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "358": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "359": {
+        "findings": [],
+        "firstAction": {
+          "y": 569,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 844,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
         }
       },
       "360": {
         "findings": [],
         "firstAction": {
-          "y": 615,
+          "y": 569,
           "sel": "button"
         },
         "chrome": {
@@ -2439,13 +2803,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "390": {
+      "478": {
         "findings": [],
         "firstAction": {
-          "y": 615,
+          "y": 610,
           "sel": "button"
         },
         "chrome": {
@@ -2463,13 +2827,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "419": {
+      "479": {
         "findings": [],
         "firstAction": {
-          "y": 614,
+          "y": 610,
           "sel": "button"
         },
         "chrome": {
@@ -2487,61 +2851,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
-        }
-      },
-      "420": {
-        "findings": [],
-        "firstAction": {
-          "y": 614,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
-        }
-      },
-      "421": {
-        "findings": [],
-        "firstAction": {
-          "y": 614,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 844,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "480": {
         "findings": [],
         "firstAction": {
-          "y": 636,
+          "y": 610,
           "sel": "button"
         },
         "chrome": {
@@ -2559,13 +2875,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "499": {
         "findings": [],
         "firstAction": {
-          "y": 792,
+          "y": 765,
           "sel": "button"
         },
         "chrome": {
@@ -2583,13 +2899,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "500": {
         "findings": [],
         "firstAction": {
-          "y": 792,
+          "y": 765,
           "sel": "button"
         },
         "chrome": {
@@ -2607,13 +2923,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "501": {
         "findings": [],
         "firstAction": {
-          "y": 792,
+          "y": 765,
           "sel": "button"
         },
         "chrome": {
@@ -2631,13 +2947,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "519": {
         "findings": [],
         "firstAction": {
-          "y": 791,
+          "y": 764,
           "sel": "button"
         },
         "chrome": {
@@ -2655,13 +2971,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "520": {
         "findings": [],
         "firstAction": {
-          "y": 791,
+          "y": 764,
           "sel": "button"
         },
         "chrome": {
@@ -2679,13 +2995,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "521": {
         "findings": [],
         "firstAction": {
-          "y": 791,
+          "y": 764,
           "sel": "button"
         },
         "chrome": {
@@ -2703,13 +3019,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "599": {
         "findings": [],
         "firstAction": {
-          "y": 808,
+          "y": 762,
           "sel": "button"
         },
         "chrome": {
@@ -2727,13 +3043,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "600": {
         "findings": [],
         "firstAction": {
-          "y": 808,
+          "y": 762,
           "sel": "button"
         },
         "chrome": {
@@ -2751,13 +3067,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "601": {
         "findings": [],
         "firstAction": {
-          "y": 808,
+          "y": 762,
           "sel": "button"
         },
         "chrome": {
@@ -2775,13 +3091,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
-      "617": {
+      "638": {
         "findings": [],
         "firstAction": {
-          "y": 808,
+          "y": 761,
           "sel": "button"
         },
         "chrome": {
@@ -2799,61 +3115,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
-        }
-      },
-      "618": {
-        "findings": [],
-        "firstAction": {
-          "y": 808,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
-        }
-      },
-      "619": {
-        "findings": [],
-        "firstAction": {
-          "y": 807,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 1000,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "639": {
         "findings": [],
         "firstAction": {
-          "y": 807,
+          "y": 761,
           "sel": "button"
         },
         "chrome": {
@@ -2871,13 +3139,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "640": {
         "findings": [],
         "firstAction": {
-          "y": 807,
+          "y": 761,
           "sel": "button"
         },
         "chrome": {
@@ -2895,13 +3163,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "641": {
         "findings": [],
         "firstAction": {
-          "y": 807,
+          "y": 761,
           "sel": "button"
         },
         "chrome": {
@@ -2919,13 +3187,85 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
+        }
+      },
+      "671": {
+        "findings": [],
+        "firstAction": {
+          "y": 760,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "672": {
+        "findings": [],
+        "firstAction": {
+          "y": 760,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
+        }
+      },
+      "673": {
+        "findings": [],
+        "firstAction": {
+          "y": 760,
+          "sel": "button"
+        },
+        "chrome": {
+          "vh": 1000,
+          "top": 0,
+          "topPct": 0,
+          "bottom": 0,
+          "bottomPct": 0,
+          "stacked": 0,
+          "topSel": null,
+          "bottomSel": null
+        },
+        "hierarchy": {
+          "h1": 22,
+          "largest": 22,
+          "ratio": 1,
+          "peers": 6,
+          "share": 0.26
         }
       },
       "767": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 757,
           "sel": "button"
         },
         "chrome": {
@@ -2943,13 +3283,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "768": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 757,
           "sel": "button"
         },
         "chrome": {
@@ -2967,13 +3307,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "769": {
         "findings": [],
         "firstAction": {
-          "y": 803,
+          "y": 757,
           "sel": "button"
         },
         "chrome": {
@@ -2991,13 +3331,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1023": {
         "findings": [],
         "firstAction": {
-          "y": 795,
+          "y": 749,
           "sel": "button"
         },
         "chrome": {
@@ -3015,13 +3355,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1024": {
         "findings": [],
         "firstAction": {
-          "y": 795,
+          "y": 749,
           "sel": "button"
         },
         "chrome": {
@@ -3039,13 +3379,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1025": {
         "findings": [],
         "firstAction": {
-          "y": 795,
+          "y": 749,
           "sel": "button"
         },
         "chrome": {
@@ -3063,13 +3403,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1279": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3087,13 +3427,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1280": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3111,13 +3451,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1281": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3135,37 +3475,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
-        }
-      },
-      "1440": {
-        "findings": [],
-        "firstAction": {
-          "y": 694,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1535": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3183,13 +3499,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1536": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3207,13 +3523,13 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       },
       "1537": {
         "findings": [],
         "firstAction": {
-          "y": 694,
+          "y": 648,
           "sel": "button"
         },
         "chrome": {
@@ -3231,31 +3547,7 @@
           "largest": 22,
           "ratio": 1,
           "peers": 6,
-          "share": 0.25
-        }
-      },
-      "1920": {
-        "findings": [],
-        "firstAction": {
-          "y": 694,
-          "sel": "button"
-        },
-        "chrome": {
-          "vh": 900,
-          "top": 0,
-          "topPct": 0,
-          "bottom": 0,
-          "bottomPct": 0,
-          "stacked": 0,
-          "topSel": null,
-          "bottomSel": null
-        },
-        "hierarchy": {
-          "h1": 22,
-          "largest": 22,
-          "ratio": 1,
-          "peers": 6,
-          "share": 0.25
+          "share": 0.26
         }
       }
     }

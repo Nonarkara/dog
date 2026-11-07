@@ -67,13 +67,40 @@
  */
 import { createServer } from "node:http";
 import { readdir } from "node:fs/promises";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, rmSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, rmSync, readdirSync, cpSync, mkdtempSync } from "node:fs";
 import { execFileSync, spawn } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * A snapshot of the directory being measured.
+ *
+ * The sweep must measure ONE set of bytes. A build that rewrites the
+ * directory while the sweep runs replaces the HTML before the chunks that
+ * HTML names, and the page then renders but never hydrates: the title is
+ * there, the first action is there, and every button does nothing.
+ *
+ * That failure is invisible to the gate, and invisible in the receipt. The
+ * gate compares holes and drift; a page that never became interactive is
+ * neither a hole nor a drift. The same is true of a sweep that reads the
+ * HTML before the build and the chunks after it — every cell is a real
+ * measurement of a site that never existed in that combination.
+ *
+ * So the directory is copied once, before the first measurement, and the
+ * copy is what every route, every stylesheet and every chunk is read from.
+ * The cost is one copy of the build; the benefit is that a receipt always
+ * describes one coherent site.
+ */
+let DIST_DIR = null;
+function snapshotDir(dir) {
+  const target = mkdtempSync(path.join(tmpdir(), "spatial-law-dist-"));
+  cpSync(dir, target, { recursive: true, dereference: true, force: true });
+  DIST_DIR = target;
+  return target;
+}
 
 // ---------------------------------------------------------------- arguments
 const argv = process.argv.slice(2);
@@ -90,6 +117,22 @@ const WIDTHS_ARG = arg("widths", null);
 const BASE = arg("base", null);
 const UPDATE = argv.includes("--update");
 const REPORT = argv.includes("--report");
+
+// The site being measured is a SNAPSHOT of the directory, copied once
+// before the first measurement.
+//
+// A sweep must measure ONE set of bytes. A build that rewrites the
+// directory while the sweep runs replaces the HTML before the chunks that
+// HTML names, and the page then renders but never hydrates: the title is
+// there, the first action is there, and every button does nothing.
+//
+// That failure is invisible to the gate and invisible in the receipt. The
+// gate compares holes and drift; a page that never became interactive is
+// neither a hole nor a drift. So the copy is what every route, every
+// stylesheet and every chunk is read from, and the receipt always describes
+// one coherent site.
+const SRC_DIR = path.resolve(String(DIR));
+const DIST = BASE ? null : existsSync(SRC_DIR) ? snapshotDir(SRC_DIR) : null;
 const JSON_OUT = arg("json", null);
 
 const DEFAULT_WIDTHS = [360, 480, 768, 1024, 1440, 1920];
@@ -427,11 +470,13 @@ function isFresh(d, navStart, token) {
 // here.
 //
 // A page with no title at all is not a failure — some pages have no h1 —
-// so for those the main element's own box is the readiness signal.
+// so for those the main element's own box is the readiness signal. Without
+// a main landmark, use the body, just as the probe and loadPage do. A blank
+// body still has to produce a real content-height box before it can pass.
 function rendered(d, cb) {
   var start = Date.now();
   (function step() {
-    var main = d.querySelector('main#content') || d.querySelector('main');
+    var main = d.querySelector('main#content') || d.querySelector('main') || d.body;
     var title = main && main.querySelector('h1');
     var ready = !main || main.getAttribute('data-study-ready') !== 'false';
     var fonts = true;
@@ -755,7 +800,7 @@ async function startServer(routes, widths) {
       }
     });
   } else {
-    const root = path.resolve(String(DIR));
+    const root = DIST;
     server = createServer((req, res) => {
       const raw = decodeURIComponent((req.url || "/").split("?")[0]);
       if (raw === "/__spatial-harness") {
@@ -885,9 +930,13 @@ async function discoverRoutes() {
 
     return [...routes].sort();
   }
-  const root = path.resolve(String(DIR));
+  const root = SRC_DIR;
   if (!existsSync(root)) {
     console.error(`\nFAIL — nothing to measure: ${root} does not exist.\n`);
+    process.exit(1);
+  }
+  if (!DIST) {
+    console.error(`\nFAIL — the snapshot of ${root} could not be made. Nothing was verified.\n`);
     process.exit(1);
   }
   const routes = [];
@@ -911,7 +960,7 @@ async function discoverRoutes() {
       await walk(sub, `${prefix}/${e.name}`);
     }
   }
-  await walk(root, "");
+  await walk(DIST, "");
   routes.sort();
   return routes;
 }
@@ -1086,7 +1135,7 @@ const projectWidths =
     : DEFAULT_WIDTHS;
 const cssScan = BASE
   ? await remoteBreakpoints(String(BASE).replace(/\/+$/, ""))
-  : cssBreakpoints(path.resolve(String(DIR)));
+  : cssBreakpoints(DIST);
 const cssWidths = cssScan.viewport;
 const widths = WIDTHS_ARG
   ? String(WIDTHS_ARG).split(",").map((w) => parseInt(w.trim(), 10)).filter(Boolean)
@@ -1117,6 +1166,17 @@ let cleaned = false;
 function cleanup() {
   if (cleaned) return;
   cleaned = true;
+  // The snapshot is this process's own scratch copy of the build. It lives
+  // in the system's temporary directory, so it goes the same way a temporary
+  // file goes.
+  if (DIST_DIR) {
+    try {
+      rmSync(DIST_DIR, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
+    DIST_DIR = null;
+  }
   try {
     // The profile is this process's own scratch directory. The trash helper
     // belongs to the runtime and is not in the same place on every machine,

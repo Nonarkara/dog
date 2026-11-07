@@ -11,7 +11,12 @@
     "deploy": "vite build && wrangler deploy",
     "test:care": "esbuild scripts/test-care-domain.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/care-tests.mjs --log-level=error && node node_modules/.cache/care-tests.mjs",
     "test:auth": "esbuild scripts/test-email-auth.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/auth-tests.mjs --log-level=error && node node_modules/.cache/auth-tests.mjs",
-    "test:push": "node scripts/test-push.cjs"
+    "test:push": "node scripts/test-push.cjs",
+    "gate:widths": "node scripts/breakpoints.mjs",
+    "gate": "node scripts/spatial/spatial-check.mjs --dir dist --baseline design/spatial-baseline.json --routes \"/,/?mode=play,/?mode=own\" --widths \"$(node scripts/breakpoints.mjs)\" --report",
+    "gate:live": "node scripts/spatial/spatial-check.mjs --base https://dog.nonarkara.org --baseline design/spatial-baseline.json --routes \"/,/?mode=play,/?mode=own\" --report",
+    "gate:falsify": "node scripts/spatial/spatial-falsify.mjs dist",
+    "one-screen": "python3 scripts/one-screen.py"
   },
   "dependencies": {
     "@clerk/backend": "3.26.5",
