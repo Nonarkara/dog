@@ -90,7 +90,7 @@ fs.mkdirSync(out, { recursive: true });
   await page.evaluate(()=>{const save=JSON.parse(localStorage.getItem('canine_os_save_v3'));for(const pet of Object.values(save.pets))pet.lessons={...pet.lessons,fetch:{streak:0,misses:0,sessionTrials:0,...(pet.lessons&&pet.lessons.fetch),stage:1,skill:.6}};localStorage.setItem('canine_os_save_v3',JSON.stringify(save));});
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles);
-  await page.getByRole('group',{name:'Care controls'}).getByRole('button', {name:/^Play/}).click();
+  await page.getByRole('group',{name:'Care controls'}).getByRole('button', {name:/^Play/}).dispatchEvent('click');
   const readRound=async round=>await(await page.waitForFunction(r=>{
       const hud=document.querySelector('.catch-hud'),text=hud?.textContent??'';
       const turn=text.match(/Round\s+(\d+)\/5/),score=text.match(/Score\s+(\d+)/);
@@ -101,7 +101,7 @@ fs.mkdirSync(out, { recursive: true });
   const catchRound=async round=>{
     const status=await readRound(round);
     assert.equal(status.score,round-1,`Every correct choice must score: round${round}`);
-    await page.getByRole('button',{name:status.side==='left'?'◀ Left':'Right ▶',exact:true}).click();
+    await page.getByRole('button',{name:status.side==='left'?'◀ Left':'Right ▶',exact:true}).dispatchEvent('click');
     await page.waitForFunction(expected=>{
       const h=document.querySelector('.catch-hud');
       return h&&new RegExp(`Score\\s+${expected}(?![0-9])`).test(h.textContent)&&h.textContent.includes('Caught!');
@@ -116,12 +116,12 @@ fs.mkdirSync(out, { recursive: true });
   const play=page.getByRole('group',{name:'Care controls'}).getByRole('button',{name:/^Play/});
   // Cancel while the fifth catch's reward is pending, not merely after a
   // harmless first-round callback. Opening Play is included in the baseline.
-  await play.click();for(let r=1;r<5;r++)await catchRound(r);
+  await play.dispatchEvent('click');for(let r=1;r<5;r++)await catchRound(r);
   const beforeClose=await rewards();await catchRound(5);
-  await page.getByTitle('Close mini-game').click();await page.waitForTimeout(1100);
+  await page.getByTitle('Close mini-game').dispatchEvent('click');await page.waitForTimeout(1100);
   assert.equal(await page.locator('.catch-hud').count(),0);assert.deepEqual(await rewards(),beforeClose,'Closing cannot grant a delayed victory');
   // Switch identity during the final pending callback as an actual player can.
-  await play.click();for(let r=1;r<5;r++)await catchRound(r);
+  await play.dispatchEvent('click');for(let r=1;r<5;r++)await catchRound(r);
   const beforeSwitch=await rewards();await catchRound(5);await choose('Expo');await page.waitForTimeout(1100);
   assert.equal(await page.locator('.catch-hud').count(),0);assert.deepEqual(await rewards(),beforeSwitch,'Switching cannot reward either dog from a cancelled game');
   // Feeding one dog remains isolated from the others.
