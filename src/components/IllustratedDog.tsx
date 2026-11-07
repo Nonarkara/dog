@@ -1,4 +1,4 @@
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -243,7 +243,7 @@ function IllustratedStage(props: Props & {url:string}) {
     // the renderer or wait for this atlas, and a failed atlas preserves care.
     const atlasTimer=setTimeout(()=>loader.load(`/dogs/motion/${artName}-motion${renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,texture=>{
       if(disposed){texture.dispose();return;}texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;
-      const image=texture.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=480;mask.height=576;const context=mask.getContext('2d');
+      const image=texture.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=MOTION_LAYOUT.columns*48;mask.height=MOTION_LAYOUT.rows*48;const context=mask.getContext('2d');
       if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};
       setMotionReady(true);
     },undefined,()=>{/* Optional movement never replaces the approved base dog. */}),1200);
@@ -463,21 +463,25 @@ function IllustratedStage(props: Props & {url:string}) {
           const d=zoomies?Math.cos(zTime*2.2):delta;
           const turning=zoomies&&Math.abs(d)<.35;
           if(turning)index=48+Math.round((Math.sin(zTime*2.2)>0?8:24)+(d/.35)*4)%32;
-          else{const fast=fastGait;index=(fast?0:32)+Math.floor(motionPhase*(fast?32:16))%(fast?32:16);scale=1;}
+          else{const fast=fastGait;index=fast?Math.floor(motionPhase*32)%32:walkIndex(Math.floor(motionPhase*32));scale=1;}
         }
         // The toward and away drawings face the viewer: a mirror on them is a
         // ghost, not a turn.
-        if(index>=MOTION_LAYOUT.turnStart)face=1;
+        if(index>=MOTION_LAYOUT.turnStart&&index<MOTION_LAYOUT.walkMidStart)face=1;
         index=Math.max(0,Math.min(MOTION_LAYOUT.frames-1,index));const from=sourceRig(artName,index);
         // Interpolate the leg joints between authored stride drawings, as in
         // the park: animation advances each display frame without new textures.
-        const cycle=index<32?32:index<48||index>=80?16:0;
-        const gaitFrame=index>=80?elapsed*14:motionPhase*cycle;
+        // The walk is 32 drawings (16 authored + 16 in-betweens at 112..127), so its
+        // legs blend between neighbouring drawings; toward/away still use 16.
+        const walking=(index>=MOTION_LAYOUT.walkStart&&index<MOTION_LAYOUT.turnStart)||index>=MOTION_LAYOUT.walkMidStart;
+        const depthKind=index>=MOTION_LAYOUT.towardStart&&index<MOTION_LAYOUT.walkMidStart;
+        const cycle=index<32||walking?32:depthKind?16:0;
+        const gaitFrame=depthKind?elapsed*14:motionPhase*cycle;
         const target=from.map(point=>[...point] as [number,number]);
-        if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
+        if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
         writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);
         canvas.dataset.strideBlend=String(cycle?gaitFrame%1:0);canvas.dataset.pivoting=String(pivoting&&!movement);
-        uniforms.art.value=atlas.texture;uniforms.artTile.value.set(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12);uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
+        uniforms.art.value=atlas.texture;uniforms.artTile.value.set(...tileUv(index));uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;
         if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
         // Every authored view uses one fit, rather than changing the dog's
         // size and the floor clamp on each stride/turn drawing.

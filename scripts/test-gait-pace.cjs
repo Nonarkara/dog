@@ -95,7 +95,7 @@ const RUN = [0, 32];
 
     await p.waitForFunction(()=>{
       const d=document.querySelector('canvas').dataset;
-      return +d.motionFrame>=32&&+d.motionFrame<48&&d.turning==='false';
+      return (+d.motionFrame>=32&&+d.motionFrame<48||+d.motionFrame>=112)&&d.turning==='false';
     },null,{timeout:30000});
     await p.evaluate(()=>document.addEventListener('click',()=>{window.petX=window.gaitMatrix.x},{once:true,capture:true}));
     await p.getByRole('button',{name:'Pet Expo',exact:true}).click();

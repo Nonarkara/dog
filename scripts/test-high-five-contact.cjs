@@ -6,7 +6,7 @@ await p.addInitScript(()=>{Math.random=()=>.22;const tags=new WeakMap(),rig=new 
 proto.getUniformLocation=function(program,name){if(name==='headPivot')rig.add(program);const loc=get.call(this,program,name);if(loc)tags.set(loc,{program,name});return loc;};
 proto.uniformMatrix4fv=function(loc,t,m,...rest){const q=tags.get(loc);if(q?.name==='modelViewMatrix'&&rig.has(q.program))window.pawMatrix={x:m[12],sx:m[0]};return put.call(this,loc,t,m,...rest);};});
 await p.goto((process.env.DOG_URL||'http://127.0.0.1:4205')+'/?mode=play');
-await p.waitForFunction(()=>{const d=document.querySelector('canvas')?.dataset;return d?.turning==='false'&&+d.motionFrame>=32&&+d.motionFrame<48&&Math.abs(window.pawMatrix?.x)>.1;},null,{timeout:60000});
+await p.waitForFunction(()=>{const d=document.querySelector('canvas')?.dataset;return d?.turning==='false'&&(+d.motionFrame>=32&&+d.motionFrame<48||+d.motionFrame>=112)&&Math.abs(window.pawMatrix?.x)>.1;},null,{timeout:60000});
 await p.getByRole('button',{name:'Pet Expo',exact:true}).click();
 await p.waitForTimeout(1800);
 const tip=p.getByRole('button',{name:'Close first-play tip'});if(await tip.count())await tip.click();

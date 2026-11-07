@@ -2,6 +2,7 @@
 // RIFE_BIN points to the official portable executable, RIFE_MODEL to rife-v4.6.
 // Generated source pictures stay in design/reference/locomotion. Browser gets WebP.
 const fs=require('node:fs'),path=require('node:path'),sharp=require('sharp'),{execFileSync}=require('node:child_process');
+if(!process.env.ALLOW_LEGACY_ATLAS)throw Error('This builds the legacy 112-tile 10x12 atlas, which the app no longer reads. The current layout is 128 tiles, 12x11: rebuild any new run/turn art here with ALLOW_LEGACY_ATLAS=1, then run scripts/illustrated/extend-walk.cjs on the result.');
 const bin=process.env.RIFE_BIN,model=process.env.RIFE_MODEL;if(!bin||!model)throw Error('Set RIFE_BIN and RIFE_MODEL. See design/park-locomotion.md.');
 const names=process.argv.slice(2).length?process.argv.slice(2):['expo','mali','oreo','paolo','hachiku'],N=320,manifest={};
 (async()=>{execFileSync(process.execPath,['scripts/illustrated/build-locomotion.cjs'],{stdio:'inherit'});for(const name of names){const root=`/tmp/dog-rife/${name}`;execFileSync(process.execPath,['scripts/illustrated/prepare-run.cjs',name],{stdio:'inherit'});

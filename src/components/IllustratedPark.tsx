@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {PLAY_PERSONALITIES} from './dogPlay';
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
 import {landmarksFor,poseAnchors,type ArtPose} from './illustratedRig';
 import {growthStage} from '../domain/growth';
 import type {PetState} from '../domain/types';
@@ -61,7 +61,7 @@ export function IllustratedPark(props:Props){
   const raster=(url:string,atlasMask=false)=>{let found=rasters.get(url);if(found)return found;
    found=new Promise<Raster>((resolve,reject)=>{const image=new Image();image.onload=()=>{
     if(disposed){reject(new Error('Park closed'));return;}
-    scratch.width=atlasMask?480:192;scratch.height=atlasMask?576:192;if(!scratchCtx){reject(new Error('Could not read dog artwork'));return;}
+    scratch.width=atlasMask?MOTION_LAYOUT.columns*48:192;scratch.height=atlasMask?MOTION_LAYOUT.rows*48:192;if(!scratchCtx){reject(new Error('Could not read dog artwork'));return;}
     scratchCtx.clearRect(0,0,scratch.width,scratch.height);scratchCtx.drawImage(image,0,0,scratch.width,scratch.height);const rgba=scratchCtx.getImageData(0,0,scratch.width,scratch.height).data,pixels=new Uint8ClampedArray(scratch.width*scratch.height);for(let i=0;i<pixels.length;i++)pixels[i]=rgba[i*4+3];let left=0,right=scratch.width-1,top=0,bottom=scratch.height-1;if(!atlasMask){left=scratch.width;right=0;top=scratch.height;bottom=0;
     for(let y=0;y<scratch.height;y++)for(let x=0;x<scratch.width;x++)if(pixels[y*scratch.width+x]>32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
     }
@@ -93,7 +93,7 @@ export function IllustratedPark(props:Props){
    if(motionFile)raster(`/dogs/motion/${motionFile}-motion${own&&renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,true).then(atlas=>{if(disposed||!actors.has(id))return;atlas.texture.generateMipmaps=false;atlas.texture.minFilter=THREE.LinearFilter;
      // Upload the motion sheet to the GPU now, while the dog stands still, not on his first step (a 120 ms hitch mid-walk).
      renderer.initTexture(atlas.texture);
-    const tileSize=atlas.w/10;a.motionFrames=Array.from({length:MOTION_LAYOUT.frames},(_,index)=>{const box=frameArt(motionFile,index).box;return {...atlas,w:tileSize,h:tileSize,left:box[0],right:box[0]+box[2],top:box[1],bottom:MOTION_FLOOR,pixelWidth:atlas.w,originX:(index%10)*tileSize,originY:Math.floor(index/10)*tileSize,tile:new THREE.Vector4(.1,1/12,(index%10)/10,1-(Math.floor(index/10)+1)/12)};});}).catch(()=>{/* Optional gait art never removes the available dog or blocks care. */});
+    const tileSize=atlas.w/MOTION_LAYOUT.columns;a.motionFrames=Array.from({length:MOTION_LAYOUT.frames},(_,index)=>{const box=frameArt(motionFile,index).box;return {...atlas,w:tileSize,h:tileSize,left:box[0],right:box[0]+box[2],top:box[1],bottom:MOTION_FLOOR,pixelWidth:atlas.w,originX:(index%MOTION_LAYOUT.columns)*tileSize,originY:Math.floor(index/MOTION_LAYOUT.columns)*tileSize,tile:new THREE.Vector4(...tileUv(index))};});}).catch(()=>{/* Optional gait art never removes the available dog or blocks care. */});
   };
   const original=DEFAULT_DOGS.find(d=>d.id===props.dogId),authored=original&&!props.appearance.avatarConfig.customModelUrl&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>original.avatarConfig[k]===props.appearance.avatarConfig[k]);
   const ownFallback:MetaverseNeighborDog={id:ownId,name:props.name,breed:props.appearance.breed,tribe:'Your dog',ownerName:'You',personality:'',avatarColors:{base:props.appearance.avatarConfig.baseColor,secondary:props.appearance.avatarConfig.secondaryColor,mask:props.appearance.avatarConfig.maskColor},earShape:'pricked',position:[0,0,0],action:'sitting',speed:0};
@@ -242,16 +242,16 @@ export function IllustratedPark(props:Props){
     let motionPoints:[number,number][]|null=null,contactFlags:boolean[]=[];
     if(animated){
      const traveling=a.blend>.15&&!reduced.matches&&Math.abs(error)<.25;
-     const depth=traveling&&Math.abs(Math.sin(a.heading))>(a.motionFrame>=80?.70:.84);
+     const depth=traveling&&Math.abs(Math.sin(a.heading))>(a.motionFrame>=MOTION_LAYOUT.towardStart&&a.motionFrame<MOTION_LAYOUT.walkMidStart?.70:.84);
      const side=traveling&&!depth,running=side&&a.speed>(a.motionFrame>=0&&a.motionFrame<32?78:92)*unit;
      const turnIndex=(Math.round((((Math.PI-a.heading)/(Math.PI*2))%1+1)%1*32)%32);
-     const index=side?(running?Math.floor(a.stride*32)%32:32+Math.floor(a.stride*16)%16):depth?(Math.sin(a.heading)>0?80:96)+Math.floor(a.stride*16)%16:48+turnIndex;
+     const index=side?(running?Math.floor(a.stride*32)%32:walkIndex(Math.floor(a.stride*32))):depth?(Math.sin(a.heading)>0?80:96)+Math.floor(a.stride*16)%16:48+turnIndex;
      a.motionFrame=index;a.raster=a.motionFrames[index];a.facing=side?view.facing:1;
      const from=sourceRig(a.motionFile!,index),gait=gaitRig(from,a.stride,0,a.heading,index===56||index===72,a.w/.80);
-     // IN-BETWEENS: a walk has 16 drawings, about 8 a second. Between two drawings the
+     // IN-BETWEENS: a walk has 32 drawings (16 authored, 16 RIFE in-betweens), about 16 a second. Between two drawings the
      // legs are warped from this drawing's joints toward the next one's, so the stride
      // moves every frame instead of in stop-motion steps.
-     {const cycle=side?(running?32:16):depth?16:0;if(cycle){const f=a.stride*cycle,t=f-Math.floor(f),base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){gait.points[j][0]+=(next[j][0]-from[j][0])*t;gait.points[j][1]+=(next[j][1]-from[j][1])*t;}}}
+     {const walking=side&&!running,cycle=side?32:depth?16:0;if(cycle){const f=a.stride*cycle,t=f-Math.floor(f),base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){gait.points[j][0]+=(next[j][0]-from[j][0])*t;gait.points[j][1]+=(next[j][1]-from[j][1])*t;}}}
      a.strideSize=(running?.46:depth?.30:.30)*a.w/.80;motionPoints=gait.points;contactFlags=frameArt(a.motionFile!,index).feet.map(point=>point[1]>.883);
      u.running.value=running?1:0;u.runNeck.value.set(...runNeckFor(index));
      if(petting){motionPoints[0][0]+=.006;motionPoints[0][1]+=.003;}

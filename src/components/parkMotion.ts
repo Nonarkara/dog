@@ -4,7 +4,14 @@ import frames from './parkLocomotionArt.json';
 
 type Point=[number,number];
 export type MotionArtName=keyof typeof frames;
-export const MOTION_LAYOUT={columns:10,rows:12,frames:112,runStart:0,runFrames:32,walkStart:32,walkFrames:16,turnStart:48,turnFrames:32,towardStart:80,awayStart:96,depthFrames:16} as const;
+// 12 x 11 tiles of 320 px = 3840 x 3520: inside the 4096 px texture limit of older phones.
+// Frames 0..111 never move. 112..127 are RIFE in-betweens for the walk: 112+j is
+// the drawing between authored walk frames 32+j and 32+(j+1)%16.
+export const MOTION_LAYOUT={columns:12,rows:11,frames:128,runStart:0,runFrames:32,walkStart:32,walkFrames:16,walkMidStart:112,walkSteps:32,turnStart:48,turnFrames:32,towardStart:80,awayStart:96,depthFrames:16} as const;
+/** Atlas tile for step k (0..31) of the 32-drawing walk: even = authored, odd = in-between. */
+export const walkIndex=(k:number)=>{const s=((k%32)+32)%32;return s%2?MOTION_LAYOUT.walkMidStart+(s-1)/2:MOTION_LAYOUT.walkStart+s/2;};
+/** Atlas uv rectangle for a tile: scale (x,y) and offset (z,w). One place, so the layout is never repeated as a literal. */
+export const tileUv=(index:number)=>[1/MOTION_LAYOUT.columns,1/MOTION_LAYOUT.rows,(index%MOTION_LAYOUT.columns)/MOTION_LAYOUT.columns,1-(Math.floor(index/MOTION_LAYOUT.columns)+1)/MOTION_LAYOUT.rows] as const;
 export const MOTION_FLOOR=348/384;
 export const turnAngle=(from:number,to:number,limit:number)=>from+Math.max(-limit,Math.min(limit,Math.atan2(Math.sin(to-from),Math.cos(to-from))));
 // A stride is advanced by distance, never by a free-running animation clock.
