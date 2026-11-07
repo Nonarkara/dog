@@ -20,8 +20,11 @@ fs.mkdirSync(out, { recursive: true });
   await page.waitForFunction(() => document.querySelector('canvas')?.dataset.triangles).catch(async e => { console.error(await page.evaluate(() => ({visibility:document.visibilityState,text:document.body.innerText.slice(0,800),canvas:[...document.querySelectorAll('canvas')].map(c=>c.dataset)}))); throw e; });
   console.log('Avatar ready');
   const choose = async name => {
-    await page.locator('[aria-controls="dog-switcher"]').click();
-    await page.getByRole('option').filter({ hasText: new RegExp('^' + name) }).click();
+    const opt=page.getByRole('option').filter({ hasText: new RegExp('^' + name) });
+    // dispatchEvent: swiftshader frames are too slow for Playwright's 'stable' wait on this moving control.
+    // Open, and re-open if a re-render swallowed the click, before choosing.
+    for(let i=0;i<3&&!(await opt.isVisible());i++){await page.locator('[aria-controls="dog-switcher"]').dispatchEvent('click');await opt.waitFor({timeout:1500}).catch(()=>{});}
+    await opt.dispatchEvent('click');
     const id=({'Expo':'expo-2021','Mali':'mali-2022','Oreo':'oreo-frenchie','Paolo':'paolo-pug','Hachiku':'shiba-chai'})[name];
     await page.waitForFunction(id=>{const c=document.querySelector('canvas');return c?.dataset.dog===id&&+c.dataset.frames>5&&document.querySelector('[aria-controls=dog-switcher]')?.getAttribute('aria-expanded')==='false';},id);
   };
