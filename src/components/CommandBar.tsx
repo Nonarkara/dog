@@ -65,30 +65,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   onCommunicate,
   onBed,
 }) => {
-  const [talkOpen,setTalkOpen]=useState(false);
-  const [cueText, setCueText] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
-  const [clock,setClock]=useState(Date.now);
-  useEffect(()=>{
-    if(petState.calmSince===undefined)return;
-    setClock(Date.now());const timer=window.setInterval(()=>setClock(Date.now()),250);
-    return()=>window.clearInterval(timer);
-  },[petState.calmSince]);
-  const watching=petState.calmSince!==undefined&&!calmNeed(petState)&&petState.arousal<=55;
-  const wait=watching?Math.ceil(calmRewardWait(petState,clock)/1000):0;
-  const calmLabel=watching?(wait?`Watch calm · ${wait}s`:'Reward calm'):'Quiet time';
-  const CalmIcon=watching?(wait?Timer:Cookie):Leaf;
-
-  const sendCue = () => {
-    const cue = cueText.trim();
-    if (!cue || isInteracting) return;
-    onCommunicate(cue);
-    setCueText('');
-    inputRef.current?.focus();
-  };
 
   // Keyboard shortcuts 1..5, plus 'M' for medicine if sick
   useEffect(() => {
@@ -170,48 +149,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         )}
       </div>
 
-<button type="button" className="btn-quiet" aria-label="Show control labels" aria-pressed={labelsVisible} aria-expanded={labelsVisible} aria-controls="control-reference" title="Control labels" onClick={onToggleLabels}><CircleHelp size={20} aria-hidden="true"/></button>
-
-      <button type="button" className="btn-quiet talk-toggle" aria-label="Talk to your dog" aria-expanded={talkOpen} aria-controls="dog-talk" onClick={()=>{setTalkOpen(!talkOpen);if(!talkOpen)requestAnimationFrame(()=>inputRef.current?.focus());}}><MessageCircle size={20}/></button>
-      {/* Quiet observation and reward stay beside the cue, without extra chrome. */}
-      <div className={`command-talk-group ${talkOpen?'talk-open':''}`}>
-        <button type="button" className={watching&&!wait?'btn-accent':'btn-quiet'}
-          aria-label={calmLabel} title={calmNeed(petState)||`${calmLabel}: watch relaxed body language, then give a small reward`}
-          disabled={isInteracting||!!calmNeed(petState)||!!wait}
-          onClick={()=>onInteract(watching?'rewardCalm':'settle')}>
-          <span className="inline-flex items-center gap-1">{wait===0&&<CalmIcon size={21} aria-hidden="true"/>}{wait>0&&<span className="data text-[11px]" aria-hidden="true">{wait}s</span>}</span><span className="sr-only">{calmLabel}</span>
-        </button>
-          <div id="dog-talk" className="command-speech" hidden={!talkOpen}>
-            <label htmlFor="cmd-cue" className="label shrink-0 hidden sm:block">
-              Say
-            </label>
-            <input
-              id="cmd-cue"
-              ref={inputRef}
-              type="text"
-              value={cueText}
-              onChange={(e) => setCueText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  sendCue();
-                }
-              }}
-              placeholder={asleep ? `${dog.name} is asleep` : `Say to ${dog.name}`}
-              aria-label={`Say a word to ${dog.name}`}
-              className="flex-1 min-w-0 px-2 py-1 text-[12px]"
-            />
-            <button
-              type="button"
-              onClick={sendCue}
-              disabled={isInteracting || !cueText.trim()}
-              className="btn btn-accent text-[11px] px-2.5 shrink-0 disabled:opacity-40"
-            >
-              <Send size={19} aria-hidden="true"/><span className="sr-only">Say</span>
-            </button>
-          </div>
-      </div>
-
       {/* Bed control */}
       <button
         type="button"
@@ -226,10 +163,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       >
         <Moon size={21} aria-hidden="true" /><span className="sr-only">{asleep ? 'Asleep' : 'Bed'}</span>
       </button>
-
-      <span className="data text-[10px] text-faint shrink-0 hidden xl:inline">
-        {Math.round(petState.trust)} trust · {Math.round(petState.discipline ?? 60)}% calm
-      </span>
     </div>
   );
 };
