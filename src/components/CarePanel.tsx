@@ -16,7 +16,8 @@ import { happiness, readiness, sickCause, temperament } from '../domain/pet';
 import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
 import {ILLUSTRATIONS} from '../data/dogIllustrations';
 import {PhotoBooth} from './PhotoBooth';
-import {Camera,ShoppingBag} from 'lucide-react';
+import {Camera,ShoppingBag,Stethoscope} from 'lucide-react';
+import {VitalsModal} from './VitalsModal';
 import {THEME_CHOICES} from '../data/dogThemes';
 
 interface CarePanelProps {
@@ -75,6 +76,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const [booth,setBooth]=useState(false);
+  const [vitalsOpen,setVitalsOpen]=useState(false);
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -134,6 +136,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           {dog.name} / {dog.breed}
         </span>
         {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
+        {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} clinical vitals`} title="Physique & psyche vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
         {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
         {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
       </header>
@@ -245,6 +248,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         <CarePanel dog={dog} petState={petState} detailView onHome={onHome} onPalette={onPalette}/>
       </dialog>}
       {booth&&<PhotoBooth dog={dog} artUrl={ILLUSTRATIONS[dog.id]??''} onClose={()=>setBooth(false)}/>}
+      {vitalsOpen&&<VitalsModal dog={dog} petState={petState} onClose={()=>setVitalsOpen(false)}/>}
     </section>
   );
 };

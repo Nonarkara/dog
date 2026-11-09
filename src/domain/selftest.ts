@@ -30,6 +30,7 @@ import { noseAccuracy, pickCup } from './nose';
 import { characterOf, revealCharacter, logCare, wishFor, grantWish, birthday, outOfQuietHours, nextCallAt, WISH_TRUST } from './life';
 import { captureOf, isUnlocked, lockedBehind, offerChance, pair, wrongMark, withCapture, LEARNED } from './capture';
 import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
+import { computeCanineVitals } from './canineVitals';
 
 let failures = 0;
 let checks = 0;
@@ -800,6 +801,33 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   for (let i = 0; i < 15; i++) reinforceCue(per, 'dinner', 1, t0 + i * 60_000);
   spontaneousRecovery(per, 72, t0 + 72 * 3_600_000);
   ok('the cue book survives quiet days', Object.keys(per.memory).length === 1 && per.memory['dinner'].peak > 0.9);
+
+  // CANINE VITALS & VETERINARY PHYSIQUE / PSYCHE
+  console.log('\nCANINE PHYSIQUE & PSYCHE');
+  const demoDog = DEFAULT_DOGS[0];
+  const healthyState = createPetState(t0);
+  const vHealthy = computeCanineVitals(demoDog, healthyState);
+  ok('WSAVA BCS is 5/9 ideal when nourished', vHealthy.physique.bcsScore === 5 && vHealthy.physique.bcsLabel === 'Ideal');
+  ok('normothermic baseline temperature', vHealthy.physique.temperatureC === 38.4);
+  ok('healthy resting heart rate within canine norm (60-100 bpm)', vHealthy.physique.heartRateBpm >= 60 && vHealthy.physique.heartRateBpm <= 100);
+
+  const hungryState = { ...healthyState, needs: { ...healthyState.needs, hunger: 15 } };
+  const vHungry = computeCanineVitals(demoDog, hungryState);
+  ok('severe hunger lowers BCS to under-conditioned', vHungry.physique.bcsScore === 3);
+
+  const sleepingState = { ...healthyState, sleep: { ...healthyState.sleep, asleep: true } };
+  const vSleep = computeCanineVitals(demoDog, sleepingState);
+  ok('resting heart rate drops during sleep', vSleep.physique.heartRateBpm < vHealthy.physique.heartRateBpm);
+  ok('respiratory rate slows to diaphragmatic sleep rhythm', vSleep.physique.respiratoryRate <= 15);
+
+  const sickState = { ...healthyState, sick: true };
+  const vSick = computeCanineVitals(demoDog, sickState);
+  ok('illness manifests pyrexia (>39.2°C)', vSick.physique.temperatureC >= 39.5);
+  ok('illness elevates respiration (tachypnea)', vSick.physique.respiratoryRate > vHealthy.physique.respiratoryRate);
+
+  const arousedState = { ...healthyState, arousal: 85 };
+  const vAroused = computeCanineVitals(demoDog, arousedState);
+  ok('high arousal triggers sympathetic dominance', vAroused.psyche.autonomicState.includes('Sympathetic'));
 }
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
