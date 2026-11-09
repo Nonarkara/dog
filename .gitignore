@@ -11,3 +11,6 @@ dist
 # Local-only secrets for wrangler dev.
 .dev.vars
 tsconfig.tsbuildinfo
+
+# Local-only Flux evidence sidecars. Generated cards, if kept, need a review.
+public/dogs/play/interactions/*.metadata.json

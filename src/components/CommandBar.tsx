@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Broom,
   Footprints,
@@ -49,6 +49,9 @@ const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: 
 ];
 
 function getUrgentAction(petState: PetState, poops: number): CareAction | null {
+  // A sleeping or sick dog should not pulse an action he cannot take.
+  if (petState.sleep?.asleep) return null;
+  if (petState.sick) return poops > 0 ? 'groom' : null;
   if (poops > 0) return 'groom';
   if ((petState.needs?.hunger ?? 100) < 40) return 'feed';
   if ((petState.needs?.hygiene ?? 100) < 40) return 'groom';
@@ -87,7 +90,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   const poops = (petState.poopCount ?? 0) + dailyLife(petState).peeCount;
   const urgent = getUrgentAction(petState, poops);
 
-  const openVitals = onOpenVitals ?? (() => setShowVitals(true));
+  const openVitals = useCallback(() => {
+    if (onOpenVitals) onOpenVitals();
+    else setShowVitals(true);
+  }, [onOpenVitals]);
 
   // Keyboard shortcuts 1..5, 6 bed, M medicine, V vitals, ? labels
   useEffect(() => {

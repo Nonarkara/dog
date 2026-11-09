@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Activity, Brain, HeartPulse, Scale, ShieldCheck, Stethoscope } from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
@@ -19,6 +19,24 @@ interface VitalsModalProps {
  */
 export const VitalsModal: React.FC<VitalsModalProps> = ({ dog, petState, onClose }) => {
   const { physique, psyche } = computeCanineVitals(dog, petState);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Keyboard users must be able to leave the dossier with Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Move focus into the dialog so screen readers announce it.
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
 
   return (
     <div
@@ -39,6 +57,7 @@ export const VitalsModal: React.FC<VitalsModalProps> = ({ dog, petState, onClose
             </h2>
           </div>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             className="btn-quiet p-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
