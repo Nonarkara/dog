@@ -48,16 +48,17 @@ const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: 
   { action: 'groom', label: 'Clean', icon: Broom, key: '5' },
 ];
 
-function getUrgentAction(petState: PetState, poops: number): CareAction | null {
+function getUrgentActions(petState: PetState, poops: number): CareAction[] {
   // A sleeping or sick dog should not pulse an action he cannot take.
-  if (petState.sleep?.asleep) return null;
-  if (petState.sick) return poops > 0 ? 'groom' : null;
-  if (poops > 0) return 'groom';
-  if ((petState.needs?.hunger ?? 100) < 40) return 'feed';
-  if ((petState.needs?.hygiene ?? 100) < 40) return 'groom';
-  if ((petState.needs?.energy ?? 100) < 35) return 'walk';
-  if (petState.trust < 35) return 'pet';
-  return null;
+  if (petState.sleep?.asleep) return [];
+  if (petState.sick) return poops > 0 ? ['groom'] : [];
+  const urgent: CareAction[] = [];
+  if (poops > 0) urgent.push('groom');
+  if ((petState.needs?.hunger ?? 100) < 40) urgent.push('feed');
+  if ((petState.needs?.hygiene ?? 100) < 40 && !urgent.includes('groom')) urgent.push('groom');
+  if ((petState.needs?.energy ?? 100) < 35) urgent.push('walk');
+  if (petState.trust < 35) urgent.push('pet');
+  return urgent;
 }
 
 const GERUND: Record<CareAction, string> = {
@@ -88,7 +89,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0) + dailyLife(petState).peeCount;
-  const urgent = getUrgentAction(petState, poops);
+  const urgent = getUrgentActions(petState, poops);
 
   const openVitals = useCallback(() => {
     if (onOpenVitals) onOpenVitals();
@@ -152,7 +153,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             const currentLabel = action === 'groom' && poops > 0 ? `Clean (${poops})` : label;
             const CurrentIcon = action === 'groom' && poops > 0 ? Broom : Icon;
             const busy = isInteracting && pendingAction === currentAction;
-            const isAttention = urgent === action;
+            const isAttention = urgent.includes(action);
 
             return (
               <button
