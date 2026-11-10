@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Broom,
+  CircleHelp,
   Footprints,
   HandHeart,
   Moon,
@@ -224,6 +225,23 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           <span className="sr-only">{asleep ? 'Asleep' : 'Bed'}</span>
         </button>
 
+        {/* Compact label reader: the phone has no hover and no `?` key. */}
+        <button
+          type="button"
+          onClick={onToggleLabels}
+          disabled={isInteracting}
+          className={[
+            'btn px-2 text-[11px] whitespace-nowrap shrink-0 min-w-[34px] min-h-[34px] h-[34px]',
+            labelsVisible ? 'btn-accent opacity-100' : 'btn-quiet border-hairline',
+          ].join(' ')}
+          aria-label={`Show control labels for ${dog.name}`}
+          aria-pressed={labelsVisible}
+          title="Control labels"
+        >
+          <CircleHelp size={20} aria-hidden="true" />
+          <span className="sr-only">Labels</span>
+        </button>
+
         <span className="data text-[10px] text-faint shrink-0 hidden xl:inline">
           {Math.round(petState.trust)} trust · {Math.round(petState.discipline ?? 60)}% calm
         </span>
@@ -267,6 +285,10 @@ export function ControlLegend({ onClose }: { onClose: () => void }) {
         <span className="inline-flex items-center gap-1.5">
           <Pill size={14} aria-hidden="true" />
           Medicine (M)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <CircleHelp size={14} aria-hidden="true" />
+          Labels (?)
         </span>
       </div>
     </section>

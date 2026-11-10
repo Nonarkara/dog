@@ -513,7 +513,7 @@ export const App: React.FC = () => {
     if(activeDogRef.current!==id)return;
     if(!next){interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);return;}
     setInteractionTrigger(trigger);say(message);
-    if(action==='feed'&&/pantry is empty/i.test(message))setCareExtra('food');
+    if(action==='feed'&&/pantry is empty/i.test(message)){setCareExtra('food');setActiveRegion('care');}
     else if(action==='feed'&&trigger)setCareExtra(null);
     actionTimer.current=setTimeout(()=>{interactionBusy.current=false;setIsInteracting(false);setPendingAction(null);setInteractionTrigger(null);},2000);
   };
@@ -999,7 +999,7 @@ export const App: React.FC = () => {
         petState={petState}
         isInteracting={isInteracting||isAddDogOpen}
         pendingAction={pendingAction}
-        onInteract={action=>{if(action==='feed'){setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}void handleInteract(action);}}
+        onInteract={action=>{if(action==='feed'){setLabelsVisible(false);setIsDogMenuOpen(false);}void handleInteract(action);}}
         onCommunicate={handleCommunicate}
         onBed={()=>{setCareExtra('bed');setActiveRegion('care');setLabelsVisible(false);setIsDogMenuOpen(false);}}
       />}

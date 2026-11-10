@@ -70,7 +70,7 @@ export const VitalsModal: React.FC<VitalsModalProps> = ({ dog, petState, onClose
         <div className="panel-body p-3 overflow-y-auto space-y-4 text-[13px] leading-relaxed">
           {/* Summary line */}
           <p className="text-[12px] text-faint pb-1 border-b border-[var(--border-dim)]">
-            Computed from living metabolic transit and conditioning records. WSAVA reference ranges.
+            Simulation values, not clinical measurements. Computed deterministically from metabolic transit and conditioning records. WSAVA reference ranges.
           </p>
 
           {/* Section 1: Physique */}
