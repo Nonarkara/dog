@@ -1,47 +1,62 @@
 /**
- * In-house FLUX.1 Schnell dog-dog play interaction generator.
- * Uses the local mflux runtime at ~/Projects/_toolkit/mflux-venv/bin/mflux-generate.
- * Generates a 2D illustrated interaction card when two dogs play together.
- * NOTE: The client cannot run mflux. This module only prepares the request.
- * A worker/build step must run generation and return a real asset path.
+ * ILLUSTRATED PARK MOMENTS.
+ *
+ * Two dogs play in the park; the panel shows a small picture of the moment.
+ * The pictures were made off-line with the in-house Flux runtime and shipped
+ * as static files, because neither the browser nor a Cloudflare Worker can run
+ * Flux. Nothing is generated at request time, and nothing pretends to be.
+ *
+ * To regenerate (mflux 0.24.0, FLUX.1 Schnell, 768x512, 8 steps):
+ *
+ *   mflux-generate --model schnell --steps 8 --height 512 --width 768 \
+ *     --seed 4101 --prompt "<the CHASE prompt below>" \
+ *     --output .audit/flux/chase.png
+ *   cwebp -q 84 .audit/flux/chase.png -o public/dogs/play/interactions/chase.webp
+ *
+ * The pictures are park scenes, not portraits: a pair's own coat markings are
+ * not reproduced, so the caption names the pair and the image stays a scene.
  */
 
-export type DogRef = { id: string; name: string; illustration?: string };
+export type DogPlayKind = 'chase' | 'tumble';
 
-export async function ensureOutputDir() {
-  // No-op on client. Server implementation will create directory.
-  return;
+export interface DogPlayMoment {
+  kind: DogPlayKind;
+  src: string;
+  alt: string;
+  caption: string;
 }
 
-function buildPrompt(a: DogRef, b: DogRef) {
-  return `Two illustrated dogs playing together in a park, ${a.name} and ${b.name}, friendly interaction, 2D cel illustration, consistent character design, amber accent, clean outlines, no text`;
-}
+const CARDS: Record<DogPlayKind, { src: string; alt: string; verb: string }> = {
+  chase: {
+    src: '/dogs/play/interactions/chase.webp',
+    alt: 'Illustration of two dogs playing chase across a green park.',
+    verb: 'played chase',
+  },
+  tumble: {
+    src: '/dogs/play/interactions/tumble.webp',
+    alt: 'Illustration of two dogs tumbling together on the grass.',
+    verb: 'tumbled in the grass',
+  },
+};
 
-function buildNegativePrompt() {
-  return 'photorealistic, 3d render, blurry, distorted limbs, extra paws, wrong markings, watermark, text, ui';
-}
+/** The prompts behind the shipped files. Kept so the art can be remade. */
+export const DOG_PLAY_PROMPTS: Record<DogPlayKind, string> = {
+  chase:
+    'Two illustrated dogs playing chase in a green park, a brown-and-white dog running ahead and a tan dog chasing behind, ears flying, tails up, joyful, side view, full bodies visible, flat 2D vector illustration, thick clean dark-brown outlines, flat colour fills, warm cream and moss green palette, one amber accent, children’s picture-book style, no text, no signature, no watermark, no border',
+  tumble:
+    'Two illustrated dogs tumbling playfully on green grass in a park, one brown-and-white and one tan, mouths open in play, paws loose, tails up, side view, full bodies visible, flat 2D vector illustration, thick clean dark-brown outlines, flat colour fills, warm cream and moss green palette, one amber accent, children’s picture-book style, no text, no signature, no watermark, no border',
+};
 
-export async function prepareDogPlayInteraction(a: DogRef, b: DogRef) {
-  await ensureOutputDir();
-  const safe = `${a.id}-${b.id}-${Date.now()}`.toLowerCase();
-  const prompt = buildPrompt(a, b);
-  const negative = buildNegativePrompt();
-
-  // The UI must never show a card until a real image exists. Server-side
-  // generation will replace this stub with the produced asset path.
+/**
+ * Build the strip for a moment that actually happened. The caller supplies the
+ * two names and the kind; the picture is one of the shipped scenes.
+ */
+export function dogPlayMoment(kind: DogPlayKind, a: string, b: string): DogPlayMoment {
+  const card = CARDS[kind];
   return {
-    status: 'not-generated' as const,
-    filename: `${safe}.png`,
-    prompt,
-    negative,
-  };
-}
-
-// Simple synchronous stub for UI preview
-export function getDogPlayCard(a: DogRef, b: DogRef) {
-  return {
-    // Do not point at a file until generation has actually written it.
-    src: null,
-    alt: `${a.name} playing with ${b.name}`,
+    kind,
+    src: card.src,
+    alt: card.alt,
+    caption: `${a} and ${b} ${card.verb}.`,
   };
 }

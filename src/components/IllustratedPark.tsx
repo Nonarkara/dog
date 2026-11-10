@@ -12,19 +12,24 @@ import {parkScenery} from './parkScenery';
 import {sound} from '../utils/proceduralAudio';
 import {chooseActivity,personalityOf} from '../domain/parkPersonality';
 import type {LiveIntent} from '../domain/parkProtocol';
+import type {DogPlayKind} from '../utils/fluxDogPlay';
 
 export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeNeighbor:(id:string)=>void;pet:(id:string)=>void;
  /** Live park: move a friend's dog to where its owner's browser says it is going. */
  steer:(id:string,intent:LiveIntent)=>void;
  /** Live park: show a pet on a dog without counting it as yours (hearts only). */
- cheer:(id:string)=>void;}
+ cheer:(id:string)=>void;
+ /** Send your dog and a neighbour into a chase, and show the moment. */
+ play:(id:string)=>void;}
 interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onClean?:()=>void;onWalk?:(distance:number,seconds:number)=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;
  /** Watch mode: the camera frames the whole pack and your dog plays on its own. */
  ambient?:boolean;
  /** Live park: your dog decided something (sent to friends' screens). */
  onIntent?:(intent:LiveIntent)=>void;
  /** Live park: you petted a friend's dog. */
- onPetRemote?:(id:string)=>void;}
+ onPetRemote?:(id:string)=>void;
+ /** Two dogs played: the panel shows the illustrated moment. */
+ onDogPlay?:(moment:{kind:DogPlayKind;a:string;b:string})=>void;}
 interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:number;left:number;right:number;top:number;bottom:number;pixelWidth?:number;originX?:number;originY?:number;tile?:THREE.Vector4;alphaOnly?:boolean;}
 const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
 const NS='http://www.w3.org/2000/svg';
@@ -107,10 +112,14 @@ export function IllustratedPark(props:Props){
    // A dog seen for the first time appears where it already is, not at a default spot.
    if(!a.hasWalked&&Math.hypot(a.x-a.tx,a.y-a.ty)>200*unit){a.x=a.tx;a.y=a.ty;}};
   const cheer=(id:string)=>{const a=actors.get(id);if(!a)return;const now=performance.now();a.petUntil=now+2200;a.tx=a.x;a.ty=a.y;sound.happyYip();};
-  let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity;
+  const play=(id:string)=>{const a=actors.get(ownId),b=actors.get(id);if(!a||!b||!b.raster||b.remote||a.mode==='chase')return;
+   const now=performance.now();a.mode='chase';a.partner=b.id;a.bowUntil=now+900;a.until=now+5200;a.sniffUntil=0;
+   b.mode='flee';b.partner=a.id;b.until=a.until;b.sniffUntil=0;[b.tx,b.ty]=farPoint(b);
+   latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});};
+  let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity,lastMoment=new Map<string,number>();
   const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&!latest.current.petState?.away&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
    const now=performance.now();a.tx=a.x;a.ty=a.y;a.speed=0;if(now-a.lastPet<(a.own?2300:700)){a.petUntil=Math.max(a.petUntil,now+600);return;}a.lastPet=lastPet=now;a.petUntil=now+2200;sound.happyYip();if(a.own)latest.current.onPet();if(a.remote)latest.current.onPetRemote?.(id);};
-  latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer});
+  latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer,play});
   let width=1,height=1;
   let pendingResize=false;const resize=()=>{pendingResize=false;const w=host.clientWidth,h=host.clientHeight;if(w===width&&h===height)return;width=w;height=h;renderer.setSize(width,height);};const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(host);resize();
   const point=(e:PointerEvent)=>{const b=canvas.getBoundingClientRect();return {x:cx+(e.clientX-b.left-width/2)/zoom,y:cy+(e.clientY-b.top-height/2)/zoom};};
@@ -126,7 +135,7 @@ export function IllustratedPark(props:Props){
   const cancel=(e:PointerEvent)=>{pointers.delete(e.pointerId);pinching=true;strokeId=null;};
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',blur);
   const contextLost=(event:Event)=>{event.preventDefault();cancelAnimationFrame(frame);canvas.dataset.contextLost='true';latest.current.onError('The graphics connection was interrupted. Try the alternate view, or reopen the garden.');};
-  const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer});frame=requestAnimationFrame(animate);};
+  const contextRestored=()=>{if(disposed)return;canvas.dataset.contextLost='false';latest.current.onReady({spawnNeighbor,removeNeighbor,pet,steer,cheer,play});frame=requestAnimationFrame(animate);};
   canvas.addEventListener('webglcontextlost',contextLost);canvas.addEventListener('webglcontextrestored',contextRestored);
   // ---- PLAY ------------------------------------------------------------
   // Dogs in a park do four things: wander, go and sniff a friend, chase and
@@ -155,7 +164,10 @@ export function IllustratedPark(props:Props){
    const friend=()=>fav&&Math.random()<.6?fav:pick(friends);
    const linger=(base:number)=>(base+Math.random()*base)*me.linger;
    switch(chooseActivity(a.artId,Math.random(),friends.length>0)){
-    case 'chase':{const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b);a.bowUntil=now+900;a.until=b.until=now+5200;return;}
+    case 'chase':{const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b);a.bowUntil=now+900;a.until=b.until=now+5200;
+     const key=[a.id,b.id].sort().join('|')+':chase';
+     if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});}
+     return;}
     case 'visit':{const b=friend();a.mode='visit';a.partner=b.id;a.tx=clampX(b.x+(a.x<b.x?-118:118)*unit);a.ty=clampY(b.y+8*unit);a.until=now+7000;return;}
     case 'rest':a.mode='rest';a.tx=a.x;a.ty=a.y;a.until=now+linger(7000);return;
     case 'nap':a.mode='nap';a.tx=a.x;a.ty=a.y;a.until=now+linger(9000);return;
@@ -170,7 +182,10 @@ export function IllustratedPark(props:Props){
    if((a.mode==='chase'||a.mode==='flee'||a.mode==='visit')&&!partner){settle(a,now);return;}
    if(a.mode==='chase'&&partner&&now>a.bowUntil){
     a.tx=partner.x;a.ty=partner.y;
-    if(Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);settle(a,now);settle(partner,now);return;}
+    if(Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);
+     const key=[a.id,partner.id].sort().join('|')+':tumble';
+     if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'tumble',a:a.name,b:partner.name});}
+     settle(a,now);settle(partner,now);return;}
    }
    if(a.mode==='flee'&&Math.hypot(a.tx-a.x,a.ty-a.y)<20*unit)[a.tx,a.ty]=farPoint(a);
    if(a.mode==='visit'&&partner&&Math.hypot(a.tx-a.x,a.ty-a.y)<10*unit){

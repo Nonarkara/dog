@@ -1,8 +1,9 @@
 import {IllustratedPark} from './IllustratedPark';
+import {dogPlayMoment,type DogPlayKind,type DogPlayMoment} from '../utils/fluxDogPlay';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils, Link2, Copy, LogOut } from 'lucide-react';
+import { MessageSquare, TriangleAlert, Upload, X, ZoomIn, ZoomOut, LocateFixed, Heart, HandHeart, Users, ChevronDown, Maximize2, Utensils, Link2, Copy, LogOut, Volleyball } from 'lucide-react';
 import { useLivePark } from './useLivePark';
 import { newRoomName, type LiveDog } from '../domain/parkProtocol';
 import { DogProfile, MetaverseNeighborDog } from '../types/dog';
@@ -107,6 +108,7 @@ interface SceneApi {
   pet: (id: string) => void;
   steer?: import('./IllustratedPark').ParkApi['steer'];
   cheer?: import('./IllustratedPark').ParkApi['cheer'];
+  play?: import('./IllustratedPark').ParkApi['play'];
 }
 
 /* ------------------------------------------------------------- seed lines */
@@ -305,6 +307,14 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
   const [visitors, setVisitors] = useState<MetaverseNeighborDog[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [webglError, setWebglError] = useState<string | null>(null);
+  const [moment,setMoment]=useState<DogPlayMoment|null>(null);
+  const momentTimer=useRef(0);
+  const showMoment=(kind:DogPlayKind,a:string,b:string)=>{
+    setMoment(dogPlayMoment(kind,a,b));
+    clearTimeout(momentTimer.current);
+    momentTimer.current=window.setTimeout(()=>setMoment(null),16000);
+  };
+  useEffect(()=>()=>clearTimeout(momentTimer.current),[]);
 
   // Mirrors of state the animation loop and the scene builder read directly.
   const selectedIdRef = useRef<string | null>(null);
@@ -1005,7 +1015,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
             never grow the region. */}
         <div ref={worldRef} className={`park-world relative w-full overflow-hidden border-hairline-b${watching?' park-world--watching':''}${watching&&watchIdle?' park-world--idle':''}`}>
           <div ref={mountRef} className="absolute inset-0 cursor-crosshair" hidden={!legacyScene}/>
-          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onClean={onClean} onSocialize={()=>socialRef.current?.()} ambient={watching} onIntent={liveRoom?live.sendIntent:undefined} onPetRemote={live.petFriend} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;live.resync();spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
+          {!legacyScene&&<IllustratedPark appearance={myDog} dogId={myDog.id} name={myDog.name} petState={petState} neighbors={[...parkNeighbors,...visitors]} zoom={zoom} focusId={selectedId} onZoom={changeZoom} onSelect={setSelectedId} onPet={()=>petCallback.current?.()} onClean={onClean} onSocialize={()=>socialRef.current?.()} ambient={watching} onIntent={liveRoom?live.sendIntent:undefined} onPetRemote={live.petFriend} onDogPlay={m=>showMoment(m.kind,m.a,m.b)} onWalk={onWalk} onReady={api=>{sceneApiRef.current=api;live.resync();spawnedRef.current=new Set(visitorsRef.current.map(v=>v.id));setWebglError(null);}} onError={setWebglError}/>}
 
           {webglError && (
             <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -1026,11 +1036,16 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
 
         </div>
         {guide&&<div className="park-guide">{guide}</div>}
+        {moment&&<figure className="park-moment">
+          <img src={moment.src} alt={moment.alt} width={72} height={48}/>
+          <figcaption aria-live="polite"><span className="label">Illustrated moment</span><span>{moment.caption}</span></figcaption>
+          <button type="button" aria-label="Dismiss the illustrated moment" onClick={()=>{clearTimeout(momentTimer.current);setMoment(null);}}><X size={12}/></button>
+        </figure>}
         {clearPending&&<div className="park-clear-confirm" role="group" aria-label="Confirm clearing visitors"><span>Let {visitors.length} visitor{visitors.length===1?'':'s'} leave?</span><button type="button" className="btn-quiet" onClick={()=>{clearVisitors();setClearPending(false);}}>Clear visitors</button><button type="button" className="btn-quiet" onClick={()=>setClearPending(false)}>Keep them</button></div>}
         <div className="park-drawers" role="group" aria-label="Park details">
 
           <button type="button" aria-label={`${sceneCount} dogs`} aria-expanded={drawer==='dogs'} aria-controls="park-roster" onClick={()=>setDrawer(drawer==='dogs'?null:'dogs')}><Users size={18}/><span>{sceneCount}<span className="park-dogs-word"> dogs</span></span><ChevronDown size={14}/></button>
-          <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} title={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button></>}</div>
+          <div className="park-selected-inline">{selectedRow&&<><span>{selectedRow.name}</span><button type="button" aria-label={`Pet ${selectedRow.name}`} title={`Pet ${selectedRow.name}`} onClick={()=>sceneApiRef.current?.pet(selectedRow.id)}><HandHeart size={20}/></button>{selectedRow.id!==myDogRowId&&!petState?.sleep.asleep&&!petState?.sick&&<button type="button" aria-label={`Play with ${selectedRow.name}`} title={`Play with ${selectedRow.name}`} onClick={()=>{socialRef.current?.();sceneApiRef.current?.play?.(selectedRow.id);}}><Volleyball size={20}/></button>}</>}</div>
           <button type="button" className={liveRoom?'park-live-on':''} aria-expanded={drawer==='live'} aria-controls="park-live" aria-label={liveRoom?'Live park':'Invite a friend to this park'} onClick={invite} title={liveRoom?'Live park':'Invite a friend to this park'}><Link2 size={18}/><span>{liveRoom?(live.status==='live'?`Live · ${friendCount+1}`:'Connecting…'):'Invite'}</span></button>
           <div className="park-camera" role="group" aria-label="Park camera">
             <button type="button" aria-label="Zoom in" disabled={zoom>=1.5} onClick={()=>changeZoom(zoomRef.current*1.2)}><ZoomIn size={20}/></button>
