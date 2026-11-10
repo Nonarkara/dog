@@ -45,6 +45,9 @@ const CANOPIES:{id:string;cx:number;cy:number;r:number}[]=[
   {id:'t3',cx:-315,cy:320,r:90*1.05},
   {id:'t4',cx:280,cy:370,r:90*.85},
 ];
+// A canopy is an elevated platform: a dog standing on one draws above every
+// ground dog and casts no grass shadow.
+const CANOPY_RENDER_ORDER=200000;
 const NS='http://www.w3.org/2000/svg';
 const attr=(element:Element,name:string,value:string)=>{if(element.getAttribute(name)!==value)element.setAttribute(name,value);};
 const v3a=new THREE.Vector3(),v4a=new THREE.Vector4(),v4Tile=new THREE.Vector4(1,1,0,0);
@@ -228,6 +231,9 @@ export function IllustratedPark(props:Props){
    const placed=[...actors.values()].filter(a=>a.raster);
    for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){
     const a=placed[i],b=placed[j];if(a.partner===b.id&&(a.mode==='chase'||a.mode==='flee'))continue;
+    // Different elevations never press on each other: a dog up in a canopy
+    // is not occupying the same ground as a dog on the lawn.
+    if((a.onCanopy!==null)!==(b.onCanopy!==null))continue;
     const gx=b.x-a.x,gy=(b.y-a.y)*1.8,d=Math.hypot(gx,gy),min=(a.w+b.w)*.42;if(d>=min)continue;
     const nx=d>.01?gx/d:1,ny=d>.01?gy/d:0;
     // Even a dog that is sniffing or lying down is eased apart a little;
@@ -294,7 +300,7 @@ export function IllustratedPark(props:Props){
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
     const on=canopyAt(a.x,a.y);a.onCanopy=on;
-    a.mesh.renderOrder=on?200000:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
+    a.mesh.renderOrder=on?CANOPY_RENDER_ORDER:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
      for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
     if(a.own){const pawsJson=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));if(pawsJson!==lastPawsJson){lastPawsJson=pawsJson;canvas.dataset.paws=pawsJson;}canvas.dataset.gaitBlend=String(a.blend);}
