@@ -1,5 +1,5 @@
 import {IllustratedPark} from './IllustratedPark';
-import {dogPlayMoment,type DogPlayKind,type DogPlayMoment} from '../utils/fluxDogPlay';
+import {dogPlayMoment,PLAY_MOMENT_CARDS,type DogPlayKind,type DogPlayMoment} from '../utils/fluxDogPlay';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -310,6 +310,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
   const [moment,setMoment]=useState<DogPlayMoment|null>(null);
   const momentTimer=useRef(0);
   const showMoment=(kind:DogPlayKind,a:string,b:string)=>{
+    if(!PLAY_MOMENT_CARDS)return;
     setMoment(dogPlayMoment(kind,a,b));
     clearTimeout(momentTimer.current);
     momentTimer.current=window.setTimeout(()=>setMoment(null),16000);
@@ -1036,7 +1037,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
 
         </div>
         {guide&&<div className="park-guide">{guide}</div>}
-        {moment&&<figure className="park-moment">
+        {PLAY_MOMENT_CARDS&&moment&&<figure className="park-moment">
           <img src={moment.src} alt={moment.alt} width={72} height={48}/>
           <figcaption aria-live="polite"><span className="label">Illustrated moment</span><span>{moment.caption}</span></figcaption>
           <button type="button" aria-label="Dismiss the illustrated moment" onClick={()=>{clearTimeout(momentTimer.current);setMoment(null);}}><X size={12}/></button>

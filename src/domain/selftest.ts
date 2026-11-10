@@ -5,6 +5,8 @@ import {DOG_BEHAVIOURS,behaviourPool,chooseBehaviour} from '../components/dogBeh
 import {newIdle,stepIdle,idlePool,idleWeight, type IdleContext} from '../components/fallbackIdle';
 import {recordSources,recordExport} from '../utils/recordProvenance';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
+import {TREES,CROWN,canopyAt} from './parkCanopy';
+import {parkScenery} from '../components/parkScenery';
 /**
  * THE ENGINE'S OWN PROOF.
  *
@@ -829,6 +831,25 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   const vAroused = computeCanineVitals(demoDog, arousedState);
   ok('high arousal triggers sympathetic dominance', vAroused.psyche.autonomicState.includes('Sympathetic'));
 }
+
+  // Park canopies: the walkable ellipse must sit inside the DRAWN crown of each drawn tree.
+  {
+    const scenery=parkScenery();
+    const drawn=[...scenery.matchAll(/translate\((-?\d+) (-?\d+)\) scale\(([\d.]+)\)"><ellipse cy="65" rx="90"/g)].map(m=>({x:+m[1],y:+m[2],s:+m[3]}));
+    ok('the four canopy trees are exactly the four drawn trees',drawn.length===TREES.length&&drawn.every((d,i)=>d.x===TREES[i].x&&d.y===TREES[i].y&&d.s===TREES[i].s));
+    const crownD=scenery.match(/fill="#386344"/)&&scenery.match(/<path d="(M-83-55[^"]+)" fill="#386344"/)?.[1];
+    const nums=(crownD??'').match(/-?\d+(?:\.\d+)?/g)?.map(Number)??[];
+    const xs=nums.filter((_,i)=>i%2===0),ys=nums.filter((_,i)=>i%2===1);
+    const box={l:Math.min(...xs),r:Math.max(...xs),t:Math.min(...ys),b:Math.max(...ys)};
+    ok('the drawn crown was found',nums.length>20&&box.r-box.l>150);
+    ok('the walkable ellipse lies inside the drawn crown',CROWN.cx-CROWN.rx>=box.l&&CROWN.cx+CROWN.rx<=box.r&&CROWN.cy-CROWN.ry>=box.t&&CROWN.cy+CROWN.ry<=box.b);
+    ok('and covers most of it',2*CROWN.rx>=.8*(box.r-box.l)&&2*CROWN.ry>=.8*(box.b-box.t));
+    ok('the crown centre of each tree is on its canopy',TREES.every(t=>canopyAt(t.x+CROWN.cx*t.s,t.y+CROWN.cy*t.s,1)===t.id));
+    ok('the ground in front of the trunk is the lawn, not the canopy',TREES.every(t=>canopyAt(t.x,t.y+65*t.s,1)===null));
+    ok('just outside the crown rim is the lawn',TREES.every(t=>canopyAt(t.x+(CROWN.cx+CROWN.rx+2)*t.s,t.y+CROWN.cy*t.s,1)===null));
+    ok('the crown scales with the park unit',canopyAt(TREES[1].x*1.3+CROWN.cx*TREES[1].s*1.3,TREES[1].y*1.3+CROWN.cy*TREES[1].s*1.3,1.3)==='t2');
+    ok('the open lawn is not a canopy',canopyAt(0,0,1)===null);
+  }
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

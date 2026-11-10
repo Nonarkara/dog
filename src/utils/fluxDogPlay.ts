@@ -17,6 +17,9 @@
  * not reproduced, so the caption names the pair and the image stays a scene.
  */
 
+/** Off until the owner has seen and approved the generated art (house rule: AI art is shown before it ships). */
+export const PLAY_MOMENT_CARDS=false;
+
 export type DogPlayKind = 'chase' | 'tumble';
 
 export interface DogPlayMoment {

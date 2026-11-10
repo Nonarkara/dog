@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {canopyAt} from '../domain/parkCanopy';
 import * as THREE from 'three';
 import {PLAY_PERSONALITIES} from './dogPlay';
 import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
@@ -32,19 +33,6 @@ interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetSta
  onDogPlay?:(moment:{kind:DogPlayKind;a:string;b:string})=>void;}
 interface Raster {texture:THREE.Texture;pixels:Uint8ClampedArray;w:number;h:number;left:number;right:number;top:number;bottom:number;pixelWidth?:number;originX?:number;originY?:number;tile?:THREE.Vector4;alphaOnly?:boolean;}
 const FILES:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
-// WORLD RULE (2D flat, orthographic): tree canopies are elevated walkable
-// platforms. A dog may step onto a canopy; trunks remain pass-through.
-// Canopy centres/radii are park units (x unit = world units), matched to the
-// drawn canopies in parkScenery.tsx. Elevation is layering, not geometry.
-const CANOPIES:{id:string;cx:number;cy:number;r:number}[]=[
-  // Honest to parkScenery.ts: four landmark trees, centre at their transform,
-  // radius = shadow ellipse rx=90 scaled by the tree's own scale so the
-  // walkable disk matches the drawn canopy's ground footprint.
-  {id:'t1',cx:-270,cy:-210,r:90*.9},
-  {id:'t2',cx:310,cy:-75,r:90*1.15},
-  {id:'t3',cx:-315,cy:320,r:90*1.05},
-  {id:'t4',cx:280,cy:370,r:90*.85},
-];
 // A canopy is an elevated platform: a dog standing on one draws above every
 // ground dog and casts no grass shadow.
 const CANOPY_RENDER_ORDER=200000;
@@ -64,7 +52,6 @@ export function IllustratedPark(props:Props){
   const host=mount.current;if(!host)return;setReady(false);let disposed=false,frame=0,last=0,next=0;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const unit=Math.min(1.35,Math.max(1,host.clientWidth/600));
-  const canopyAt=(x:number,y:number)=>{for(const c of CANOPIES)if(Math.hypot(x-c.cx*unit,y-c.cy*unit)<c.r*unit)return c.id;return null;};
   host.insertAdjacentHTML('beforeend',parkScenery());const scenery=host.querySelector<SVGSVGElement>('svg')!;
   const landmarks=scenery.querySelector<SVGGElement>('.park-landmarks')!;landmarks.setAttribute('transform',`scale(${unit})`);
   const labels=document.createElementNS(NS,'g');labels.setAttribute('class','park-dog-labels');scenery.append(labels);
@@ -299,9 +286,9 @@ export function IllustratedPark(props:Props){
     // Park tails spool like stage tails: quick to speed up, slow to settle.
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
-    const on=canopyAt(a.x,a.y);a.onCanopy=on;
+    const on=canopyAt(a.x,a.y,unit);a.onCanopy=on;
     a.mesh.renderOrder=on?CANOPY_RENDER_ORDER:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
-     for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
+     for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',!on&&point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
     if(a.own){const pawsJson=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));if(pawsJson!==lastPawsJson){lastPawsJson=pawsJson;canvas.dataset.paws=pawsJson;}canvas.dataset.gaitBlend=String(a.blend);}
     attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit));attr(a.shadow,'opacity',on&&a.raster?'0':(a.raster?'.12':'0'));
