@@ -111,11 +111,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
    */
   const nextAction = (): string => {
     const mood=dailyMood(petState);
-    if(mood==='sick')return sickCause(petState)==='mess'?`${dog.name} is ill from lying in mess. Clean up (broom), then give medicine.`:sickCause(petState)==='hunger'?`${dog.name} is ill from going hungry. Give medicine (red button), then a meal.`:`${dog.name} is still unwell. Give medicine (red button).`;
+    if(mood==='sick')return sickCause(petState)==='mess'?`${dog.name} is ill from lying in mess. Clean up (broom), then give medicine.`:sickCause(petState)==='hunger'?`${dog.name} is ill from going hungry. Give medicine, then a meal.`:`${dog.name} is still unwell. Give medicine.`;
     if(mood==='sleeping')return `${dog.name} is sleeping. Quiet time while energy returns.`;
     if(mood==='toilet')return `${dog.name} needs a toilet break. Take a walk before an accident.`;
     if(mood==='hungry')return `${dog.name} is hungry. Food first.`;
-    if(mood==='tired')return `${dog.name} is out of energy. Rest before training.`;
+    if(mood==='tired')return `${dog.name} is tired. Tuck ${dog.sex==='female'?'her':'him'} in.`;
     if(mood==='dirty')return poops?`${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`:`${dog.name} needs a groom.`;
     if(mood==='bored')return `${dog.name} is bored. Play, a sniff walk or a little company helps.`;
     if (petState.calmSince!==undefined) return `${dog.name} is resting quietly. Watch the relaxed posture, then reward calm.`;
@@ -131,12 +131,12 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
     <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''} ${extras?'care-console--extras':''}`} aria-label="Care">
       <header className="panel-head">
         <h2 className="label text-zinc-300">Care</h2>{!detailView&&playMode()==='own'&&<CloudSaveStatus/>}
-        <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, calm. A red bar needs you. The line under Now says the one thing to do next."/>
+        <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, excitement. A red bar needs you. The line under Now says the one thing to do next."/>
         <span className="care-identity truncate text-[11px] text-zinc-500">
           {dog.name} / {dog.breed}
         </span>
         {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
-        {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} clinical vitals`} title="Physique & psyche vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
+        {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} game vitals`} title="Game vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
         {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
         {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
       </header>
@@ -193,7 +193,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         {/* The sentence: advice, health, discipline and time together */}
         <div className="care-now border-hairline-t">
           <p className="label">Now</p>
-          {petState.call&&petState.call.reason!=='sick' ? (
+          {petState.call&&!isSick&&!asleep&&(dailyMood(petState)!=='tired'||!['bored','lonely','tantrum'].includes(petState.call.reason)) ? (
             <p className="text-[12px] leading-snug text-accent mt-0.5" role="status">
               {dog.name} {CALL_TEXT[petState.call.reason]}. Answer with {ANSWERS[petState.call.reason].join(' or ')}.
             </p>

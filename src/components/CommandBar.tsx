@@ -16,6 +16,7 @@ import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import type { Interaction } from '../domain/pet';
 import { dailyLife } from '../domain/dailyLife';
+import { sickCause } from '../domain/pet';
 import { VitalsModal } from './VitalsModal';
 
 export type CareAction = Interaction;
@@ -41,26 +42,13 @@ interface CommandBarProps {
  * When the pet has an urgent need (hunger, mess, low energy), that specific action
  * carries the Tamagotchi "Attention" call highlight.
  */
-const BASE_ACTIONS: { action: CareAction; label: string; icon: LucideIcon; key: string }[] = [
+const BASE_ACTIONS = [
   { action: 'feed', label: 'Feed', icon: Utensils, key: '1' },
   { action: 'pet', label: 'Pet', icon: HandHeart, key: '2' },
   { action: 'play', label: 'Play', icon: Volleyball, key: '3' },
   { action: 'walk', label: 'Walk', icon: Footprints, key: '4' },
   { action: 'groom', label: 'Clean', icon: Broom, key: '5' },
-];
-
-function getUrgentActions(petState: PetState, poops: number): CareAction[] {
-  // A sleeping or sick dog should not pulse an action he cannot take.
-  if (petState.sleep?.asleep) return [];
-  if (petState.sick) return poops > 0 ? ['groom'] : [];
-  const urgent: CareAction[] = [];
-  if (poops > 0) urgent.push('groom');
-  if ((petState.needs?.hunger ?? 100) < 40) urgent.push('feed');
-  if ((petState.needs?.hygiene ?? 100) < 40 && !urgent.includes('groom')) urgent.push('groom');
-  if ((petState.needs?.energy ?? 100) < 35) urgent.push('walk');
-  if (petState.trust < 35) urgent.push('pet');
-  return urgent;
-}
+] satisfies { action: CareAction; label: string; icon: LucideIcon; key: string }[];
 
 const GERUND: Record<CareAction, string> = {
   pet: 'Petting',
@@ -89,8 +77,18 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   const [showVitals, setShowVitals] = useState(false);
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
-  const poops = (petState.poopCount ?? 0) + dailyLife(petState).peeCount;
-  const urgent = getUrgentActions(petState, poops);
+  const life = dailyLife(petState);
+  const poops = (petState.poopCount ?? 0) + life.peeCount;
+  const needsBed = !asleep && !isSick && petState.needs.energy < 25;
+  const needsMedicine = isSick && sickCause(petState) !== 'mess';
+  const needsWalk = life.bladder >= 70 || petState.call?.reason === 'tantrum';
+  const urgent = {
+    feed: !asleep && !isSick && petState.needs.hunger < 35,
+    pet: !asleep && !isSick && petState.call?.reason === 'lonely',
+    play: !asleep && !isSick && !needsBed && petState.call?.reason === 'bored',
+    walk: !asleep && !isSick && needsWalk,
+    groom: poops > 0 || (!asleep && !isSick && petState.needs.hygiene < 30),
+  };
 
   const openVitals = useCallback(() => {
     if (onOpenVitals) onOpenVitals();
@@ -154,7 +152,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             const currentLabel = action === 'groom' && poops > 0 ? `Clean (${poops})` : label;
             const CurrentIcon = action === 'groom' && poops > 0 ? Broom : Icon;
             const busy = isInteracting && pendingAction === currentAction;
-            const isAttention = urgent.includes(action);
+            const isAttention = urgent[action];
 
             return (
               <button
@@ -189,7 +187,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
               disabled={isInteracting}
               aria-label={`Administer medicine to ${dog.name}`}
               title="Administer medicine (M)"
-              className="btn bg-rose-600 text-white hover:bg-rose-500 px-2.5 text-[11px] font-semibold whitespace-nowrap animate-pulse min-w-[34px] min-h-[34px] h-[34px]"
+              className={`btn px-2.5 text-[11px] font-semibold whitespace-nowrap min-w-[34px] min-h-[34px] h-[34px] ${needsMedicine?'btn-accent':'btn-quiet border-hairline'}`}
             >
               <Pill size={20} aria-hidden="true" />
               <span className="sr-only">Medicine</span>
@@ -202,8 +200,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           type="button"
           onClick={openVitals}
           className="btn btn-quiet border-hairline px-2 text-[11px] whitespace-nowrap shrink-0 min-w-[34px] min-h-[34px] h-[34px]"
-          aria-label={`Inspect ${dog.name} physique and psyche vitals`}
-          title={`${dog.name} clinical vitals: physique & psyche (V)`}
+          aria-label={`Inspect ${dog.name} game vitals`}
+          title={`${dog.name} game vitals (V)`}
         >
           <Stethoscope size={20} aria-hidden="true" />
           <span className="sr-only">Vitals</span>
@@ -217,6 +215,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           className={[
             'btn px-2 text-[11px] whitespace-nowrap shrink-0 min-w-[34px] min-h-[34px] h-[34px]',
             asleep ? 'btn-accent opacity-100' : 'btn-quiet border-hairline',
+            needsBed ? 'border-amber-500/80 text-amber-300' : '',
           ].join(' ')}
           aria-label={`Bedtime and wake options for ${dog.name}`}
           title={asleep ? `${dog.name} is asleep · Bedtime options` : 'Bedtime and wake options (6)'}
@@ -242,9 +241,6 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           <span className="sr-only">Labels</span>
         </button>
 
-        <span className="data text-[10px] text-faint shrink-0 hidden xl:inline">
-          {Math.round(petState.trust)} trust · {Math.round(petState.discipline ?? 60)}% calm
-        </span>
       </div>
 
       {showVitals && (

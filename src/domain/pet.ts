@@ -609,7 +609,7 @@ export function interact(
         next.poopCount = 0;
         next.needs.hygiene = clamp(base.needs.hygiene + 35);
         next.trust = clamp(base.trust + 4);
-        note = `Scooped and cleared ${mess} mess${mess > 1 ? 'es' : ''} from the stage. Spotless and fresh again. Trust +4.`;
+        note = `Cleaned up ${mess} mess${mess > 1 ? 'es' : ''}.`;
       } else {
         outcomeDelivered = false;
         note = 'The stage is already clean and spotless.';

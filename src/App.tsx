@@ -4,7 +4,7 @@ import {finishParkOuting} from './domain/parkOuting';
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
 import { validRoom } from './domain/parkProtocol';
 import { startCloudSync } from './utils/cloud';
-import { arriveAtPark, leavePark, fetchVisitChoice, chooseVisitRecord, type VisitChoice } from './utils/careLog';
+import { arriveAtPark, fetchVisitChoice, chooseVisitRecord, type VisitPermission } from './utils/careLog';
 import { ParkConsent } from './components/ParkConsent';
 import { coax } from './domain/runaway';
 import {FirstPlayTip,useFirstPlayTips} from './components/FirstPlayTips';
@@ -23,7 +23,7 @@ import { dailyLife } from './domain/dailyLife';
 import type { AvatarInteractionTrigger } from './components/DogAvatar3D';
 import type {PoseRequest,AvatarPose,PerformPose} from './components/trainingMotion';
 import {calmNeed} from './domain/calm';
-import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './domain/attention';
+import { addTogether, answerCareCall, tickCall, CALL_FADES_MS } from './domain/attention';
 import type { CoatPattern } from './domain/coat';
 import { dogTheme, DOG_THEMES } from './data/dogThemes';
 import { DEFAULT_DOGS } from './data/defaultDogs';
@@ -302,16 +302,31 @@ export const App: React.FC = () => {
   // with a care snapshot, leave with another. The game never waits on it.
   const careRef=useRef({dog:currentDog,petState});
   careRef.current={dog:currentDog,petState};
+  const visitState=useRef<{dogId:string;state:PetState}|null>(null);
+  if(visitState.current?.dogId===currentDog.id)visitState.current.state=petState;
   // undefined until the server answers; it stays undefined when signed out or offline.
-  const [visitOk,setVisitOk]=useState<VisitChoice|undefined>(undefined);
-  useEffect(()=>{if(activeRegion==='commons'&&visitOk===undefined)void fetchVisitChoice().then(setVisitOk);},[activeRegion,visitOk]);
+  const [visitPermission,setVisitPermission]=useState<VisitPermission>();
   useEffect(()=>{
-    if(activeRegion!=='commons'||visitOk!=='yes')return;
-    arriveAtPark(careRef.current.dog,careRef.current.petState,liveRoom??'commons');
-    const hide=()=>{if(document.visibilityState==='hidden')leavePark(careRef.current.dog,careRef.current.petState);};
-    document.addEventListener('visibilitychange',hide);
-    return()=>{document.removeEventListener('visibilitychange',hide);leavePark(careRef.current.dog,careRef.current.petState);};
-  },[activeRegion,liveRoom,visitOk]);
+    if(activeRegion!=='commons')return;
+    let cancelled=false;
+    void fetchVisitChoice().then(permission=>{if(!cancelled)setVisitPermission(permission);});
+    return()=>{cancelled=true;setVisitPermission(undefined);};
+  },[activeRegion]);
+  useEffect(()=>{
+    if(activeRegion!=='commons'||visitPermission?.consent!=='yes')return;
+    const {dog,petState:initialState}=careRef.current;
+    const observed={dogId:dog.id,state:initialState};
+    visitState.current=observed;
+    let leave: ReturnType<typeof arriveAtPark>|undefined;
+    const close=()=>{leave?.(observed.state);leave=undefined;};
+    const visibility=()=>{
+      if(document.visibilityState==='hidden')close();
+      else if(!leave)leave=arriveAtPark(dog,observed.state,liveRoom??'commons',visitPermission);
+    };
+    visibility();
+    document.addEventListener('visibilitychange',visibility);
+    return()=>{document.removeEventListener('visibilitychange',visibility);close();visitState.current=null;};
+  },[activeRegion,liveRoom,visitPermission,currentDog.id]);
 
   // Switch identity and state in one React batch, before the save effect runs.
   const selectDog = (id: string) => {
@@ -386,21 +401,32 @@ export const App: React.FC = () => {
    * overnight earns nothing.
    */
   useEffect(() => {
-    let lastActive = Date.now();
-    const touch = () => (lastActive = Date.now());
+    let lastActive = 0;
+    let activeSince = 0;
+    const touch = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now=Date.now();
+      if (!lastActive || now-lastActive>30_000) activeSince=now;
+      lastActive=now;
+    };
+    const reset = () => { if (document.visibilityState !== 'visible') lastActive=0; };
     const events = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
     events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    document.addEventListener('visibilitychange',reset);
     const SLICE = 15;
     const id = window.setInterval(() => {
-      if (document.visibilityState !== 'visible' || Date.now() - lastActive > 30_000) return;
+      if (!lastActive || document.visibilityState !== 'visible' || Date.now() - lastActive > 30_000) return;
       void commitPet(prev=>{
-        const now=Date.now(),seconds=Math.max(0,Math.min(SLICE,(now-(prev.lastTogetherAt??now-SLICE*1000))/1000));
+        if (!lastActive || document.visibilityState !== 'visible') return prev;
+        const now=Date.now(),from=Math.max(activeSince,prev.lastTogetherAt??0);
+        const seconds=Math.max(0,Math.min(SLICE,(now-from)/1000));
         return seconds?growCompanion({...prev,together:addTogether(prev.together,seconds,now),lastTogetherAt:now},seconds,now):prev;
       });
     }, SLICE * 1000);
     return () => {
       window.clearInterval(id);
       events.forEach((e) => window.removeEventListener(e, touch));
+      document.removeEventListener('visibilitychange',reset);
     };
   }, [commitPet]);
 
@@ -493,11 +519,12 @@ export const App: React.FC = () => {
       }
       if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
       const touched=part?discoverTouch(latest,id,part):latest;
-      const result=interact(touched,action,Date.now(),subject);
+      const now=Date.now();
+      const result=interact(touched,action,now,subject);
       // A dose refused in the mess has not answered his call.
       if(action==='medicine'&&result.state.sick)trigger=null;
-      const answer=latest.call?.reason==='sick'&&result.state.sick?{answered:false,trustBonus:0}:answerCall(latest,action);
-      message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called. Trust +${answer.trustBonus}.`:result.note;
+      const answer=answerCareCall(latest,result.state,action,now);
+      message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called.`:result.note;
       if(action==='rewardCalm'&&result.state.lastCalmRewardAt===latest.lastCalmRewardAt)trigger=null;
       if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
       if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state={...result.state,trust:Math.min(100,result.state.trust+1)};
@@ -506,7 +533,7 @@ export const App: React.FC = () => {
       if(trigger&&(action==='feed'||action==='play'||action==='pet'||action==='walk')){
         out=logCare(out,action);
         const wish=action==='feed'?{state:out,granted:false}:grantWish(out,action,Date.now());out=wish.state;
-        if(wish.granted)message+=` That was ${currentDog.name}'s wish today. Trust +3, +5 paw coins.`;
+        if(wish.granted)message+=` That was ${currentDog.name}'s wish today.`;
       }
       return out;
     },care);
@@ -531,8 +558,8 @@ export const App: React.FC = () => {
     },'play');
     if(!next||activeDogRef.current!==id)return;
     if(!accepted){say(`${currentDog.name} needs rest. We can play again later.`);return;}
-    if(wished){say(`That was ${currentDog.name}'s wish today. Trust +3, +5 paw coins.`);return;}
-    say(kind==='find-treat'?(won?`${currentDog.name} found the treats. Clever nose! Trust +3.`:`A little sniffing practice together. Trust +1.`):(won?`Agility catch victory! ${currentDog.name} caught the balls with joyful barks. Trust +5!`:`Good effort! ${currentDog.name} burned energy and enjoyed the practice.`));
+    if(wished){say(`That was ${currentDog.name}'s wish today.`);return;}
+    say(kind==='find-treat'?(won?`${currentDog.name} found the treats. Clever nose!`:'A little sniffing practice together.'):(won?`Nice catches, ${currentDog.name}!`:`${currentDog.name} had a good run.`));
   };
 
   const handleCommunicate = async (cue: string) => {
@@ -689,7 +716,7 @@ export const App: React.FC = () => {
         return (
           <Suspense fallback={<RegionLoading label="Commons" />}>
             <CommonsPanel guide={firstGuide.tip?<FirstPlayTip tip={firstGuide.tip} onClose={firstGuide.close}/>:null} myDog={currentDog} petState={petState} onSocialize={()=>commitPet(base=>socialize(base,Date.now()))} onWalk={(distance,seconds)=>{outing.current.distance+=distance;outing.current.seconds+=seconds;}} onPet={()=>handleInteract('pet')} onClean={()=>handleInteract('clean')} onGoHome={togglePark} liveRoom={liveRoom} onLiveRoom={setLiveRoom} />
-            {visitOk===null&&<ParkConsent onChoose={async agree=>{const saved=await chooseVisitRecord(agree);setVisitOk(saved&&agree?'yes':'no');}}/>}
+            {visitPermission?.consent===null&&<ParkConsent onChoose={async agree=>{const saved=await chooseVisitRecord(visitPermission.accountId,agree);if(saved)setVisitPermission(current=>current===visitPermission?saved:current);return !!saved;}}/>}
           </Suspense>
         );
     }
@@ -845,7 +872,7 @@ export const App: React.FC = () => {
             )}
             </div>
             </div>
-            {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={petState.growth.careDays.length}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span><button type="button" className="growth-backup" aria-label={`Back up ${currentDog.name}`} title="Stored in this browser. Download a backup to keep your dog if you clear site data or change devices." onClick={()=>{try{downloadOwnedBackup(currentDog.name);say('Backup ready. Restore it from the mode screen.');}catch{setSaveError('Could not create a complete backup yet. Please try again.');}}}><Download size={16}/><span>Backup</span></button></div>}
+            {petState.growth&&<div className="growth-caption"><span className="growth-days" role="progressbar" aria-label="Care days toward adulthood" aria-valuemin={0} aria-valuemax={7} aria-valuenow={Math.min(7,petState.growth.careDays.length)}>{Array.from({length:7},(_,i)=><i key={i} data-earned={i<petState.growth!.careDays.length}/>)}</span><span>1 min × 7 care days → adult</span><button type="button" className="growth-backup" aria-label={`Back up ${currentDog.name}`} title="Stored in this browser. Download a backup to keep your dog if you clear site data or change devices." onClick={()=>{try{downloadOwnedBackup(currentDog.name);say('Backup ready. Restore it from the mode screen.');}catch{setSaveError('Could not create a complete backup yet. Please try again.');}}}><Download size={16}/><span>Backup</span></button></div>}
             <div className="stage-game-dock" hidden={isDogMenuOpen} ref={setGameControlsHost} aria-label="Dog game controls"/>
           </div>
         </section>

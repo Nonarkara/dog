@@ -13,6 +13,8 @@
  * POST /api/push {endpoint,at,until?,followupAt?,followupUntil?,revision?}
  * at=0 clears every window; at=null deletes the subscription.
  */
+import { readJsonObject } from './requestBody';
+
 interface Stmt { bind(...v: unknown[]): Stmt; run(): Promise<unknown>; first<T>(): Promise<T | null>; all<T>(): Promise<{ results: T[] }> }
 export interface PushEnv { DB: { prepare(sql: string): Stmt }; VAPID_PUBLIC?: string; VAPID_PRIVATE_JWK?: string }
 
@@ -35,11 +37,10 @@ export async function handlePush(request: Request, env: PushEnv, url: URL): Prom
   const w = hits.get(ip), t = Date.now();
   if (!w || t - w.start > 60_000) hits.set(ip, { start: t, n: 1 }); else if (++w.n > 20) return json({ error: 'Slow down' }, 429);
   if (hits.size > 10_000) hits.clear();
-  const text = await request.text();
-  if (text.length > 2048) return json({ error: 'Too large' }, 413);
-  let body: { endpoint?: unknown; at?: unknown; until?:unknown; followupAt?:unknown; followupUntil?:unknown; revision?:unknown } | null = null;
-  try { body = JSON.parse(text); } catch { /* not JSON */ }
-  if (!body || Array.isArray(body) || !validEndpoint(body.endpoint)) return json({ error: 'Not a push subscription' }, 400);
+  const input = await readJsonObject(request, 2048);
+  if ('status' in input) return json({ error: input.status === 413 ? 'Too large' : 'Not a push subscription' }, input.status);
+  const body = input.value;
+  if (!validEndpoint(body.endpoint)) return json({ error: 'Not a push subscription' }, 400);
   const now=Date.now(),numeric=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
   if(body.revision!==undefined&&(!numeric(body.revision)||body.revision===0))return json({error:'Bad revision'},400);
   const revision=(body.revision as number|undefined)??0;

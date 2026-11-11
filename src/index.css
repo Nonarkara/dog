@@ -1067,6 +1067,7 @@ html {font-synthesis:none;}
 [data-practice-behaviour] p {font-size:13px;line-height:1.35;}
 [data-practice-behaviour] .btn.flex-1 {flex:none;min-height:32px;padding:0 12px;font-size:13px;}
 [data-practice-behaviour] .btn {min-height:32px;padding:0 10px;font-size:13px;}
+.region-coach .btn.training-word {height:auto;min-height:32px;padding:3px 4px;font-size:13px;line-height:1.15;white-space:normal;text-align:center;}
 .practice-real-notes {padding:2px 6px;}
 .practice-real-notes summary {min-height:24px;font-size:11px;}
 .training-tip {padding:1px 6px;font-size:13px;}
@@ -1221,7 +1222,9 @@ html {font-synthesis:none;}
 .practice-support[open]{max-height:160px;overflow-y:auto;}
 
 .capture-actions>button{min-width:44px;}
-/* On short phones, reserve the task's measured space rather than clipping its button. */
+/* Training needs room for the cue choices and the first action at enlarged text. */
+@media(min-height:741px){.cockpit-workspace--tall:has(.region-coach){grid-template-rows:minmax(0,1fr) auto minmax(min(400px,48dvh),auto);}}
+/* Short phones keep a larger share for the dog, with more Coach below the fold. */
 @media(max-height:740px){.cockpit-workspace--tall:has(.region-coach){grid-template-rows:minmax(0,1fr) auto minmax(286px,auto);}.training-pictures svg{height:48px;}}
 
 .park-cleanup[data-kind=pee] .park-poop,.park-cleanup[data-kind=poop] .park-pee{display:none;}

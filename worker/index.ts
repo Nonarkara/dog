@@ -43,7 +43,8 @@ export default {
     // A live park room: one Durable Object per invite link.
     const live = url.pathname.match(/^\/api\/park\/([^/]+)$/);
     if (live) {
-      const room = decodeURIComponent(live[1]);
+      // Room codes are already URL-safe. Reject encoded input before routing.
+      const room = live[1];
       if (!validRoom(room)) return new Response('Unknown park', { status: 404 });
       return env.PARK_ROOM.get(env.PARK_ROOM.idFromName(room)).fetch(request);
     }
@@ -60,8 +61,12 @@ export default {
   },
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
-    await sendDuePushes(env as unknown as PushEnv);
-    await purgeOldVisits(env as CareEnv);
-    await drainEmailDeletions(env);
+    const outcomes = await Promise.allSettled([
+      sendDuePushes(env as unknown as PushEnv),
+      purgeOldVisits(env as CareEnv),
+      drainEmailDeletions(env),
+    ]);
+    const failures = outcomes.flatMap(outcome => outcome.status === 'rejected' ? [outcome.reason] : []);
+    if (failures.length) throw new AggregateError(failures, 'A scheduled task failed.');
   },
 };

@@ -1,4 +1,5 @@
 import {validOwnedBackup} from '../src/domain/ownedSaveValidation';
+import {readJsonObject} from './requestBody';
 import {emailConfig,emailIdentity,emailProfile,finishEmailDeletion,revokeEmailSession,type EmailEnv} from './emailAuth';
 /**
  * ACCOUNTS AND CLOUD-SAVED DOGS.
@@ -100,13 +101,11 @@ function providerConfig(p: Provider, env: AccountEnv): ProviderConfig | null {
 }
 
 /**
- * The test sign-in exists only for local runs. `wrangler dev` presents
- * requests under the real domain, so the guard is: the DEV_AUTH flag, which
- * lives only in the gitignored .dev.vars file that `wrangler deploy` never
- * uploads, AND plain http, which the live site never serves. After every
- * deploy, /api/me must not list "dev" among the providers.
+ * The test sign-in requires both the local DEV_AUTH flag and a loopback
+ * HTTP origin. A misconfigured production flag cannot activate it.
  */
-const devAllowed = (url: URL, env: AccountEnv) => env.DEV_AUTH === '1' && url.protocol === 'http:';
+const devAllowed = (url: URL, env: AccountEnv) =>
+  env.DEV_AUTH === '1' && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
 
 export function providersFor(url: URL, env: AccountEnv): Provider[] {
   const list: Provider[] = [];
@@ -367,14 +366,9 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   if (!user) return json({ error: 'Sign in first.' }, 401);
 
   if (path === '/api/dog' && request.method === 'PUT') {
-    const raw = await request.text();
-    if (new TextEncoder().encode(raw).byteLength > MAX_BACKUP_BYTES) return json({ error: 'That save is too large.' }, 413);
-    let body: { revision?: unknown; backup?: unknown; expectedAccountId?: unknown; baseRevision?: unknown };
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      return json({ error: 'Not understood.' }, 400);
-    }
+    const input = await readJsonObject(request, MAX_BACKUP_BYTES);
+    if ('status' in input) return json({ error: input.status === 413 ? 'That save is too large.' : 'Not understood.' }, input.status);
+    const body = input.value;
     // The cookie may have changed in another tab after this game reconciled.
     if (body.expectedAccountId !== undefined && body.expectedAccountId !== user.id)
       return json({ error: 'The signed-in account changed. Reopen Own mode before saving.' }, 409);
@@ -382,9 +376,9 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     const baseRevision=body.baseRevision;
     if(hasBase&&baseRevision!==null&&(!Number.isSafeInteger(baseRevision)||Number(baseRevision)<0))
       return json({error:'Not a valid save base.'},400);
-    const revision = Number(body.revision);
+    const revision = body.revision;
     const backup = body.backup;
-    if (!Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS) || backup.save.revision !== revision)
+    if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS) || backup.save.revision !== revision)
       return json({ error: 'Not a dog save.' }, 400);
     const name = clean(backup.adoption?.name, 24) || 'Dog';
     // Check the revision inside the write: two devices can pass a separate
@@ -392,15 +386,22 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     // clients also compare their observed server base: equal local counters
     // can represent different care. An older client with no base may only
     // create the initial row or retry exact bytes; otherwise it must reload.
+    const serialized = JSON.stringify(backup);
     const saved = await env.DB.prepare(
-      'INSERT INTO dogs (user_id, name, dog_id, revision, backup, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
+      'INSERT INTO dogs (user_id, name, dog_id, revision, backup, updated_at) ' +
+        'SELECT ?, ?, ?, ?, ?, ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM dogs WHERE user_id = ?) ' +
         'ON CONFLICT(user_id) DO UPDATE SET name = excluded.name, dog_id = excluded.dog_id, revision = excluded.revision, backup = excluded.backup, updated_at = excluded.updated_at ' +
-        'WHERE excluded.revision >= dogs.revision AND ((? = 1 AND dogs.revision = ?) OR (excluded.revision = dogs.revision AND excluded.backup = dogs.backup))'
+        'WHERE excluded.revision > dogs.revision AND dogs.revision = ?'
     )
-      .bind(user.id, name, String(backup.adoption!.dogId), revision, JSON.stringify(backup), Date.now(), hasBase?1:0, baseRevision??-1)
+      .bind(user.id, name, backup.adoption.dogId, revision, serialized, Date.now(), baseRevision??null, user.id, baseRevision??-1)
       .run();
     if (!saved.meta?.changes) {
-      const stored = await env.DB.prepare('SELECT revision FROM dogs WHERE user_id = ?').bind(user.id).first<{ revision: number }>();
+      const stored = await env.DB.prepare(
+        'SELECT revision, (revision = ? AND backup = ?) AS identical FROM dogs WHERE user_id = ?'
+      ).bind(revision, serialized, user.id).first<{ revision: number; identical: number }>();
+      // A retry acknowledges the same bytes without spending another write or
+      // moving the displayed save time. New content must advance the revision.
+      if (stored?.identical === 1) return json({ ok: true, revision });
       return json({ ok: false, newer: stored?.revision, error:'The cloud copy changed. Reopen Own mode before saving.' }, 409);
     }
     return json({ ok: true, revision });

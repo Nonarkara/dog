@@ -52,7 +52,7 @@ interface Props {
   petPulse?:number;
 }
 
-const CHIP = 'min-h-0 h-[24px] px-1 py-0 text-[10px] leading-none';
+const CHIP = 'training-word';
 
 export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour,petPulse=0 }) => {
   const [name, setName] = useState<BehaviourName>(requestedBehaviour&&!lockedBehind(petState,requestedBehaviour)?requestedBehaviour:'sit');

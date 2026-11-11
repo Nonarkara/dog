@@ -41,7 +41,7 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
   const c=captureOf(petState,name);
   const word=BEHAVIOURS.find(b=>b.name===name)?.label??name;
   const target=POSE_FOR[name];
-  const stars=Math.min(5,Math.round(c.association/LEARNED*5));
+  const stars=Math.min(5,Math.floor(c.association/LEARNED*5));
 
   const stop=()=>{run.current++;doneAt.current=0;doingAt.current=false;setDoing(false);setBubble(null);setPhase('ready');void onPose('stand');};
   useEffect(()=>stop,[name]);// eslint-disable-line react-hooks/exhaustive-deps

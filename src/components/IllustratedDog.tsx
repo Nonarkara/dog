@@ -1,4 +1,4 @@
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -46,6 +46,7 @@ const v4a=new THREE.Vector4(),v4b=new THREE.Vector4(),v2a=new THREE.Vector2();
 const PACE_WALK=0.48,PACE_TROT=0.78;
 /** How long a turn takes. The authored pivot frames cover the whole turn. */
 const TURN_MS=500;
+const APPROACH_SECONDS=1.8;
 /** Behaviours with no visible motion beyond breathing: thirty frames is enough. */
 const STILL_BEHAVIOURS=['watching','looking','sitting','resting','sighing'];
 
@@ -244,7 +245,10 @@ function IllustratedStage(props: Props & {url:string}) {
     const atlasTimer=setTimeout(()=>loader.load(`/dogs/motion/${artName}-motion${renderer.capabilities.maxTextureSize>=3840?'':'-lite'}.webp`,texture=>{
       if(disposed){texture.dispose();return;}texture.colorSpace=THREE.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=THREE.LinearFilter;
       const image=texture.image as HTMLImageElement,mask=document.createElement('canvas');mask.width=MOTION_LAYOUT.columns*48;mask.height=MOTION_LAYOUT.rows*48;const context=mask.getContext('2d');
-      if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};
+      if(!context){texture.dispose();return;}context.drawImage(image,0,0,mask.width,mask.height);const rgba=context.getImageData(0,0,mask.width,mask.height).data,alpha=new Uint8ClampedArray(mask.width*mask.height);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];
+      // Upload while the home dog is still available. The first step should
+      // never have to send a whole motion sheet to the GPU.
+      renderer.initTexture(texture);atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};
       setMotionReady(true);
     },undefined,()=>{/* Optional movement never replaces the approved base dog. */}),1200);
     for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow','sick'] as const){
@@ -285,6 +289,7 @@ function IllustratedStage(props: Props & {url:string}) {
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,lastInterval=0,start=performance.now();
     const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let wasTravelling=false,driftX=0,paceX=0,paceGoal=1,paceDir=1,pacePhase='idle',paceTurnUntil=0,fitRatio=1,strideShown=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
+    let approachScale=1;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
       // Spend frames on motion. Quiet breathing needs fewer; hidden tabs render none.
@@ -394,9 +399,16 @@ function IllustratedStage(props: Props & {url:string}) {
       uniforms.reduced.value=reduced.matches?1:0;uniforms.time.value=reduced.matches?0:t;
       outgoingUniforms.reduced.value=uniforms.reduced.value;outgoingUniforms.time.value=uniforms.time.value;
       const jump=leap.current.direction?Math.min(1,(now-leap.current.started)/700):0;
-      const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=activeFun?(now-activeFun.started)/1000*Math.min(1,personality.pace):0;
+      const elapsed=activeFun?Math.max(0,(now-activeFun.started)/1000):0;
+      const zoom=uniforms.fun.value.y*(reduced.matches?0:1),zTime=elapsed*Math.min(1,personality.pace);
+      const approachTurn=TURN_MS/1000;
+      const approachTime=elapsed-approachTurn;
+      // Ease the depth cue during the turn, then bring it forward through
+      // the steps. The same easing also settles an interrupted approach.
+      const approachTarget=kind==='come'&&shownPose==='stand'&&transition===1&&approachTime<0?.94:1;
+      approachScale=reduced.matches?1:THREE.MathUtils.lerp(approachScale,approachTarget,1-Math.exp(-dt*7));
       uniforms.puppy.value=1-growth.progress;outgoingUniforms.puppy.value=uniforms.puppy.value;
-      const desiredSize=growth.scale*(1-zoom*.12)*(lesson?.scale??1),size=Math.min(stageFit,Math.min(growth.scale,stageFit)*(1-zoom*.12)*(lesson?.scale??1)),room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
+      const desiredSize=growth.scale*(1-zoom*.12)*(lesson?.scale??1),size=Math.min(stageFit,Math.min(growth.scale,stageFit)*(1-zoom*.12)*(lesson?.scale??1))*approachScale,room=Math.max(0,camera.right-(dog.id==='mali-2022'?1:.96)*size-(camera.right-camera.left)*.025);
       fitRatio=size/desiredSize;
       const runX=Math.sin(zTime*2.2)*Math.min(.4,room)*zoom;
       // THE PACE. He owns a stretch of floor: he turns to face the way he is
@@ -443,27 +455,30 @@ function IllustratedStage(props: Props & {url:string}) {
       const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&!turning&&(zoomies||pacing||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
       canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';canvas.dataset.pivoting='false';canvas.dataset.strideBlend='0';
       if((movement||pivoting)&&atlas){
-        const elapsed=activeFun?(now-activeFun.started)/1000:0,delta=skin.position.x-lastMotionX;
+        const delta=skin.position.x-lastMotionX;
         // The stride is measured against the drawing, not against a guess: the
         // park advances a walk by 0.30 of a tile's width and a run by 0.46.
         // A stride is advanced by distance travelled and never by a clock, so
         // his feet cannot slide and his speed alone sets his cadence.
         motionPhase+=Math.min(.1,Math.abs(delta))/((fastGait?.46:.30)*2*size);
         strideShown=(fastGait?.46:.30)*2*size;
-        let index:number,face=facingE.v<0?-1:1,scale=1;
+        let index:number,face=facingE.v<0?-1:1;
         if(pivoting&&!movement)index=48+Math.min(31,Math.round(faceTarget<0?(1-facingE.v)*8:16+(1+facingE.v)*8));
         else if(kind==='turn')index=MOTION_LAYOUT.turnStart+Math.min(31,Math.floor(elapsed/2*32));
         // Three cups: turn until his back is to you (frame 24 of the turn), hold, then turn home.
         else if(kind==='away')index=MOTION_LAYOUT.turnStart+Math.min(24,Math.floor(elapsed/1.2*24));
         else if(kind==='back')index=elapsed>=.5?MOTION_LAYOUT.turnStart:MOTION_LAYOUT.turnStart+24+Math.min(7,Math.floor(elapsed/.5*8));
         else if(kind==='come'){
-          const approach=Math.min(1,elapsed/2);scale=.90+.10*approach;
-          index=elapsed<2?MOTION_LAYOUT.towardStart+Math.floor(elapsed*14)%16:elapsed<2.7?56:48+Math.round(8*(1-Math.min(1,(elapsed-2.7)/.9)));
+          const side=faceTarget<0?16:0,front=8;
+          const returnProgress=THREE.MathUtils.clamp((elapsed-3)/approachTurn,0,1);
+          if(approachTime<0)index=MOTION_LAYOUT.turnStart+Math.round(THREE.MathUtils.lerp(side,front,elapsed/approachTurn));
+          else if(approachTime<APPROACH_SECONDS)index=MOTION_LAYOUT.towardStart+Math.floor(approachTime*14)%MOTION_LAYOUT.depthFrames;
+          else index=MOTION_LAYOUT.turnStart+Math.round(THREE.MathUtils.lerp(front,side,returnProgress));
         }else{
           const d=zoomies?Math.cos(zTime*2.2):delta;
           const turning=zoomies&&Math.abs(d)<.35;
           if(turning)index=48+Math.round((Math.sin(zTime*2.2)>0?8:24)+(d/.35)*4)%32;
-          else{const fast=fastGait;index=fast?Math.floor(motionPhase*32)%32:walkIndex(Math.floor(motionPhase*32));scale=1;}
+          else index=fastGait?Math.floor(motionPhase*32)%32:walkIndex(Math.floor(motionPhase*32));
         }
         // The toward and away drawings face the viewer: a mirror on them is a
         // ghost, not a turn.
@@ -476,7 +491,7 @@ function IllustratedStage(props: Props & {url:string}) {
         const walking=(index>=MOTION_LAYOUT.walkStart&&index<MOTION_LAYOUT.turnStart)||index>=MOTION_LAYOUT.walkMidStart;
         const depthKind=index>=MOTION_LAYOUT.towardStart&&index<MOTION_LAYOUT.walkMidStart;
         const cycle=index<32||walking?32:depthKind?16:0;
-        const gaitFrame=depthKind?elapsed*14:motionPhase*cycle;
+        const gaitFrame=depthKind?approachTime*14:motionPhase*cycle;
         const target=from.map(point=>[...point] as [number,number]);
         if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
         writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);
@@ -485,9 +500,7 @@ function IllustratedStage(props: Props & {url:string}) {
         if(index<32)uniforms.runNeck.value.set(...runNeckFor(index));
         // Every authored view uses one fit, rather than changing the dog's
         // size and the floor clamp on each stride/turn drawing.
-        scale=size*scale;
-        fitRatio=size/desiredSize;
-        skin.scale.set(face*scale,scale,1);skin.position.y=-.82+(.90625-.5)*2*scale;
+        skin.scale.set(face*size,size,1);skin.position.y=-.82+(MOTION_FLOOR-.5)*2*size;
         hitAtlasFrame=index;canvas.dataset.motionFrame=String(index);
       }
       // The distance he actually covered on the floor, after the floor has
@@ -531,7 +544,7 @@ function IllustratedStage(props: Props & {url:string}) {
     toilet:{Icon:Footprints,text:'Need to go! · walk',action:'walk' as const},
     bored:{Icon:Bone,text:'Bored… play with me?',action:'play' as const},
     hungry:{Icon:Utensils,text:'A little hungry · feed',action:'feed' as const},
-    tired:{Icon:Battery,text:'Sleepy paws · bed time',action:undefined},
+    tired:{Icon:Battery,text:'Sleepy paws · tuck me in',action:undefined},
     dirty:{Icon:Broom,text:'A little cleanup?',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as 'clean'|'groom'},
     content:{Icon:Heart,text:'',action:undefined},
   }[mood];
@@ -541,12 +554,14 @@ function IllustratedStage(props: Props & {url:string}) {
     hungry:{Icon:Utensils,text:'Hungry — feed me',action:'feed' as Interaction},
     dirty:{Icon:Broom,text:'Messy — clean me',action:((props.petState.poopCount??0)+life.peeCount>0?'clean':'groom') as Interaction},
     lonely:{Icon:Heart,text:'Where are you?',action:'pet' as Interaction},
-    sick:{Icon:Thermometer,text:'I do not feel well',action:'medicine' as Interaction},
+    sick:needs,
     tantrum:{Icon:Wind,text:'Too wound up!',action:'walk' as Interaction},
     toilet:{Icon:Footprints,text:'I need to go out',action:'walk' as Interaction},
     bored:{Icon:Bone,text:'Bored — play with me',action:'play' as Interaction},
   };
-  const call=props.petState.call,calling=call?callNeeds[call.reason]:null;
+  const call=props.petState.call;
+  const calling=call&&!asleep&&(mood!=='sick'||call.reason==='sick')&&
+    (mood!=='tired'||!['bored','lonely','tantrum'].includes(call.reason))?callNeeds[call.reason]:null;
   const status=calling??(mood==='content'?null:needs);
   const StatusIcon=status?.Icon as React.ElementType;
   const ambientText:Record<string,string>={looking:'What was that?',yawning:'A little yawn…','ear-twitch':'Did I hear you?','head-tilt':'Hmm?','tail-wag':'Happy you’re here',shake:'Shake it off!',scratch:'An itchy spot…','paw-screen':'Are you there?','nose-nudge':'Hello, you.','play-bow':'Come play!',watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};

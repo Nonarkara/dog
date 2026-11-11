@@ -5,7 +5,9 @@ import {DEFAULT_DOGS} from '../data/defaultDogs';
 import {dogTheme} from '../data/dogThemes';
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {ADOPTION_KEY,readAdoption,cleanDogName} from '../utils/playMode';
+import {chooseVisitRecord,fetchVisitChoice,type VisitPermission} from '../utils/careLog';
 const EmailSignIn=lazy(()=>import('./EmailSignIn').then(m=>({default:m.EmailSignIn})));
+const ParkConsent=lazy(()=>import('./ParkConsent').then(m=>({default:m.ParkConsent})));
 const App=lazy(()=>import('../App').then(m=>({default:m.App})));
 const art:Record<string,string>={'expo-2021':'expo','mali-2022':'mali','oreo-frenchie':'oreo','paolo-pug':'paolo','shiba-chai':'hachiku'};
 export function Entry(){
@@ -19,6 +21,12 @@ export function Entry(){
  useEffect(()=>{let live=true;fetchMe().then(async m=>{if(!live)return;setMe(m);if(m?.user){try{const result=await pullIfNewer(m);if(result==='restored')setOwned(readAdoption());if(result==='conflict')setCloudConflict(m);}catch{setSyncError('Account sync could not finish. Your browser’s dog is safe here.');}}if(live)setSynced(true);});return()=>{live=false;};},[]);
  const failed=new URLSearchParams(location.search).get('signin')==='failed';
  const [emailOpen,setEmailOpen]=useState(false);
+ const [visitSettings,setVisitSettings]=useState<VisitPermission>();
+ const openVisitSettings=async()=>{
+  const permission=await fetchVisitChoice();
+  if(permission&&permission.accountId===me?.user?.id){setVisitSettings(permission);setError('');}
+  else setError('Could not open park visit settings. Try again.');
+ };
  const signIn=(provider:string)=>provider==='email'?setEmailOpen(true):location.assign(`/api/auth/${provider}/start?back=${encodeURIComponent(`/?mode=own${invite}`)}`);
  const [choosing,setChoosing]=useState(mode==='own'&&!adoption),[selected,setSelected]=useState(adoption?.dogId??'oreo-frenchie'),[artReady,setArtReady]=useState(false),[error,setError]=useState(''),[restore,setRestore]=useState<{raw:string;name:string}|null>(null);
  if(mode==='own'&&!synced)return <main className="entry-loading" data-workspace-loading="true">Fetching your dog…</main>;
@@ -39,13 +47,18 @@ export function Entry(){
    </>:<>
     <a href={`/?mode=play${invite}`} className="entry-choice"><Play size={24}/><span>Play<small>Meet the pack. Pet, play, explore.</small></span><ArrowRight size={22}/></a>
     {adoption?<a href={`/?mode=own${invite}`} className="entry-choice"><Heart size={24}/><span>Continue {cleanDogName(owned?.name)||dog.name}<small>{me?.user?'Browser save + account sync.':'Your companion lives in this browser.'}</small></span><ArrowRight size={22}/></a>:<button type="button" onClick={()=>setChoosing(true)} className="entry-choice"><Heart size={24}/><span>Own a dog<small>Raise your puppy. Shape a personality.</small></span><ArrowRight size={22}/></button>}
-    <div className="entry-footer">{me?.user?<p className="entry-note entry-account">Signed in as {me.user.name} · <button type="button" className="btn-quiet" onClick={async()=>{try{await signOut();setMe({...me,user:null,dog:null});}catch{setError('Sign-out did not finish. Please try again.');}}}>Sign out</button> · <button type="button" className="btn-quiet" onClick={async()=>{try{await downloadMyData();}catch{setError('Your data could not be downloaded. Please try again.');}}}>My data</button> · {confirmDelete?<><button type="button" className="btn-quiet" onClick={async()=>{try{const removed=await deleteAccount();if(removed){setConfirmDelete(false);setMe({...me,user:null,dog:null});if(removed==='pending')setError('Your account data was deleted. Final sign-in cleanup is queued and will retry automatically.');}else setError('Account deletion did not finish. Please try again.');}catch{setError('Account deletion did not finish. Please try again.');}}}>Delete account and cloud copy</button> <button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(false)}>Keep</button></>:<button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(true)}>Delete account</button>}</p>
+    <div className="entry-footer">{me?.user?<p className="entry-note entry-account">Signed in as {me.user.name} · <button type="button" className="btn-quiet" onClick={async()=>{try{await signOut();setMe({...me,user:null,dog:null});}catch{setError('Sign-out did not finish. Please try again.');}}}>Sign out</button> · <button type="button" className="btn-quiet" onClick={async()=>{try{await downloadMyData();}catch{setError('Your data could not be downloaded. Please try again.');}}}>My data</button> · <button type="button" className="btn-quiet" onClick={()=>void openVisitSettings()}>Park visits</button> · {confirmDelete?<><button type="button" className="btn-quiet" onClick={async()=>{try{const removed=await deleteAccount();if(removed){setConfirmDelete(false);setMe({...me,user:null,dog:null});if(removed==='pending')setError('Your account data was deleted. Final sign-in cleanup is queued and will retry automatically.');}else setError('Account deletion did not finish. Please try again.');}catch{setError('Account deletion did not finish. Please try again.');}}}>Delete account and cloud copy</button> <button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(false)}>Keep</button></>:<button type="button" className="btn-quiet" onClick={()=>setConfirmDelete(true)}>Delete account</button>}</p>
      :me?.providers?.length?<div className="entry-signin"><p className="entry-note">Sign in to keep your dog on any phone or laptop. We keep your name, verified email when shared, and your dog.</p><div>{me.providers.map(p=><button key={p} type="button" onClick={()=>signIn(p)}><LogIn size={16}/>{p==='apple'?'Apple':p==='line'?'LINE':p==='google'?'Google':p==='email'?'Email':'Test sign-in'}</button>)}</div></div>
      :<p className="entry-note">Your browser, your little world. No account needed.</p>}
      {failed&&<p role="alert">Sign-in did not finish. Please try again.</p>}<label className="entry-restore"><Upload size={16}/><span>Restore</span><input type="file" accept=".json,application/json" className="sr-only" aria-label="Choose an owned-dog backup" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{if(file.size>5_000_000)throw new Error('That backup is too large.');const raw=await file.text(),{validateOwnedBackup}=await import('../utils/progressStore');const data=validateOwnedBackup(raw);setRestore({raw,name:DEFAULT_DOGS.find(d=>d.id===data.adoption.dogId)?.name??'your dog'});setError('');}catch(error){setError(error instanceof Error?error.message:'Could not read this backup.');}}}/></label></div>
     {restore&&<div className="restore-confirm"><p>Restore {restore.name}? This replaces the owned-dog save in this browser. Play stays separate.</p><button type="button" onClick={async()=>{try{const {restoreOwnedBackup}=await import('../utils/progressStore');await restoreOwnedBackup(restore.raw);location.assign('/?mode=own');}catch{setError('Could not restore this backup. The previous save is unchanged.');}}}>Restore {restore.name}</button><button type="button" onClick={()=>setRestore(null)}>Cancel</button></div>}
    </>}
    {emailOpen&&<Suspense fallback={<p role="status">Opening email sign-in…</p>}><EmailSignIn back={`/?mode=own${invite}`} onClose={()=>setEmailOpen(false)}/></Suspense>}
+   {visitSettings&&visitSettings.accountId===me?.user?.id&&<Suspense fallback={null}><ParkConsent onClose={()=>setVisitSettings(undefined)} onChoose={async agree=>{
+    const saved=await chooseVisitRecord(visitSettings.accountId,agree);
+    if(saved)setVisitSettings(undefined);
+    return !!saved;
+   }}/></Suspense>}
    {(error||syncError)&&<p role="alert">{error||syncError}</p>}
   </div>
  </main>;

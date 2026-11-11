@@ -13,7 +13,7 @@
  *     get the trust that answering would have earned.
  */
 
-import type { NeedKey, PetState } from './types';
+import type { PetState } from './types';
 import { dailyLife } from './dailyLife';
 
 export interface Together {
@@ -49,7 +49,9 @@ export function addTogether(t: Together | undefined, seconds: number, now: numbe
   const today = dayKey(now);
   if (!t) return { day: today, todaySec: seconds, totalSec: seconds, streak: 1 };
   if (t.day === today) return { ...t, todaySec: t.todaySec + seconds, totalSec: t.totalSec + seconds };
-  const yesterday = dayKey(now - 86_400_000);
+  const previous = new Date(now);
+  previous.setDate(previous.getDate() - 1);
+  const yesterday = dayKey(previous.getTime());
   return {
     day: today,
     todaySec: seconds,
@@ -57,11 +59,6 @@ export function addTogether(t: Together | undefined, seconds: number, now: numbe
     streak: t.day === yesterday ? t.streak + 1 : 1,
   };
 }
-
-const NEED_CALLS: { need: NeedKey; below: number; reason: CallReason }[] = [
-  { need: 'hunger', below: 35, reason: 'hungry' },
-  { need: 'hygiene', below: 30, reason: 'dirty' },
-];
 
 /** Why he would call for you right now, if he would. A sleeping dog does not call. */
 export function whyCalling(state: PetState, now: number = Date.now()): CallReason | null {
@@ -72,7 +69,8 @@ export function whyCalling(state: PetState, now: number = Date.now()): CallReaso
   // there is also a mess. Following the visible advice must answer the call.
   if (state.needs.hunger < 35) return 'hungry';
   if ((state.poopCount ?? 0)+dailyLife(state).peeCount > 0) return 'dirty';
-  for (const c of NEED_CALLS) if (state.needs[c.need] < c.below) return c.reason;
+  if (state.needs.hygiene < 30) return 'dirty';
+  if (state.needs.energy < 25) return null;
   // Legacy save key: an overstimulated dog needs an outlet, not punishment.
   if (
     state.arousal > 75 &&
@@ -130,7 +128,21 @@ export function answerCall(
 ): { answered: boolean; trustBonus: number } {
   const call = state.call;
   if (!call || !ANSWERS[call.reason].includes(action)) return { answered: false, trustBonus: 0 };
-  return { answered: true, trustBonus: now - call.since <= ANSWER_WINDOW_MS ? 3 : 1 };
+  const elapsed = now - call.since;
+  if (elapsed < 0 || elapsed > CALL_FADES_MS) return { answered: false, trustBonus: 0 };
+  return { answered: true, trustBonus: elapsed <= ANSWER_WINDOW_MS ? 3 : 1 };
+}
+
+/** A matching button only answers the call when the dog actually receives care. */
+export function answerCareCall(before: PetState, after: PetState, action: Answer, now: number) {
+  const answer = answerCall(before, action, now);
+  if (!answer.answered) return answer;
+  const relieved = before.call?.reason === 'hungry' ? after.needs.hunger > before.needs.hunger
+    : before.call?.reason === 'sick' ? !after.sick
+    : before.call?.reason === 'dirty' ? after.needs.hygiene > before.needs.hygiene ||
+      (after.poopCount ?? 0) + dailyLife(after).peeCount < (before.poopCount ?? 0) + dailyLife(before).peeCount
+    : after.lastCareAt === now;
+  return relieved ? answer : { answered: false, trustBonus: 0 };
 }
 
 export const minutes = (sec: number): string =>

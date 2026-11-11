@@ -148,19 +148,20 @@ ok(
 ok('a fixed ratio pays about a third of the reps', counted.reps > 10 && counted.reps < 20, `paid ${counted.reps}`);
 
 console.log('\nTHE EXTINCTION CLOCK');
+const extinctionNow = Date.now();
 let ext2: Behaviour = {
   ...blank,
   strength: 0.8,
-  lastReinforcedAt: new Date(Date.now() - 86_400_000).toISOString(),
+  lastReinforcedAt: new Date(extinctionNow - 86_400_000).toISOString(),
 };
-const decayedOnce = decayBehaviour(ext2, Date.now());
+const decayedOnce = decayBehaviour(ext2, extinctionNow);
 ok('the strength stays a probability', decayedOnce.strength <= 1 && decayedOnce.strength >= 0, `got ${decayedOnce.strength}`);
 ok(
   'decaying twice in the same moment gives the same number',
-  decayBehaviour(decayedOnce, Date.now()).strength === decayedOnce.strength
+  decayBehaviour(decayedOnce, extinctionNow).strength === decayedOnce.strength
 );
 let manyDecays = ext2;
-for (let i = 0; i < 500; i += 1) manyDecays = decayBehaviour(manyDecays, Date.now());
+for (let i = 0; i < 500; i += 1) manyDecays = decayBehaviour(manyDecays, extinctionNow);
 ok('five hundred decays do not inflate the strength', manyDecays.strength <= 1, `got ${manyDecays.strength}`);
 ok('five hundred decays do not erase it either', manyDecays.strength > 0.5, `got ${manyDecays.strength}`);
 

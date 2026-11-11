@@ -1,12 +1,8 @@
 /**
  * CANINE PHYSIQUE & PSYCHE: VETERINARY & ETHOLOGICAL SCIENCES.
  *
- * Grounded in real-world veterinary medicine (WSAVA Nutritional Assessment,
- * canine resting cardiology, gastroenterology) and canine cognitive ethology
- * (Rescorla-Wagner associative learning, autonomic nervous balance).
- *
- * All metrics are computed deterministically from the pet's living state.
- * No data is invented.
+ * Fictional readings derived from the game state. Weight is the one value
+ * read from the dog's profile and may be absent.
  */
 
 import type { PetState } from './types';
@@ -15,7 +11,7 @@ import { dailyLife } from './dailyLife';
 import { readiness, happiness, temperament, sickCause } from './pet';
 
 export interface CaninePhysique {
-  weightKg: number;
+  weightKg: number | null;
   bcsScore: number; // 1 to 9 scale (WSAVA standard)
   bcsLabel: string;
   bcsDetail: string;
@@ -63,7 +59,7 @@ export function computeCanineVitals(dog: DogProfile, petState: PetState): Canine
   const trust = Math.max(0, Math.min(100, petState.trust));
 
   // --- 1. PHYSIQUE -----------------------------------------------------------
-  const weight = dog.weightKg > 0 ? dog.weightKg : 24.8;
+  const weight = Number.isFinite(dog.weightKg) && dog.weightKg > 0 ? dog.weightKg : null;
 
   // WSAVA Body Condition Score (1–9 scale):
   // 4-5 is Ideal. Low sustained fullness shifts score downward; high fullness maintains.

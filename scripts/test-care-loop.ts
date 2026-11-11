@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {createPetState, interact} from '../src/domain/pet';
 import {dailyLife, advanceDailyLife, dailyMood} from '../src/domain/dailyLife';
-import {whyCalling, tickCall, answerCall} from '../src/domain/attention';
+import {whyCalling, tickCall, answerCareCall, addTogether, CALL_FADES_MS} from '../src/domain/attention';
+import {computeCanineVitals} from '../src/domain/canineVitals';
+import {DEFAULT_DOGS} from '../src/data/defaultDogs';
 import {grantWish, wishFor, WISH_COINS} from '../src/domain/life';
 import {gameState} from '../src/domain/companionGame';
 
@@ -12,9 +14,33 @@ const cases:[string,()=>void][]=[
   const hungry={...fresh,needs:{...fresh.needs,hunger:20},poopCount:1};
   assert.equal(dailyMood(hungry),'hungry');assert.equal(whyCalling(hungry,now),'hungry');
   const called={...hungry,call:tickCall(hungry,now).call};
-  assert(answerCall(called,'feed',now+1000).answered);
   const fed=interact(called,'feed',now+1000).state;
   assert(fed.needs.hunger>hungry.needs.hunger);
+  assert(answerCareCall(called,fed,'feed',now+1000).answered);
+  assert(!answerCareCall(called,called,'feed',now+1000).answered,'An unserved meal cannot answer a call');
+  assert(!answerCareCall(called,fed,'feed',now+CALL_FADES_MS+1).answered,'An expired call cannot pay a bonus');
+ }],
+ ['Care streaks follow consecutive local dates through daylight saving time',()=>{
+  const tz=process.env.TZ;
+  try{
+   process.env.TZ='America/New_York';
+   const first=addTogether(undefined,60,new Date(2026,2,8,12).getTime());
+   const second=addTogether(first,60,new Date(2026,2,9,0,30).getTime());
+   assert.equal(second.streak,2);
+  }finally{
+   if(tz===undefined)delete process.env.TZ;
+   else process.env.TZ=tz;
+  }
+ }],
+ ['Game vitals preserve unknown profile weight',()=>{
+  assert.equal(computeCanineVitals({...DEFAULT_DOGS[0],weightKg:0},fresh).physique.weightKg,null);
+  assert.equal(computeCanineVitals({...DEFAULT_DOGS[0],weightKg:12},fresh).physique.weightKg,12);
+ }],
+ ['Fatigue does not call for play or company',()=>{
+  const tired={...fresh,needs:{...fresh.needs,energy:10},life:{...dailyLife(fresh),boredom:90}};
+  assert.equal(dailyMood(tired),'tired');
+  assert.equal(whyCalling(tired,now),null);
+  assert.equal(whyCalling({...tired,needs:{...tired.needs,hunger:20}},now),'hungry');
  }],
  ['A newly initialized dog receives the promised daily-wish coins',()=>{
   const accrued={...fresh,together:{day:'2026-11-04',todaySec:120,totalSec:120,streak:1}};
