@@ -38,7 +38,15 @@ export const ParkConsent: React.FC<{onChoose:(agree:boolean)=>Promise<boolean>;o
   const [lang, setLang] = useState<'en'|'th'>('en');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  useEffect(() => { ref.current?.showModal(); }, []);
+  useEffect(() => {
+    const dialog = ref.current;
+    const opener = document.activeElement;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
   const t = TEXT[lang];
   const choose = async (agree:boolean) => {
     setBusy(true);
