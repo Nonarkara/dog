@@ -127,7 +127,20 @@ export function IllustratedPark(props:Props){
   let width=1,height=1;
   let pendingResize=false;const resize=()=>{pendingResize=false;const w=host.clientWidth,h=host.clientHeight;if(w===width&&h===height)return;width=w;height=h;renderer.setSize(width,height);};const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(host);resize();
   const point=(e:PointerEvent)=>{const b=canvas.getBoundingClientRect();return {x:cx+(e.clientX-b.left-width/2)/zoom,y:cy+(e.clientY-b.top-height/2)/zoom};};
-  const hit=(p:{x:number;y:number})=>[...actors.values()].sort((a,b)=>b.y-a.y).find(a=>{if(!a.raster)return false;const v=a.mesh.worldToLocal(v3a.set(p.x,-p.y,0)),[x,y]=unwarpMotionPoint([(v.x+1)/2,(1-v.y)/2],a.motionFrame),r=a.raster;if(x<0||x>1||y<0||y>1)return false;return r.pixels[((Math.min(r.h-1,Math.floor(y*r.h))+(r.originY||0))*(r.pixelWidth||r.w)+Math.min(r.w-1,Math.floor(x*r.w))+(r.originX||0))*(r.alphaOnly?1:4)+(r.alphaOnly?0:3)]>32;});
+  const hit=(p:{x:number;y:number})=>{
+   // These meshes share a depth. Check the last-drawn dog first, including canopies.
+   const frontToBack=[...actors.values()].sort((a,b)=>b.mesh.renderOrder-a.mesh.renderOrder||b.mesh.id-a.mesh.id);
+   return frontToBack.find(a=>{
+    const r=a.raster;if(!r)return false;
+    const v=a.mesh.worldToLocal(v3a.set(p.x,-p.y,0));
+    const [x,y]=unwarpMotionPoint([(v.x+1)/2,(1-v.y)/2],a.motionFrame);
+    if(x<0||x>1||y<0||y>1)return false;
+    const px=Math.min(r.w-1,Math.floor(x*r.w))+(r.originX||0);
+    const py=Math.min(r.h-1,Math.floor(y*r.h))+(r.originY||0);
+    const pixel=py*(r.pixelWidth||r.w)+px;
+    return r.pixels[r.alphaOnly?pixel:pixel*4+3]>32;
+   });
+  };
   const pointers=new Map<number,{x:number;y:number;startX:number;startY:number;moved:boolean}>();let pinching=false,pinch=0,strokeId:string|null=null;
   const down=(e:PointerEvent)=>{if(!pointers.size){pinching=false;strokeId=null;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false});canvas.setPointerCapture(e.pointerId);if(pointers.size>1){pinching=true;strokeId=null;const[a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);return;}const a=hit(point(e));if(a){strokeId=a.id;pet(a.id);}};
   const move=(e:PointerEvent)=>{if(!pointers.has(e.pointerId))return;const prior=pointers.get(e.pointerId)!;pointers.set(e.pointerId,{...prior,x:e.clientX,y:e.clientY,moved:prior.moved||Math.hypot(e.clientX-prior.startX,e.clientY-prior.startY)>=15});if(pointers.size===2){const[a,b]=[...pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch&&d)latest.current.onZoom(zoom*d/pinch);pinch=d;}else if(!pinching&&strokeId&&hit(point(e))?.id===strokeId)pet(strokeId);};
