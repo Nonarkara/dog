@@ -850,6 +850,12 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
     ok('just outside the crown rim is the lawn',TREES.every(t=>canopyAt(t.x+(CROWN.cx+CROWN.rx+2)*t.s,t.y+CROWN.cy*t.s,1)===null));
     ok('the crown scales with the park unit',canopyAt(TREES[1].x*1.3+CROWN.cx*TREES[1].s*1.3,TREES[1].y*1.3+CROWN.cy*TREES[1].s*1.3,1.3)==='t2');
     ok('the open lawn is not a canopy',canopyAt(0,0,1)===null);
+    {const t=TREES[0],at=(r:number,cur:string|null)=>canopyAt(t.x+(CROWN.cx+CROWN.rx*r)*t.s,t.y+CROWN.cy*t.s,1,cur);
+     // r is the rim fraction on the crown's long axis; 1.01..1.025 lies inside the hysteresis band.
+     const jitter=[1.01,1.025,1.012,1.02,1.015],run=(start:string|null)=>{let cur=start,flips=0;for(const r of jitter){const next=at(r,cur);if(next!==cur)flips++;cur=next;}return flips;};
+     ok('a dog jittering inside the rim band does not flip, whether it started on the canopy or on the lawn',run('t1')===0&&run(null)===0);
+     ok('leaving the canopy still happens once the dog is clearly past the rim',at(1.06,'t1')===null);
+     ok('entering needs the inner rim: the band alone does not put a lawn dog on the canopy',at(1.02,null)===null&&at(.98,null)==='t1');}
   }
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
