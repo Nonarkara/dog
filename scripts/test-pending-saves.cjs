@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178';
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
 (async()=>{
 const browser=await chromium.launch({channel:'chrome',headless:true});
 try{

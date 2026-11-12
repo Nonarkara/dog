@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-whole-day';fs.mkdirSync(out,{recursive:true});
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-whole-day';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true}),report=[];try{
  const p=await browser.newPage({viewport:{width:390,height:844}});p.setDefaultTimeout(20000);let now=new Date(2026,9,30,12).getTime();await p.clock.setFixedTime(now);const errors=[];p.on('pageerror',e=>errors.push(e.message));
  const ready=()=>p.waitForFunction(()=>+document.querySelector('.region-stage canvas')?.dataset.frames>8);

@@ -99,13 +99,16 @@ bun install
 bun run dev
 ```
 
+With the dev server running, use `npm run test:browser`. The suite includes source-module probes that need Vite’s dev server. Set `DOG_URL` to override its origin.
+
 Build, verify and deploy:
 
 ```bash
 bun run build
 npm run test:domain
-node scripts/spatial/spatial-check.mjs   # the spatial gate
+npm run gate   # entry layout across CSS breakpoints
 npx wrangler deploy
+npm run gate:live
 ```
 
 The 29 October Dog-Tamagotchi likeness, interaction and rendering audit is in [docs/tamagotchi-audit.md](docs/tamagotchi-audit.md).

@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178';
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
 const out=process.env.DOG_EVIDENCE||'/tmp/dog-calm';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true}),report=[];

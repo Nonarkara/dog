@@ -444,8 +444,12 @@ function rendered(d, cb) {
       } else if (main) {
         var m = main.getBoundingClientRect();
         shown = m.height > 0;
-      } else {
-        shown = false;
+      } else if (d.body) {
+        var content = d.body.querySelector('h1,h2,p,button,a,input,canvas');
+        if (content) {
+          var box = content.getBoundingClientRect();
+          shown = box.width > 0 && box.height > 0;
+        }
       }
     } catch (e) { shown = false; }
     if (ready && fonts && shown) return cb(true);
@@ -1020,7 +1024,8 @@ function scanStylesheets(text, into) {
 
 function cssBreakpoints(root) {
   const into = { viewport: new Set(), container: new Set(), cliffs: new Set(), namedCliffs: new Map() };
-  const dir = path.join(root, "_next", "static", "css");
+  const nextCss = path.join(root, "_next", "static", "css");
+  const dir = existsSync(nextCss) ? nextCss : path.join(root, "assets");
   let files = [];
   try {
     files = readdirSync(dir).filter((f) => f.endsWith(".css"));

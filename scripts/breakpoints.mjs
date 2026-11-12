@@ -22,13 +22,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 const DIST = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'dist';
 
 const dir = `${DIST}/assets`;
-const files = readdirSync(dir).filter((f) => f.endsWith('.css'));
+const files = readdirSync(dir).filter((f) => f.endsWith('.css')).sort();
 if (!files.length) {
   console.error(`No stylesheet in ${dir}. Build first: npm run build`);
   process.exit(1);
 }
-const path = `${dir}/${files[0]}`;
-const text = readFileSync(path, 'utf8');
+const paths = files.map(file => dir + '/' + file);
+const text = paths.map(file => readFileSync(file, 'utf8')).join('\n');
 
 const widths = new Set();
 for (const m of text.matchAll(/@(media|container)([^{]*)\{/g)) {
@@ -43,5 +43,5 @@ for (const m of text.matchAll(/@(media|container)([^{]*)\{/g)) {
   }
 }
 
-if (process.argv.includes('--with-css')) console.error(`stylesheet: ${path}`);
+if (process.argv.includes('--with-css')) console.error("stylesheets: " + paths.join(", "));
 console.log([...widths].sort((a, b) => a - b).join(','));

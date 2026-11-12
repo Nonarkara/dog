@@ -8,19 +8,10 @@
 #
 # EACH TEST GETS THE SURFACE IT ASKS FOR.
 #
-# The scripts default to different surfaces: twenty of them want the entry
-# screen ("http://127.0.0.1:4178") and nine want the app itself
-# ("http://127.0.0.1:4178/?mode=play"). They also default to different
-# ports. One DOG_URL for all of them points every test at one surface, and
-# the ones that wanted the other surface fail on a page that was never
-# supposed to be there — which reads exactly like a broken product.
-#
-# So the runner reads each script's OWN default, keeps its path and query,
-# and re-points only the port at the running server.
-#
-#   DOG_URL=http://127.0.0.1:3100 bash scripts/run-browser-tests.sh
+# Preserve each test's entry or play path and query when changing origins.
+#   DOG_URL=http://127.0.0.1:4189 npm run test:browser
 set -u
-BASE="${DOG_URL:-http://127.0.0.1:3100}"
+BASE="${DOG_URL:-http://127.0.0.1:5173}"
 LOG="${DOG_TEST_LOG:-/tmp/dog-browser-tests.log}"
 : > "$LOG"
 
@@ -39,30 +30,29 @@ if ! node -e "require('playwright')" 2>/dev/null; then
 fi
 
 pass=0; fail=0; failed=""
-for script in scripts/test-*.cjs scripts/test-*.ts; do
-  [ -e "$script" ] || continue
+if [ "$#" -eq 0 ]; then set -- scripts/test-*.cjs; fi
+for script in "$@"; do
+  if [ ! -f "$script" ]; then
+    printf 'Missing browser test: %s\n' "$script" >&2
+    fail=$((fail+1))
+    continue
+  fi
   name="$(basename "$script")"
   case "$name" in
-    test-email-auth.ts|test-care-domain.ts|test-push-*.ts|test-park-rewards.ts|test-return-summary.ts|test-call-announcement.ts)
-      # These run under `npm run test:*` (esbuild + node), not in a browser.
+    test-push.cjs)
+      # The push runner bundles Node-only tests.
       continue ;;
   esac
 
-  # The surface this script asks for: its own default's path and query.
-  # (cut on the quote: a greedy sed would eat the URL itself.)
-  surface="$(grep -o "DOG_URL||'[^']*'" "$script" | head -1 | cut -d"'" -f2)"
-  path="/"
-  case "$surface" in
-    *\?*) path="/?${surface#*\?}" ;;
-    *) path="${surface#http://127.0.0.1:4178}" ;;
+  # Keep the test's path and query while replacing its development origin.
+  surface="$(sed -nE "s/.*DOG_URL[[:space:]]*\\|\\|[[:space:]]*['\"]([^'\"]*)['\"].*/\\1/p" "$script" | head -1)"
+  path="$(printf '%s' "$surface" | sed -E 's#^https?://[^/?]+##')"
+  case "$path" in
+    \?*) path="/$path" ;;
   esac
-  url="$BASE$path"
+  url="${BASE%/}$path"
 
-  if [ "${script##*.}" = "ts" ]; then
-    out="$(npx esbuild "$script" --bundle --platform=node --format=cjs --outfile=node_modules/.cache/tmp-test.cjs --log-level=error 2>&1 && node node_modules/.cache/tmp-test.cjs 2>&1)"
-  else
-    out="$(DOG_URL="$url" node "$script" 2>&1)"
-  fi
+  out="$(DOG_URL="$url" node "$script" 2>&1)"
   code=$?
   if [ $code -eq 0 ]; then
     pass=$((pass+1)); printf 'PASS  %-38s %s\n' "$name" "$url" >> "$LOG"

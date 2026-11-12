@@ -1,5 +1,5 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-real-log';fs.mkdirSync(out,{recursive:true});
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-real-log';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),report=[];try{
  const p=await b.newPage({viewport:{width:390,height:844}});await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded'});await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>5);await p.getByRole('tab',{name:'Coach',exact:true}).click();const c=p.locator('.region-coach');await c.getByRole('button',{name:'REAL LOG',exact:true}).click();
  const state=()=>p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);

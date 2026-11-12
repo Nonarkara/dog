@@ -11,6 +11,7 @@ import sys
 import math
 
 import bpy
+from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -43,15 +44,13 @@ obj = bpy.context.view_layer.objects.active
 # Ground it: the animal stands on z = 0.
 bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 bpy.context.view_layer.update()
-mins = [Vector(c) for c in obj.bound_box]
-low = min(v.z for v in mins)
+low = min((obj.matrix_world @ Vector(c)).z for c in obj.bound_box)
 obj.location.z -= low
 bpy.context.view_layer.update()
 
 verts = obj.data.vertices
-xs = [v.co.x for v in verts]
-ys = [v.co.y for v in verts]
-zs = [v.co.z for v in verts]
+corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+xs, ys, zs = zip(*corners)
 print(
     f"[turntable] verts={len(verts)} faces={len(obj.data.polygons)} "
     f"x=[{min(xs):.3f},{max(xs):.3f}] y=[{min(ys):.3f},{max(ys):.3f}] z=[{min(zs):.3f},{max(zs):.3f}]"
@@ -103,8 +102,11 @@ constraint.track_axis = "TRACK_NEGATIVE_Z"
 constraint.up_axis = "UP_Y"
 
 height = max(zs) - min(zs)
-target = Vector((0, 0, height * 0.5))
-dist = height * 1.9
+# Frame the entire world-space box, including imported offsets and rotation.
+target = Vector(tuple((min(axis) + max(axis)) / 2 for axis in (xs, ys, zs)))
+radius = max((corner - target).length for corner in corners)
+half_fov = min(cam_data.angle_x, cam_data.angle_y) / 2
+dist = radius / math.sin(half_fov * 0.88)
 
 focus.location = target
 
@@ -115,6 +117,11 @@ for name, angle in (("front", 180), ("right", 90), ("back", 0), ("left", 270)):
         target.y + dist * math.sin(rad),
         target.z + height * 0.28,
     )
+    bpy.context.view_layer.update()
+    for corner in corners:
+        p = world_to_camera_view(scene, cam, corner)
+        if p.z <= cam_data.clip_start or not (0.04 < p.x < 0.96 and 0.04 < p.y < 0.96):
+            raise RuntimeError(f"{name}: subject bounds leave the framing margin")
     scene.render.filepath = os.path.join(out_dir, f"{name}.png")
     bpy.ops.render.render(write_still=True)
     print(f"[turntable] wrote {scene.render.filepath}")

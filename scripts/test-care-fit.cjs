@@ -1,5 +1,5 @@
 const{chromium}=require('playwright');const fs=require('fs');const assert=require('assert/strict');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-care-fit',baseline=process.env.DOG_CARE_BASELINE==='1';fs.mkdirSync(out,{recursive:true});
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-care-fit',baseline=process.env.DOG_CARE_BASELINE==='1';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),report=[];for(const[w,h]of [[390,844],[1024,768],[1440,900],[1280,720],[1024,820],[1440,820]]){
  const p=await b.newPage({viewport:{width:w,height:h}});p.setDefaultTimeout(20000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url);await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>5);await p.locator('[aria-controls="dog-switcher"]').click();await p.getByRole('option').filter({hasText:/^Paolo/}).click();await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.dog==='paolo-pug');
  const c=await p.context().newCDPSession(p);

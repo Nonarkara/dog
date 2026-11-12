@@ -1,5 +1,5 @@
 const{chromium}=require('playwright');const fs=require('fs');const assert=require('assert/strict');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-daily-life';fs.mkdirSync(out,{recursive:true});
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-daily-life';fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const b=await chromium.launch({channel:'chrome',headless:true});
  const p=await b.newPage({viewport:{width:390,height:844}});p.setDefaultTimeout(25000);

@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178';
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
 const out=process.env.DOG_EVIDENCE||'/tmp/dog-sleep-recovery';
 fs.mkdirSync(out,{recursive:true});
 (async()=>{

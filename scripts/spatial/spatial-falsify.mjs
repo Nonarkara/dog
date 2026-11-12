@@ -462,8 +462,8 @@ if (failures) {
 // failed is a rule nobody should rely on.
 const BASELINE_SAVED = readFileSync(BASELINE, "utf8");
 
-function withBaseline(mutate) {
-  const b = JSON.parse(BASELINE_SAVED);
+function withBaseline(mutate, source = BASELINE_SAVED) {
+  const b = JSON.parse(source);
   mutate(b);
   writeFileSync(BASELINE, JSON.stringify(b, null, 2) + "\n");
 }
@@ -478,24 +478,12 @@ const BASELINE_RULES = [
     },
   },
   {
-    name: "the chrome grows and the receipt does not",
-    expect: "chrome GREW",
+    name: "the chrome shrinks and the receipt does not",
+    expect: "chrome SHRANK",
     full: true,
     mutate: (b) => {
-      // The receipt records how tall the chrome is, at every route and every
-      // width. Take forty pixels off the number it recorded, and the chrome
-      // the gate measures now looks forty pixels BIGGER than the page it was
-      // measured on — which is what happens the day somebody makes the header
-      // taller and forgets the receipt. Without this rule, the chrome drift
-      // check is a check nobody has ever seen fail.
-      for (const byw of Object.values(b.routes || {})) {
-        for (const entry of Object.values(byw)) {
-          if (entry.chrome && entry.chrome.top) {
-            entry.chrome.top = Math.max(0, entry.chrome.top - 40);
-            return;
-          }
-        }
-      }
+      const cell = Object.values(Object.values(b.routes)[0])[0];
+      cell.chrome.top += 40;
     },
   },
   {
@@ -580,6 +568,7 @@ const BASELINE_RULES = [
   },
   {
     name: "a decision the receipt has no numbers for",
+    needsFinding: true,
     expect: "the baseline records no numbers for this route and width",
     full: true,
     mutate: (b) => {
@@ -598,6 +587,7 @@ const BASELINE_RULES = [
   },
   {
     name: "a hole that grew since the receipt was written",
+    needsFinding: true,
     expect: "GREW",
     full: true,
     mutate: (b) => {
@@ -615,6 +605,7 @@ const BASELINE_RULES = [
   },
   {
     name: "a hole that shrank since the receipt was written",
+    needsFinding: true,
     expect: "SHRANK",
     full: true,
     mutate: (b) => {
@@ -686,10 +677,27 @@ document.querySelector(".sl-b").style.marginTop = (w >= 700 && w < 800) ? "260px
 for (const rule of BASELINE_RULES) {
   writeFileSync(BASELINE, BASELINE_SAVED);
   if (rule.site) rule.site();
-  withBaseline(rule.mutate || (() => {}));
+  let source = BASELINE_SAVED;
+  if (rule.needsFinding) {
+    const gap = FIXTURES[0];
+    writeFileSync(PAGE, inject(gap.html, gap.at));
+    const measured = runFullGate(["--update"]);
+    requireFinished(measured);
+    const seeded = JSON.parse(readFileSync(BASELINE, "utf8"));
+    const findings = Object.values(seeded.routes).flatMap(byWidth =>
+      Object.values(byWidth).flatMap(cell => cell.findings ?? []));
+    if (!findings.some(f => f.kind === "dead" && f.sel.includes("sl-dead"))) {
+      throw new Error("Could not measure the synthetic gap for baseline drift");
+    }
+    seeded.reasons = Object.fromEntries(findings.map(f =>
+      [`${f.kind}|${f.sel}`, "synthetic baseline for falsification"]));
+    source = JSON.stringify(seeded);
+  }
+  withBaseline(rule.mutate || (() => {}), source);
   const res = rule.full ? runFullGate([]) : runGate([], rule.routes);
   requireFinished(res);
   if (rule.cleanupSite) rule.cleanupSite();
+  if (rule.needsFinding) writeFileSync(PAGE, ORIGINAL);
   writeFileSync(BASELINE, BASELINE_SAVED);
   if (rule.expect === null) {
     // This one must PASS: the page has no <main>, and the gate must measure

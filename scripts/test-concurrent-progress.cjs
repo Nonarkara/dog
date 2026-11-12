@@ -1,5 +1,5 @@
 const{chromium}=require('playwright');const assert=require('node:assert/strict');const fs=require('node:fs');
-const url=process.env.DOG_URL||'http://127.0.0.1:4178',out=process.env.DOG_EVIDENCE||'/tmp/dog-concurrent',old=process.env.DOG_EXPECT_OLD==='1';
+const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-concurrent',old=process.env.DOG_EXPECT_OLD==='1';
 fs.mkdirSync(out,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true}),context=await browser.newContext({viewport:{width:390,height:844}});
