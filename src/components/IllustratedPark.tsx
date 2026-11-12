@@ -177,6 +177,10 @@ export function IllustratedPark(props:Props){
   const pick=<T,>(list:T[])=>list[Math.floor(Math.random()*list.length)];
   const hungry=()=>(latest.current.petState?.needs.hunger??100)<35;
   const ownFree=()=>!!latest.current.ambient&&!latest.current.petState?.sleep.asleep&&!latest.current.petState?.sick&&!hungry();
+  // Your own dog can be GREETED while it stands idle, awake and fed (not steered, not asleep, not sick, not away).
+  // It is never dragged off by a greeting, so petting and steering stay yours.
+  const ownAvailable=()=>{const o=actors.get(ownId),s=latest.current.petState;return !!o&&!!o.raster&&!!s&&!s.away&&!s.sleep.asleep&&!s.sick&&!hungry()&&o.mode==='wander'&&o.speed<2&&Math.hypot(o.tx-o.x,o.ty-o.y)<6&&!keys.size&&!pointers.size;};
+  let greetings=0;
   const canPlay=(b:Actor)=>!!b.raster&&!b.remote&&b.mode==='wander'&&(!b.own||ownFree());
   const farPoint=(b:Actor):[number,number]=>{const angle=Math.random()*Math.PI*2,r=(170+Math.random()*130)*unit;return [clampX(b.x+Math.cos(angle)*r),clampY(b.y+Math.sin(angle)*r*.8)];};
   const settle=(a:Actor,now:number)=>{a.mode='wander';a.partner=null;a.tx=a.x;a.ty=a.y;a.until=now+1500+Math.random()*2500;};
@@ -191,13 +195,14 @@ export function IllustratedPark(props:Props){
    const me=personalityOf(a.artId),friends=[...actors.values()].filter(b=>b!==a&&canPlay(b));
    const fav=friends.find(b=>b.artId===me.favourite);
    const friend=()=>fav&&Math.random()<.6?fav:pick(friends);
+   const guest=!a.own&&!latest.current.ambient&&ownAvailable()?actors.get(ownId)!:null;
    const linger=(base:number)=>(base+Math.random()*base)*me.linger;
-   switch(chooseActivity(a.artId,Math.random(),friends.length>0)){
-    case 'chase':{const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b);a.bowUntil=now+900;a.until=b.until=now+5200;
+   switch(chooseActivity(a.artId,Math.random(),friends.length>0||!!guest)){
+    case 'chase':{if(!friends.length&&guest){a.mode='visit';a.partner=guest.id;a.tx=clampX(guest.x+(a.x<guest.x?-118:118)*unit);a.ty=clampY(guest.y+8*unit);a.until=now+7000;return;}const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b);a.bowUntil=now+900;a.until=b.until=now+5200;
      const key=[a.id,b.id].sort().join('|')+':chase';
      if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});}
      return;}
-    case 'visit':{const b=friend();a.mode='visit';a.partner=b.id;a.tx=clampX(b.x+(a.x<b.x?-118:118)*unit);a.ty=clampY(b.y+8*unit);a.until=now+7000;return;}
+    case 'visit':{const b=guest&&(!friends.length||Math.random()<.45)?guest:friend();a.mode='visit';a.partner=b.id;a.tx=clampX(b.x+(a.x<b.x?-118:118)*unit);a.ty=clampY(b.y+8*unit);a.until=now+7000;return;}
     case 'rest':a.mode='rest';a.tx=a.x;a.ty=a.y;a.until=now+linger(7000);return;
     case 'nap':a.mode='nap';a.tx=a.x;a.ty=a.y;a.until=now+linger(9000);return;
     case 'lookout':{const spot=LOOKOUTS.reduce((best,p)=>Math.hypot(p[0]*unit-a.x,p[1]*unit-a.y)<Math.hypot(best[0]*unit-a.x,best[1]*unit-a.y)&&Math.random()<.7?p:best,pick(LOOKOUTS));goTo(a,spot,'sit',now);return;}
@@ -218,7 +223,8 @@ export function IllustratedPark(props:Props){
    }
    if(a.mode==='flee'&&Math.hypot(a.tx-a.x,a.ty-a.y)<20*unit)[a.tx,a.ty]=farPoint(a);
    if(a.mode==='visit'&&partner&&Math.hypot(a.tx-a.x,a.ty-a.y)<10*unit){
-    if(Math.hypot(partner.x-a.x,partner.y-a.y)<130*unit&&partner.mode!=='chase'&&partner.mode!=='flee'){a.sniffUntil=now+2200;partner.sniffUntil=Math.max(partner.sniffUntil,now+2200);face(a,partner);}
+    if(Math.hypot(partner.x-a.x,partner.y-a.y)<130*unit&&partner.mode!=='chase'&&partner.mode!=='flee'){a.bowUntil=now+800;partner.bowUntil=Math.max(partner.bowUntil,now+1000);a.sniffUntil=now+2400;partner.sniffUntil=Math.max(partner.sniffUntil,now+2400);face(a,partner);greetings++;canvas.dataset.greetings=String(greetings);
+      if(partner.own){canvas.dataset.greetedOwn='true';if(now-lastSocial>30000){lastSocial=now;latest.current.onSocialize();}}}
     settle(a,now);return;
    }
    if(a.mode==='walkto'&&Math.hypot(a.tx-a.x,a.ty-a.y)<10*unit){
@@ -311,7 +317,7 @@ export function IllustratedPark(props:Props){
     // Park tails spool like stage tails: quick to speed up, slow to settle.
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
-    const on=canopyAt(a.x,a.y,unit);a.onCanopy=on;
+    const on=canopyAt(a.x,a.y,unit,a.onCanopy);a.onCanopy=on;
     a.mesh.renderOrder=on?CANOPY_RENDER_ORDER:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
      for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',!on&&point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
