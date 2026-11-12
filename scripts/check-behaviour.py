@@ -16,7 +16,7 @@ import time
 from playwright.sync_api import sync_playwright
 
 url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:4281/"
-EXPECTED_TITLE = "Canine OS"
+EXPECTED_TITLE = "Tama-Dog-Chi"
 
 results = []
 
@@ -33,9 +33,23 @@ def note_text(page):
     return node.inner_text().strip() if node else ""
 
 
+def button_labels(page):
+    """Every button on the page, so a failure can say what WAS there."""
+    return page.eval_on_selector_all(
+        "button",
+        "els => els.map(e => (e.innerText || e.getAttribute('aria-label') || '').trim()).filter(Boolean)",
+    )
+
+
 def press(page, label):
-    """Press a control in the command bar by its visible name."""
-    button = page.get_by_role("button", name=label, exact=False).first
+    """Press a control by its visible text."""
+    button = page.locator("button", has_text=label).first
+    if not button.count():
+        button = page.get_by_role("button", name=label, exact=False).first
+    if not button.count():
+        raise AssertionError(
+            f"no button reading {label!r}. On the page: {button_labels(page)}"
+        )
     button.click()
     time.sleep(0.4)
 
@@ -52,6 +66,13 @@ with sync_playwright() as p:
 
     title = page.title()
     check("the right page is measured", EXPECTED_TITLE in title, title)
+
+    # The entry screen: Play opens the household sandbox, which is where the
+    # care controls live. Own opens a separate adoption flow.
+    play = page.get_by_role("link", name="Play", exact=False).first
+    if play.count():
+        play.click()
+        page.wait_for_timeout(2500)
 
     # ---- 1. THE BED ------------------------------------------------------
     print("\nTHE BED")
@@ -125,9 +146,9 @@ with sync_playwright() as p:
         log_btn.click()
         time.sleep(0.4)
     # A real rep: he did it, then he was marked.
-    page.get_by_role("button", name="He did it", exact=False).first.click()
+    press(page, "He did it")
     time.sleep(0.6)
-    page.get_by_role("button", name="Marked", exact=False).first.click()
+    press(page, "Marked")
     time.sleep(0.8)
     coach_text = page.inner_text("body")
     check("the coach measures the delay", "ms" in coach_text.lower(), coach_text[:200])
@@ -160,7 +181,7 @@ with sync_playwright() as p:
     observation = page.locator("#coach-observation")
     observation.select_option(index=1)
     time.sleep(0.3)
-    page.get_by_role("button", name="Record", exact=False).first.click()
+    press(page, "Record")
     time.sleep(1.0)
     observed = page.evaluate(
         """() => {

@@ -11,11 +11,11 @@ from playwright.sync_api import sync_playwright
 
 label = sys.argv[1] if len(sys.argv) > 1 else "current"
 url = sys.argv[2] if len(sys.argv) > 2 else "http://127.0.0.1:4173/"
-EXPECTED_TITLE = sys.argv[3] if len(sys.argv) > 3 else "Canine OS"
+EXPECTED_TITLE = sys.argv[3] if len(sys.argv) > 3 else "Tama-Dog-Chi"
 out = os.path.join(".audit", label)
 os.makedirs(out, exist_ok=True)
 
-VIEWPORTS = [(390, 844), (1024, 768), (1440, 900)]
+VIEWPORTS = [(320, 568), (390, 844), (1024, 768), (1440, 900)]
 
 PROBE = """() => {
   const de = document.documentElement;

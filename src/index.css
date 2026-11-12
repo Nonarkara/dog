@@ -887,7 +887,15 @@ html {font-synthesis:none;}
 .desktop-detail>.region-coach .panel-body {flex:none;}
 /* Entry is a choice, not a landing-page essay. */
 .entry {padding:clamp(12px,3vw,32px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;}
-.entry-head {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+/* The head is the SAME column as the choices below it.
+
+   It used to span the whole frame, so on a desktop screen the wordmark sat
+   alone in the top-left corner, aligned with nothing — a loose corner next
+   to a centred column, which is the near-miss edge the law names. One
+   column, one set of edges: the name, the dog and the choices all start at
+   the same line. On a phone the column is the full width anyway, so nothing
+   moves. */
+.entry-head {width:min(100%,600px);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .entry-head h1 {font-size:clamp(22px,4vw,32px);line-height:1.35;}
 .entry-dog {min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .entry-dog img {max-height:calc(100% - 28px);width:auto;max-width:100%;object-fit:contain;}
