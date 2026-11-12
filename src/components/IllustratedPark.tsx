@@ -240,7 +240,7 @@ export function IllustratedPark(props:Props){
   let frames=0;const animate=(now:number)=>{frame=requestAnimationFrame(animate);if(document.visibilityState!=='visible'){last=0;next=0;blur();return;}
    let active=keys.size>0||pointers.size>0;if(!active)for(const a of actors.values())if(a.speed>.5||Math.hypot(a.tx-a.x,a.ty-a.y)>2||now<a.petUntil||now<a.sniffUntil||now<a.bowUntil){active=true;break;}
    const targetFps=reduced.matches?6:active?60:30,interval=1000/targetFps;canvas.dataset.targetFps=String(targetFps);
-   if(!next||interval!==lastInterval){lastInterval=interval;next=now;}if(now+.5<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=interval;if(next<now-interval)next=now+interval;
+   if(!next||interval!==lastInterval){lastInterval=interval;next=now;}if(now+interval*.25<next)return;const dt=last?Math.min(.08,(now-last)/1000):1/60;last=now;next+=interval;if(next<now-interval)next=now+interval;
    if(pendingResize)resize();{const tall=height>width*1.15;roamX=tall?210:400;roamTop=-240;roamBottom=tall?620:380;}const p=latest.current;if(p.focusId!==propFocus){propFocus=p.focusId;focus=propFocus&&actors.has(propFocus)?propFocus:ownId;}zoom=Math.max(.85,Math.min(1.5,p.zoom));
    const own=actors.get(ownId)!,resting=!!p.petState?.sleep.asleep||!!p.petState?.sick;
    let dx=0,dy=0;if(!resting){if(keys.has('a')||keys.has('arrowleft'))dx--;if(keys.has('d')||keys.has('arrowright'))dx++;if(keys.has('w')||keys.has('arrowup'))dy--;if(keys.has('s')||keys.has('arrowdown'))dy++;}if(keys.size&&!dx&&!dy)stopKeyboard();if(dx||dy){own.tx=Math.max(-420*unit,Math.min(420*unit,own.x+dx*50));own.ty=Math.max(-280*unit,Math.min(400*unit,own.y+dy*50));}
