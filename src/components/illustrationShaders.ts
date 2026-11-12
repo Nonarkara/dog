@@ -1,7 +1,8 @@
 export const VERTEX = `
   varying vec2 vUv;
   uniform float time, reduced, blink;
-  uniform float wagT;
+  uniform float wagT,phased;
+  uniform vec2 phases;
   uniform vec2 morphFrom[8],morphTo[8];
   uniform float morphAmount;
   uniform vec2 profile;
@@ -26,15 +27,20 @@ export const VERTEX = `
     float walk=motion.y*(1.-reduced)*(1.-resting);
     p.x+=walk*.018*(nearFront*sin(phase)+farFront*sin(phase+3.14159)+nearBack*sin(phase+3.14159)+farBack*sin(phase));
     p.y-=walk*.016*(nearFront*max(0.,sin(phase))+farFront*max(0.,sin(phase+3.14159))+nearBack*max(0.,sin(phase+3.14159))+farBack*max(0.,sin(phase)));
-    float breathPhase=time*(1.4+temperament.y)*(1.-temperament.z*.35);
-    float bodyBreath=(sin(breathPhase)+.16*sin(breathPhase*.53))*(.004-temperament.z*.002)*(1.-reduced);
+    // A phase is an integral of its tempo. time*tempo makes the phase leap whenever the
+    // tempo eases (a leap of time*dTempo radians), so the host accumulates it and sets phased.
+    float breathPhase=phased>.5?phases.x:time*(1.4+temperament.y)*(1.-temperament.z*.35);
+    float bodyBreath=(sin(breathPhase)+.16*sin(breathPhase*.53))*(.0062-temperament.z*.0028)*(1.-reduced);
+    // Weight shifts slowly from side to side even when nothing is asked of him; planted feet stay put.
+    float sway=sin(time*.43)*(1.-reduced)*(1.-resting*.75);
+    p.x+=sway*.0042*torso*(1.-legs)*(1.-head);
     // The ribs expand while planted feet stay put; the head follows a beat later.
     p.x+=bodyBreath*(original.x-.47)*1.8*torso*(1.-legs)*(1.-head);
     float eyeA=band(original.x,eyes.x,.028)*band(original.y,eyes.y,.024);
     float eyeB=band(original.x,eyes.z,.026)*band(original.y,eyes.w,.023);
     p.y-=blink*.88*((original.y-eyes.y)*eyeA+(original.y-eyes.w)*eyeB);
     p.x+=fun.x*sin(time*11.*fun.w)*.009*torso*(1.-head)*(1.-reduced);
-    p.y+=(bodyBreath+walk*abs(sin(phase))*.008)*torso*(1.-legs);
+    p.y+=(bodyBreath*1.35+walk*abs(sin(phase))*.008)*torso*(1.-legs);
     p.x+=more.z*sin(time*27.)*.0025*(torso+head)*(1.-reduced);
     p.x=.47+(p.x-.47)*profile.x;
     p.y+=profile.y*(.91-p.y)*.16*(1.-head);
@@ -47,7 +53,8 @@ export const VERTEX = `
     float angle=fun.z*.13*sin(time*2.4)* (1.-reduced)+fun.x*.025*sin(time*8.*fun.w)*(1.-reduced)+temperament.w*sin(time*1.7)*.018*(1.-reduced)+motion.x*-.075+more.y*sin(time*1.5)*.07+gaze.x*.05+more.x*sin(time*19.)*.055;
     vec2 headPosition=turn(headPivot+(p-headPivot)*(1.+puppy*.10),headPivot,angle);
     // A real dog nods at stride frequency — the head leads each forepaw's landing.
-    headPosition.y+=sin(breathPhase-.45)*.0018*(1.-reduced)*(1.-resting);
+    headPosition.y+=sin(breathPhase-.45)*.0026*(1.-reduced)*(1.-resting*.5);
+    headPosition.x+=sin(time*.43-.8)*.0034*(1.-reduced)*(1.-resting*.75);
     headPosition+=vec2(motion.x*.012+walk*.003*sin(phase+1.5708),more.z*.012+temperament.z*.015+walk*.006*(abs(sin(phase))-.5));
     p=mix(p,headPosition,head);
     float muzzle=band(original.x,headPivot.x-.12,.095)*band(original.y,headPivot.y-.015,.06);
@@ -60,9 +67,9 @@ export const VERTEX = `
     p.x+=lifeAct.z*sin(time*18.)*.018*nearBack*(1.-reduced);
     p.x+=lifeAct.w*sin(time*19.)*.008*torso*(1.-reduced);
     float tail=band(original.x,tailPivot.x,.105)*band(original.y,tailPivot.y,.12);
-    vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),sin(time*wagT)*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
+    vec2 tailPosition=turn(p,tailPivot+vec2(-.035,.065),(sin(phased>.5?phases.y:time*wagT)+.22*sin(phased>.5?phases.y*.5-.9:0.))*(.012+temperament.x*.024+temperament.y*.025+motion.x*.11+motion.w*.08+fun.x*.07)*(1.-temperament.z*.65)*(1.-reduced)*(1.-resting));
     p=mix(p,tailPosition,tail);
-    if(morphAmount>.001){
+    if(abs(morphAmount)>.001){
       vec2 shift=vec2(0.);float total=0.;
       for(int i=0;i<8;i++){float d=distance(original,morphFrom[i]);float w=1./(d*d*d*d+.00008);shift+=(morphTo[i]-morphFrom[i])*w;total+=w;}
       // Different drawings must not pull the eyes and muzzle apart. Translate

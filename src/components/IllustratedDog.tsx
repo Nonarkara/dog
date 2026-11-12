@@ -1,4 +1,4 @@
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,poseSpring,poseSettling,smooth01,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -182,7 +182,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const container=mount.current;if(!container||!url||failed)return;
     let disposed=false,frame=0;
     const textures=new Map<ArtPose,THREE.Texture>();
-    let shownPose:ArtPose='stand',desiredPose:ArtPose='stand',poseChangedAt=-Infinity,transitionDuration=420;
+    let shownPose:ArtPose='stand',desiredPose:ArtPose='stand',poseChangedAt=-Infinity,transitionDuration=560,settleKind=0;
     let poseRun={id:0,settledAt:null as number|null,reported:false};
     let renderer:THREE.WebGLRenderer;
     try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});}catch{setFailed(true);return;}
@@ -193,10 +193,10 @@ function IllustratedStage(props: Props & {url:string}) {
     const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);camera.position.z=3;
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     const rig=landmarksFor(dog.id,'stand');
-    const uniforms={wagT:{value:5},artTile:{value:new THREE.Vector4(1,1,0,0)},locomotion:{value:0},running:{value:0},runNeck:{value:new THREE.Vector2(.36,.72)},strideFrom:{value:Array.from({length:16},()=>new THREE.Vector2())},strideTo:{value:Array.from({length:16},()=>new THREE.Vector2())},puppy:{value:0},fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},lifeAct:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
+    const uniforms={wagT:{value:5},phased:{value:1},phases:{value:new THREE.Vector2()},artTile:{value:new THREE.Vector4(1,1,0,0)},locomotion:{value:0},running:{value:0},runNeck:{value:new THREE.Vector2(.36,.72)},strideFrom:{value:Array.from({length:16},()=>new THREE.Vector2())},strideTo:{value:Array.from({length:16},()=>new THREE.Vector2())},puppy:{value:0},fun:{value:new THREE.Vector4(0,0,0,personality.pace)},morphFrom:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphTo:{value:poseAnchors(dog.id,'stand').map(p=>new THREE.Vector2(...p))},morphAmount:{value:0},opacity:{value:1},temperament:{value:new THREE.Vector4()},feet:{value:new THREE.Vector4(...rig.feet)},eyes:{value:new THREE.Vector4(...rig.eyes)},headPivot:{value:new THREE.Vector2(...rig.head)},tailPivot:{value:new THREE.Vector2(...rig.tail)},legStart:{value:rig.legStart},resting:{value:0},settling:{value:0},art:{value:null as THREE.Texture|null},time:{value:0},blink:{value:0},profile:{value:new THREE.Vector2(dog.id==='mali-2022'?1.08:dog.id==='paolo-pug'?1.05:1,dog.id==='mali-2022'?.65:0)},reduced:{value:reduced.matches?1:0},motion:{value:new THREE.Vector4()},lifeAct:{value:new THREE.Vector4()},more:{value:new THREE.Vector4()},gaze:{value:new THREE.Vector2()}};
     renderer.info.autoReset=false;
     const material=new THREE.ShaderMaterial({vertexShader:PARK_VERTEX,fragmentShader:PARK_FRAGMENT,uniforms,transparent:true,depthTest:false,depthWrite:false});
-    const geometry=new THREE.PlaneGeometry(2,2,96,96);
+    const geometry=new THREE.PlaneGeometry(2,2,80,80);// 12.8k triangles: the dissolve draws two skins at once, and the pair stays under the 35k budget.
     const floorGeometry=new THREE.CircleGeometry(1,48);
     const stageInk=getComputedStyle(container.closest('.cockpit')||container).getPropertyValue('--text-main').trim()||'#294434';
     const floorMaterial=new THREE.MeshBasicMaterial({color:stageInk,transparent:true,opacity:.08,depthWrite:false});
@@ -304,7 +304,7 @@ function IllustratedStage(props: Props & {url:string}) {
       // A change of rate must not cost a frame: re-grid the schedule instead
       // of waiting out the interval the previous rate left behind.
       if(interval!==lastInterval){lastInterval=interval;next=now;}
-      if(now+.5<next)return;
+      if(now+interval*.25<next)return;
       const dt=last?Math.min((now-last)/1000,.1):1/60;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
       if(!uniforms.art.value)return;if(pendingResize)resize();
@@ -364,9 +364,16 @@ function IllustratedStage(props: Props & {url:string}) {
       // down slowly after it passes — a real tail never jumps between speeds.
       const wagTarget=uniforms.motion.value.x>.1||uniforms.fun.value.x>.05?13:3+uniforms.temperament.value.y*5;
       uniforms.wagT.value+=(wagTarget-uniforms.wagT.value)*(1-Math.exp(-dt*(wagTarget>uniforms.wagT.value?9:1.8)));
+      // Breath and tail are phases, integrated from their tempo. The tempo eases;
+      // the phase never leaps. (Doing time*tempo in the shader jumped by
+      // time*dTempo radians on every change of mood.)
+      const breathRate=(1.4+uniforms.temperament.value.y)*(1-uniforms.temperament.value.z*.35);
+      uniforms.phases.value.x+=breathRate*dt;uniforms.phases.value.y+=uniforms.wagT.value*dt;
+      outgoingUniforms.phases.value.copy(uniforms.phases.value);
       const requested:ArtPose=asleep?'sleep':p.petState.sick?'sick':action==='feed'||action==='rewardCalm'?'feed':p.petState.calmSince!==undefined?'down':p.pose&&p.pose!=='stand'?artPoseFor(p.pose):kind==='highfive'||idle==='paw-screen'?'paw':kind==='bow'||idle==='play-bow'?'bow':petting?'pet':toilet?'sit':free&&['sick','tired','resting','sighing'].includes(idle)?'down':free&&['sitting','bored'].includes(idle)?'sit':idle==='stretching'?'bow':'stand';
       desiredPose=requested;
-      const complete=reduced.matches||now-poseChangedAt>=transitionDuration;
+      // The next step of a chain may begin as the last one settles: stopping dead between stand, sit and down is a hitch.
+      const complete=reduced.matches||now-poseChangedAt>=transitionDuration*.92;
       let step=desiredPose;
       const path:ArtPose[]=['stand','sit','down','sleep'];
       const category=(v:ArtPose)=>v==='pet'?'stand':v==='paw'?'sit':v==='feed'?'down':v==='bow'?'stand':v==='sick'?'down':v;
@@ -375,7 +382,9 @@ function IllustratedStage(props: Props & {url:string}) {
       if(complete&&step!==shownPose&&textures.has(step)){
         outgoingUniforms.art.value=uniforms.art.value;setRig(outgoingUniforms,shownPose);
         register(outgoingUniforms,shownPose,step);register(uniforms,step,shownPose);
-        transitionDuration=shownPose==='pet'||step==='pet'?260:420;
+        const lowering=['sit','down','sleep','feed','sick'].includes(step)&&!['sit','down','sleep','feed','sick'].includes(shownPose);
+        settleKind=lowering?1:0;
+        transitionDuration=shownPose==='pet'||step==='pet'?300:560;
         shownPose=step;uniforms.art.value=textures.get(shownPose)!;setRig(uniforms,shownPose);poseChangedAt=now;
         outgoing.visible=!reduced.matches;
         const m=masks.get(shownPose);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}
@@ -387,13 +396,17 @@ function IllustratedStage(props: Props & {url:string}) {
       if(posed&&poseRun.settledAt===null)poseRun.settledAt=now;
       const lesson=request?trainingMotion(request.pose,poseRun.settledAt===null?0:now-poseRun.settledAt,reduced.matches):null;
       if(lesson){uniforms.gaze.value.x=lesson.gaze;uniforms.motion.value.y=Math.max(uniforms.motion.value.y,lesson.run);}
-      const eased=transition*transition*(3-2*transition);
-      uniforms.morphAmount.value=1-eased;uniforms.opacity.value=1;
-      outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1;
-      // A single opaque drawing carries each frame. Corresponding joints move
-      // continuously; no transparent duplicate face or paws cross-fade.
-      outgoing.visible=transition<1&&eased<.5;skin.visible=!outgoing.visible;
-      uniforms.settling.value=transition<1?Math.sin(transition*Math.PI)*.28:0;
+      // A critically damped step (a soft spring when he lowers himself) instead of a
+      // symmetric smoothstep: it leaves rest gently and arrives without a stop.
+      const eased=poseSpring(transition,settleKind?.62:1);
+      // The two drawings differ, so swapping them at the halfway point was a visible pop.
+      // The new drawing dissolves in over the middle of the morph (the old one is warped
+      // onto it) and the old one stays under it until its stray silhouette has gone.
+      const blendIn=smooth01(.36,.64,transition);
+      uniforms.morphAmount.value=1-eased;uniforms.opacity.value=transition<1?blendIn:1;
+      outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1-smooth01(.58,.9,transition);
+      outgoing.visible=transition<1&&outgoingUniforms.opacity.value>.01;skin.visible=transition>=1||blendIn>0;
+      uniforms.settling.value=transition<1?poseSettling(transition,settleKind===1):0;
       outgoingUniforms.settling.value=uniforms.settling.value;
       outgoingUniforms.fun.value.copy(uniforms.fun.value);outgoingUniforms.motion.value.copy(uniforms.motion.value);outgoingUniforms.more.value.copy(uniforms.more.value);outgoingUniforms.lifeAct.value.copy(uniforms.lifeAct.value);outgoingUniforms.temperament.value.copy(uniforms.temperament.value);outgoingUniforms.gaze.value.copy(uniforms.gaze.value);outgoingUniforms.wagT.value=uniforms.wagT.value;
       uniforms.reduced.value=reduced.matches?1:0;uniforms.time.value=reduced.matches?0:t;
