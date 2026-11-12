@@ -862,6 +862,12 @@ html {font-synthesis:none;}
 .park-affection {position:absolute;transform:translate(-50%,-50%);pointer-events:none;color:var(--accent);opacity:0;}
 @media(max-width:639px){.header-dog-facts {display:none;}.cockpit>header>div {gap:6px;}.park-navigation span {display:none;}.park-navigation {margin-left:auto;}}
 @media(max-width:330px){.app-brand {font-size:12px;}}
+/* The calm control is a score you can press: a leaf is quiet time, a timer
+   is the observation, a biscuit is the reward. It is a control, so it has a
+   pressed state and a real target — and it costs the strip no row. */
+.care-calm-btn {min-height:22px;min-width:22px;border:1px solid var(--border-dim);background:transparent;color:var(--text-muted);}
+.care-calm-btn:hover:not(:disabled){color:var(--text-main);border-color:var(--border-strong);}
+.care-calm-btn:disabled{opacity:.55;}
 /* Care is an instrument strip, never a stretched information box. */
 .care-console:not(.care-detail-view) {height:auto;flex:none;}
 .care-console:not(.care-detail-view) .care-identity,

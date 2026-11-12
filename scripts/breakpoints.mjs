@@ -43,5 +43,18 @@ for (const m of text.matchAll(/@(media|container)([^{]*)\{/g)) {
   }
 }
 
+/* THE CONTAINER CLIFFS.
+ *
+ * A container query changes the layout when the CONTAINER reaches a width,
+ * not when the viewport does. The care panel is ten pixels narrower than
+ * the viewport on a phone (the workspace's padding), so a container cliff
+ * at 279px is a viewport of 289px — and a sweep that visits only viewport
+ * breakpoints steps straight over it. The instrument names these cliffs
+ * when the sweep misses one, so the widths it asks for live here.
+ */
+const CONTAINER_CLIFF_VIEWPORTS = [289, 290, 350, 610];
+
 if (process.argv.includes('--with-css')) console.error("stylesheets: " + paths.join(", "));
-console.log([...widths].sort((a, b) => a - b).join(','));
+console.log(
+  [...new Set([...widths, ...CONTAINER_CLIFF_VIEWPORTS])].sort((a, b) => a - b).join(','),
+);

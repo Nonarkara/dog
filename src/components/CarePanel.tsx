@@ -7,8 +7,9 @@ import {HOMES,isHome,type HomeId} from './homeScenes';
 import {growthLabel,CHARACTER_TEXT,wishFor,WISH_SHORT} from '../domain/life';
 import {recordSources} from '../utils/recordProvenance';
 import { dailyLife, dailyMood } from '../domain/dailyLife';
-import React, {useRef,useState} from 'react';
-import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock} from 'lucide-react';
+import { calmNeed, calmRewardWait } from '../domain/calm';
+import React, {useEffect,useRef,useState} from 'react';
+import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock, Leaf, Timer, Cookie} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import {Help} from './Help';
@@ -28,6 +29,8 @@ interface CarePanelProps {
   onPantry?:()=>void;
   onHome?:(home:HomeId)=>void;
   onPalette?:(palette:string)=>void;
+  /** Offer quiet time, or reward the calm he has shown. */
+  onCalm?:(action:'settle'|'rewardCalm')=>void;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -72,11 +75,27 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette, onCalm }) => {
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const [booth,setBooth]=useState(false);
   const [vitalsOpen,setVitalsOpen]=useState(false);
+  /* QUIET TIME.
+     The calm practice is a real mechanic and the care copy tells the reader
+     to offer quiet time — so the score that names it is the control. A leaf
+     is quiet time, a timer and visible seconds are the observation, a
+     biscuit is the reward; the count ticks while he is being watched, and
+     only then, because the wait is the method. */
+  const [clock,setClock]=useState(()=>Date.now());
+  useEffect(()=>{
+    if(petState.calmSince===undefined)return;
+    const id=window.setInterval(()=>setClock(Date.now()),1000);
+    return ()=>window.clearInterval(id);
+  },[petState.calmSince]);
+  const calmWatching=petState.calmSince!==undefined&&!calmNeed(petState)&&petState.arousal<=55;
+  const calmWait=calmWatching?Math.ceil(calmRewardWait(petState,clock)/1000):0;
+  const calmLabel=calmWatching?(calmWait?`Watch calm · ${calmWait}s`:'Reward calm'):'Quiet time';
+  const calmBlocked=calmNeed(petState);
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -203,6 +222,21 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           <p className="care-summary text-[11px] text-faint mt-1">
             <span className="data">Ready {Math.round(ready * 100)}%</span>
             <span className="data" title="Virtual calm-practice score; not a real-dog assessment">Calm {disciplineVal}%</span>
+            {/* The calm score is the control. It sits where the reader is
+                already looking, it costs no row, and its name says what it
+                does. */}
+            {onCalm&&<button
+              type="button"
+              onClick={()=>onCalm(calmWatching?'rewardCalm':'settle')}
+              disabled={!!calmBlocked||calmWait>0}
+              aria-label={`${calmLabel}. ${dog.name}`}
+              title={calmBlocked||`${calmLabel}: watch relaxed body language, then give a small reward`}
+              className="care-calm-btn btn-quiet shrink-0 px-1 text-[11px] whitespace-nowrap"
+            >
+              {calmWait>0
+                ? <span className="inline-flex items-center gap-1"><Timer size={13} aria-hidden="true"/><span className="data">{calmWait}s</span></span>
+                : <span className="inline-flex items-center gap-1">{calmWatching?<Cookie size={13} aria-hidden="true"/>:<Leaf size={13} aria-hidden="true"/>}<span className="sr-only">{calmLabel}</span></span>}
+            </button>}
             <span>{temperament(petState)}</span>
             {isSick ? <span>Sick</span> : poops > 0 ? <span>{poops} mess</span> : null}
           </p>
