@@ -54,13 +54,25 @@ export function IllustratedPark(props:Props){
   const unit=Math.min(1.35,Math.max(1,host.clientWidth/600));
   host.insertAdjacentHTML('beforeend',parkScenery());const scenery=host.querySelector<SVGSVGElement>('svg')!;
   const landmarks=scenery.querySelector<SVGGElement>('.park-landmarks')!;landmarks.setAttribute('transform',`scale(${unit})`);
-  const labels=document.createElementNS(NS,'g');labels.setAttribute('class','park-dog-labels');scenery.append(labels);
+  // The dog's NAME lives in the layer above the canvas; his shadow lives
+  // below it.
+  //
+  // The labels used to be children of the scenery, and the scenery is
+  // painted UNDER the WebGL canvas — so any dog standing in front of a
+  // name painted over it. A neighbour's head cut the first letter off
+  // "Expo", and a prop's beam cut through "Hachiku". A name is how you know
+  // who is in the park; it cannot be something the dog in front of you
+  // hides. The shadow and the paw prints stay where they were, because a
+  // shadow belongs UNDER the dog.
+  const labels=document.createElementNS(NS,'g');labels.setAttribute('class','park-dog-ground');scenery.append(labels);
   let renderer:THREE.WebGLRenderer;
   try{renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});}catch{scenery.remove();setReady(true);latest.current.onError('The illustrated park needs WebGL. The dog list and visitor tools still work.');return;}
   renderer.setClearColor(0,0);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));host.append(renderer.domElement);
   // Signals that must never be hidden behind a dog (the hungry bowl) live on
   // a layer above the canvas, sharing the scenery's coordinates.
   const overlay=document.createElementNS(NS,'svg');overlay.setAttribute('class','park-overlay');overlay.setAttribute('aria-hidden','true');host.append(overlay);
+  // The names, in the overlay, so nothing in the scene can hide them.
+  const names=document.createElementNS(NS,'g');names.setAttribute('class','park-dog-labels');overlay.append(names);
   const canvas=renderer.domElement;canvas.style.touchAction='none';canvas.dataset.renderer='illustrated-park';
   let messSite:{x:number;y:number;count:number}|null=null;
   const cleanup=document.createElement('button');cleanup.type='button';cleanup.className='park-cleanup';cleanup.setAttribute('aria-label','Clean up after your dog');cleanup.title='Clean up after your dog';cleanup.hidden=true;cleanup.innerHTML='<svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><path d="M13 33q-9-5 0-11q-1-7 8-9q6-3 3-8q15 6 9 15q13 4 7 12q9 8-3 10H12q-14-2-5-9Z" fill="#a77a4a" stroke="#614c37" stroke-width="2"/><path d="M15 23h16M12 33h24" fill="none" stroke="#614c37" stroke-width="2"/></svg>';cleanup.querySelectorAll('path').forEach(path=>path.classList.add('park-poop'));cleanup.querySelector('svg')!.insertAdjacentHTML('beforeend','<path class="park-pee" d="M7 30Q3 23 15 24Q11 13 25 18Q40 11 38 23Q51 26 39 35Q19 43 7 30Z" fill="#dfc577" stroke="#9b7a36" stroke-width="2"/>');cleanup.onclick=()=>latest.current.onClean?.();host.append(cleanup);
@@ -91,8 +103,8 @@ export function IllustratedPark(props:Props){
   const spawn=(id:string,name:string,artId:string,source:string,x:number,y:number,own=false)=>{
    if(actors.has(id))return;const material=new THREE.ShaderMaterial({vertexShader:PARK_VERTEX,fragmentShader:PARK_FRAGMENT,uniforms:uniformsFor(artId),transparent:true,depthTest:false,depthWrite:false});const mesh=new THREE.Mesh(geometry,material);scene.add(mesh);
    const shadow=document.createElementNS(NS,'ellipse');shadow.setAttribute('class','park-contact-shadow');labels.append(shadow);
-   const label=document.createElementNS(NS,'text');label.textContent=name;label.setAttribute('text-anchor','middle');labels.append(label);
-   const heart=document.createElementNS(NS,'path');heart.setAttribute('d','M0 4C-18-8-11-19 0-11C11-19 18-8 0 4Z');heart.setAttribute('class','park-pet-heart');labels.append(heart);
+   const label=document.createElementNS(NS,'text');label.textContent=name;label.setAttribute('text-anchor','middle');names.append(label);
+   const heart=document.createElementNS(NS,'path');heart.setAttribute('d','M0 4C-18-8-11-19 0-11C11-19 18-8 0 4Z');heart.setAttribute('class','park-pet-heart');names.append(heart);
    const contacts=Array.from({length:4},()=>{const dot=document.createElementNS(NS,'ellipse');dot.setAttribute('class','park-contact-shadow');dot.setAttribute('rx',String(4*unit));dot.setAttribute('ry',String(1.6*unit));labels.append(dot);return dot;});
    const motionFile=source===`/dogs/${FILES[artId]}.webp`?FILES[artId] as MotionArtName:null;
    const a:Actor={id,name,artId,source,own,heading:Math.PI,speed:0,stride:0,strideSize:76*unit,nextBlink:performance.now()+1600+Math.random()*1200,blinkStarted:-Infinity,motionFile,motionFrames:[],motionFrame:-1,hasWalked:false,blend:0,baseRaster:null,poseRaster:null,contacts,phase:[...id].reduce((sum,c)=>sum+c.charCodeAt(0),0)*.13,x:x*unit,y:y*unit,homeX:x*unit,homeY:y*unit,tx:x*unit,ty:y*unit,facing:1,until:performance.now()+3000+Math.random()*4000,petUntil:0,lastPet:-Infinity,sniffUntil:0,pose:'stand',poseAt:0,requestedPose:'stand',mode:'wander',then:null,partner:null,remote:false,grown:1,remoteAsleep:false,remoteHungry:false,bowUntil:0,bubble:null,raster:null,mesh,label,shadow,heart,w:0,h:0,onCanopy:null};actors.set(id,a);

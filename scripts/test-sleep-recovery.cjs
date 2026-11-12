@@ -19,7 +19,7 @@ fs.mkdirSync(out,{recursive:true});
  },night);
  await page.reload();
  const state=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);
- await page.getByRole('button',{name:'Put Expo to bed',exact:true}).click();
+ await page.getByRole('button',{name:/Bedtime and wake options for/i}).click();
  await page.getByText('Expo is restless. Give him some quiet time before trying bed again.',{exact:true}).waitFor();
  const before=await state();assert.equal(before.sleep.asleep,false);
  // Move wall time; normal browser intervals must apply recovery without a click.

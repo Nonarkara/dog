@@ -50,11 +50,13 @@ interface Props {
   busy?:boolean;
   requestedBehaviour?:BehaviourName;
   petPulse?:number;
+  /** Say a word to the dog, so the word starts to mean what follows it. */
+  onSay?:(word:string)=>void;
 }
 
 const CHIP = 'training-word';
 
-export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour,petPulse=0 }) => {
+export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange, onPose,busy,requestedBehaviour,petPulse=0,onSay }) => {
   const [name, setName] = useState<BehaviourName>(requestedBehaviour&&!lockedBehind(petState,requestedBehaviour)?requestedBehaviour:'sit');
   useEffect(()=>{if(requestedBehaviour&&!lockedBehind(stateRef.current,requestedBehaviour))setName(requestedBehaviour);},[requestedBehaviour]);
   const [phase, setPhase] = useState<Phase>('ready');
@@ -331,7 +333,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
         )}
       </div>
       </>}
-      <WordBook petState={petState}/>
+      <WordBook petState={petState} onSay={onSay} name={dog.name}/>
 
       <details className="practice-support"><summary>Guide &amp; history</summary>
       <details className="practice-real-notes border-hairline-t px-2 py-1.5">

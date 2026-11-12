@@ -696,6 +696,7 @@ export const App: React.FC = () => {
               key={activeDogId}
               onPetStateChange={commitPet}
               onPose={performPose}
+              onSay={handleCommunicate}
               requestedBehaviour={coachRequest}
               petPulse={petPulse}
               busy={isInteracting||isAddDogOpen}

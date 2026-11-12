@@ -1,9 +1,25 @@
-import React from 'react';
+import React,{useState} from 'react';
 import type {PetState} from '../domain/types';
 /** Spoken cues strengthen through care pairings; an unanswered cue can weaken. */
-export function WordBook({petState}:{petState:PetState}){return (
+export function WordBook({petState,onSay,name}:{petState:PetState;onSay?:(word:string)=>void;name:string}){
+ const [word,setWord]=useState('');
+ const send=(e:React.FormEvent)=>{e.preventDefault();const clean=word.trim().toLowerCase();if(!clean||!onSay)return;onSay(clean);setWord('');};
+ return (
       <details className="practice-attempts practice-attempts--fold border-hairline-t px-2 py-1.5">
         <summary className="label">Words he knows</summary>
+        {/* The way in. A word is only a word if someone can say it to him, and
+            this is where the words live, so the saying lives here too. */}
+        {onSay&&<form onSubmit={send} className="mt-1 flex items-center gap-1">
+          <input
+            value={word}
+            onChange={e=>setWord(e.target.value)}
+            maxLength={24}
+            placeholder="Say a word"
+            aria-label={`Say a word to ${name}`}
+            className="min-w-0 flex-1 border-hairline bg-transparent px-1.5 py-1 text-[11px]"
+          />
+          <button type="submit" className="btn btn-quiet border-hairline px-2 text-[11px]" disabled={!word.trim()}>Say</button>
+        </form>}
         {(() => {
           const entries = Object.entries(petState.associations ?? {}).filter(([, v]) => v > 0.04).sort((a, b) => b[1] - a[1]);
           const words = entries.slice(0, 5);
