@@ -18,6 +18,9 @@ import {parkScenery} from '../components/parkScenery';
  */
 
 import { sickCause } from './pet';
+import {nextStep,meterChanges} from './nextStep';
+import {welcomeBack} from './absence';
+import {wishFor as wishOf} from './life';
 import { createPetState, decay, decayBehaviour, interact, observe, performChance, readiness, getBehaviour, happiness, communicate } from './pet';
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
@@ -857,6 +860,31 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
      ok('leaving the canopy still happens once the dog is clearly past the rim',at(1.06,'t1')===null);
      ok('entering needs the inner rim: the band alone does not put a lawn dog on the canopy',at(1.02,null)===null&&at(.98,null)==='t1');}
   }
+
+
+/* ---- the one next thing, the meter that moved, the return greeting ---- */
+{
+  const fed=createPetState(noon),n='Expo';
+  const calm={...fed,needs:{hunger:80,energy:80,hygiene:90},trust:60,arousal:50,wish:{...wishOf(fed,noon),done:true}};
+  ok('a hungry dog is told to be fed, with a Feed control',nextStep({...calm,needs:{...calm.needs,hunger:20}},n,noon).act==='feed');
+  ok('a tired dog is told to bed',nextStep({...calm,needs:{...calm.needs,energy:10}},n,noon).act==='bed');
+  ok('a sleeping dog gets words but no control',nextStep({...calm,sleep:{...calm.sleep,asleep:true}},n,noon).act===undefined);
+  ok('his lonely call is answered by one tap on Pet',(()=>{const s=nextStep({...calm,call:{reason:'lonely',since:noon}},n,noon);return s.why==='call'&&s.act==='pet';})());
+  ok('a need outranks his call',nextStep({...calm,needs:{...calm.needs,hunger:20},call:{reason:'lonely',since:noon}},n,noon).why==='need');
+  ok('a mess is cleaned, not groomed',nextStep({...calm,poopCount:1},n,noon).act==='clean');
+  const open={...calm,wish:{...wishOf(fed,noon),kind:'walk' as const,done:false}};
+  ok('an open wish is named with its control',(()=>{const s=nextStep(open,n,noon);return s.why==='wish'&&s.act==='walk'&&/walk/.test(s.text);})());
+  ok('a granted wish stops nagging',nextStep({...open,wish:{...open.wish!,done:true}},n,noon).why!=='wish');
+  ok('a trick wish opens Practice',nextStep({...open,wish:{...open.wish!,kind:'trick'}},n,noon).act==='practice');
+  ok('a cups wish has words but no false button',nextStep({...open,wish:{...open.wish!,kind:'cups'}},n,noon).act===undefined);
+  ok('a one-point drift is not shown as care',meterChanges({trust:60},{trust:61}).length===0);
+  ok('a two-point move is shown, with its sign',(()=>{const c=meterChanges({trust:60,energy:50},{trust:63,energy:48});return c.length===2&&c[0].d===3&&c[1].d===-2;})());
+  const then=createPetState(noon),at=(h:number)=>({...then,updatedAt:noon+h*3_600_000});
+  ok('a short gap greets no one',welcomeBack(then,at(.2),n)===null);
+  ok('a few hours away: glad you are back',/glad you are back/.test(welcomeBack(then,at(2),n)||''));
+  ok('half a day away: he missed you',/missed you/.test(welcomeBack(then,at(8),n)||''));
+  ok('a dog who ran away does not greet you',welcomeBack(then,{...at(8),away:true as never},n)===null);
+}
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);
 if (failures > 0) {

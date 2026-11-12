@@ -12,3 +12,11 @@ export function describeAbsence(before:PetState,after:PetState):string|null{
  const next=after.away?'Find your dog in the park; gentle pets bring them home.':mood==='sleeping'?'Rest is restoring energy.':mood==='sick'?mess(after)?'Clean up first, then game medicine and rest.':'Game medicine and rest first.':mood==='hungry'?'Food first.':mood==='toilet'?'A toilet walk first.':mess(after)?'Clean up, then a little company.':mood==='tired'?'A little rest first.':'A little company is welcome.';
  return `While you were away (${span}): ${bits.join(', ')||'nothing urgent changed'}. ${next}`;
 }
+/** The moment he sees you again. Words only: it never changes a meter, and a dog who ran away is not here to greet you. */
+export const MISSED_AFTER_MS=6*3_600_000;
+export function welcomeBack(before:PetState,after:PetState,name:string):string|null{
+ const elapsed=after.updatedAt-before.updatedAt;
+ if(!Number.isFinite(elapsed)||elapsed<30*60_000||after.away)return null;
+ if(after.sleep?.asleep)return `${name} is asleep. Welcome back.`;
+ return elapsed>=MISSED_AFTER_MS?`${name} missed you.`:`${name} is glad you are back.`;
+}

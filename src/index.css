@@ -1145,11 +1145,7 @@ html {font-synthesis:none;}
 @keyframes delta-rise {0% {opacity:0;transform:translateY(4px);} 15% {opacity:1;transform:none;} 75% {opacity:1;} 100% {opacity:0;transform:translateY(-6px);}}
 @media (prefers-reduced-motion:reduce){.care-delta {animation:none;}}
 /* Each care action names the meters it moved, over the dog. */
-.meter-deltas {position:absolute;left:50%;top:8%;z-index:5;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px 8px;pointer-events:none;max-width:90%;}
-.meter-delta {display:inline-flex;align-items:center;gap:3px;padding:1px 6px;background:var(--bg-surface);border:1px solid var(--border-strong);font-size:14px;color:var(--accent);animation:delta-rise 1.8s ease-out forwards;}
-.meter-delta[data-up=false] {color:#9a2a22;}
 @keyframes delta-rise {0% {opacity:0;transform:translateY(6px);} 12% {opacity:1;transform:none;} 78% {opacity:1;} 100% {opacity:0;transform:translateY(-8px);}}
-@media (prefers-reduced-motion:reduce){.meter-delta {animation:none;}}
 /* A one-line note rides the floor strip below the paws, so the stage keeps its size. */
 .stage-note-slot:not(.stage-note-slot--guide) {position:absolute;left:0;right:0;bottom:0;z-index:5;}
 /* Three cups on the stage floor, in front of him. */
@@ -1169,7 +1165,6 @@ html {font-synthesis:none;}
 .stage-cup-bone {left:18%;bottom:2%;width:64%;height:64%;}
 /* Play-test: the bubble sat on his ear; it floats above the head. The care floats sit top-left, below the speech line so the two never overlap. */
 .think-bubble {top:2%;}
-.meter-deltas {left:8px;top:44px;transform:none;flex-direction:column;align-items:flex-start;max-width:60%;}
 
 /* Push offer: one quiet line under the care sentence. */
 .push-offer{margin-top:4px;font-size:11px;color:var(--text-faint,#6b6b6b);}
@@ -1267,11 +1262,8 @@ html {font-synthesis:none;}
 .care-console>.care-body>.care-extras{height:auto;flex:none;border:0;border-top:1px solid var(--border-dim);}
 .care-console .care-extras .panel-head{padding-inline:0;}
 .care-pantry-toggle{min-width:28px;min-height:28px;padding:4px;}
-.care-console>.care-body>.meter-deltas{position:static;transform:none;max-width:100%;flex-direction:row;justify-content:flex-start;min-height:0;gap:2px 6px;}
-.care-console .meter-delta{padding:0;border:0;background:transparent;font-size:12px;}
 @media(max-width:339px){.park-drawers{flex-wrap:wrap;}.park-drawers .park-camera{margin-left:auto;}.park-selected-inline{min-width:0;}}
 .pantry-guide{font-size:13px;line-height:1.35;}.pantry-guide summary{cursor:pointer;min-height:24px;}.pantry-guide p{padding-block:4px;}
-@media(prefers-reduced-motion:reduce){.care-console .meter-delta{animation:none;}}
 /* Keep the command cluster together when a player enlarges the handwriting. */
 .cockpit>header>div{height:auto;min-height:44px;flex-wrap:wrap;row-gap:0;}
 .header-instruments{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0;}
@@ -1306,3 +1298,17 @@ html {font-synthesis:none;}
 .push-offer-controls label{display:inline-flex;align-items:center;gap:5px;min-height:34px;cursor:pointer;}
 .push-offer>p{margin-top:3px;line-height:1.35;}
 .care-console--extras .push-offer{display:none;}
+
+/* Each care action rings the meter it moved and puts the change where the number was. */
+.care-meter [role="progressbar"]>div{transition:width .6s ease-out;}
+.care-meter[data-moved]{outline:1px solid var(--accent);outline-offset:1px;animation:care-ring 1.8s ease-out forwards;}
+.care-meter-delta{font-size:15px;line-height:1;color:var(--accent);font-weight:700;}
+.care-meter[data-moved=down] .care-meter-delta{color:#9a2a22;}
+@keyframes care-ring{0%,70%{outline-color:var(--accent);}100%{outline-color:transparent;}}
+@media(prefers-reduced-motion:reduce){.care-meter[data-moved]{animation:none;}.care-meter [role="progressbar"]>div{transition:none;}}
+/* The one next thing and the one control that does it. */
+.care-step{display:flex;align-items:center;gap:8px;}
+.care-step>p{flex:1 1 auto;min-width:0;}
+.care-step-btn{flex:none;min-height:32px;padding:0 12px;background:var(--accent);color:var(--bg-surface);border:1px solid var(--accent);font-size:13px;font-weight:700;line-height:1;}
+.care-step-btn:active{transform:scale(.97);}
+.care-step[data-why=idle]>.care-step-btn,.care-step[data-why=wish]>.care-step-btn{background:transparent;color:var(--accent);}

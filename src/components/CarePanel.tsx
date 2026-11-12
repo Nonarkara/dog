@@ -1,4 +1,5 @@
-import {MeterDeltas} from './MeterDeltas';
+import {useMeterDeltas} from './MeterDeltas';
+import {nextStep,STEP_LABEL,type StepAct} from '../domain/nextStep';
 import {CloudSaveStatus} from './CloudSaveStatus';
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
@@ -6,15 +7,15 @@ import {PushOffer} from './PushOffer';
 import {HOMES,isHome,type HomeId} from './homeScenes';
 import {growthLabel,CHARACTER_TEXT,wishFor,WISH_SHORT} from '../domain/life';
 import {recordSources} from '../utils/recordProvenance';
-import { dailyLife, dailyMood } from '../domain/dailyLife';
+import { dailyLife } from '../domain/dailyLife';
 import { calmNeed, calmRewardWait } from '../domain/calm';
 import React, {useEffect,useRef,useState} from 'react';
 import {Utensils, Battery, Sparkles, Smile, Heart, Activity, Clock, Leaf, Timer, Cookie} from 'lucide-react';
 import type { DogProfile } from '../types/dog';
 import type { PetState } from '../domain/types';
 import {Help} from './Help';
-import { happiness, readiness, sickCause, temperament } from '../domain/pet';
-import { ANSWERS, CALL_TEXT, minutes } from '../domain/attention';
+import { happiness, readiness, temperament } from '../domain/pet';
+import { minutes } from '../domain/attention';
 import {ILLUSTRATIONS} from '../data/dogIllustrations';
 import {PhotoBooth} from './PhotoBooth';
 import {Camera,ShoppingBag,Stethoscope} from 'lucide-react';
@@ -31,6 +32,8 @@ interface CarePanelProps {
   onPalette?:(palette:string)=>void;
   /** Offer quiet time, or reward the calm he has shown. */
   onCalm?:(action:'settle'|'rewardCalm')=>void;
+  /** The one control beside the one next thing: feed, walk, bed, medicine... */
+  onAct?:(act:StepAct)=>void;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -75,7 +78,8 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette, onCalm }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette, onCalm, onAct }) => {
+  const deltas=useMeterDeltas(petState,dog.id);
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
   const [booth,setBooth]=useState(false);
@@ -122,29 +126,8 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
     { key: 'groomed', label: 'Groomed', at: dog.tamagotchi?.lastGroomed },
   ];
 
-  /**
-   * THE ONE THING TO DO NEXT.
-   *
-   * Six numbers are data. A sentence is advice. The app owes the reader the
-   * sentence — otherwise the panel is a dashboard nobody can act on.
-   */
-  const nextAction = (): string => {
-    const mood=dailyMood(petState);
-    if(mood==='sick')return sickCause(petState)==='mess'?`${dog.name} is ill from lying in mess. Clean up (broom), then give medicine.`:sickCause(petState)==='hunger'?`${dog.name} is ill from going hungry. Give medicine, then a meal.`:`${dog.name} is still unwell. Give medicine.`;
-    if(mood==='sleeping')return `${dog.name} is sleeping. Quiet time while energy returns.`;
-    if(mood==='toilet')return `${dog.name} needs a toilet break. Take a walk before an accident.`;
-    if(mood==='hungry')return `${dog.name} is hungry. Food first.`;
-    if(mood==='tired')return `${dog.name} is tired. Tuck ${dog.sex==='female'?'her':'him'} in.`;
-    if(mood==='dirty')return poops?`${dog.name}'s stage has ${poops} mess. Scoop and clean to protect health.`:`${dog.name} needs a groom.`;
-    if(mood==='bored')return `${dog.name} is bored. Play, a sniff walk or a little company helps.`;
-    if (petState.calmSince!==undefined) return `${dog.name} is resting quietly. Watch the relaxed posture, then reward calm.`;
-    if (petState.trust < 35) return `${dog.name} needs gentle company. Care and patient practice build trust.`;
-    if (disciplineVal < 40) return `${dog.name} can practise calm. Offer quiet time, then reward relaxed posture.`;
-    if (petState.arousal > 80) return `${dog.name} is wound up. A walk brings the arousal down.`;
-    if (petState.arousal < 20) return `${dog.name} is flat. Play wakes him up.`;
-    if (ready > 0.7) return `${dog.name} is ready to work. The coach will tell you what to mark.`;
-    return `${dog.name} is comfortable. Nothing is urgent.`;
-  };
+  /** One sentence, one control (domain/nextStep.ts). */
+  const step=nextStep(petState,dog.name,Date.now());
 
   return (
     <section className={`panel region-care care-console h-full ${detailView?'care-detail-view':''} ${extras?'care-console--extras':''}`} aria-label="Care">
@@ -170,7 +153,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
             const value = Math.round(m.value);
             const warningLabel=m.inverted&&m.value>75?'Wired':m.lowMeans;
             return (
-              <div key={m.key} className="care-meter care-meter-reading min-w-0">
+              <div key={m.key} className="care-meter care-meter-reading min-w-0" data-moved={deltas[m.key]?(deltas[m.key]>0?'up':'down'):undefined}>
                 <div className="care-meter-symbols">
                   <span className="meter-symbol" title={m.label}>{React.createElement(({fullness:Utensils,energy:Battery,hygiene:Sparkles,happiness:Smile,trust:Heart,arousal:Activity})[m.key],{size:18,'aria-hidden':true})}<span className="sr-only">{m.label}</span></span>
                 </div>
@@ -179,7 +162,9 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
                     the care console's height and reflow the record below. The
                     exact number stays on the bar and in the meter's aria-label. */}
                 <div className="care-meter-value flex items-baseline gap-1">
-                  {isLow ? (
+                  {deltas[m.key] ? (
+                    <span className="data care-meter-delta" aria-live="polite">{deltas[m.key]>0?'+':'−'}{Math.abs(deltas[m.key])}<span className="sr-only"> {m.label}</span></span>
+                  ) : isLow ? (
                     <span className="label text-rose-400 truncate" title={warningLabel}>{warningLabel}</span>
                   ) : (
                     <>
@@ -206,19 +191,15 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           })}
         </div>
 
-        {!detailView&&<MeterDeltas petState={petState} dogId={dog.id}/>}
-        {extras}
+                {extras}
 
         {/* The sentence: advice, health, discipline and time together */}
         <div className="care-now border-hairline-t">
           <p className="label">Now</p>
-          {petState.call&&!isSick&&!asleep&&(dailyMood(petState)!=='tired'||!['bored','lonely','tantrum'].includes(petState.call.reason)) ? (
-            <p className="text-[12px] leading-snug text-accent mt-0.5" role="status">
-              {dog.name} {CALL_TEXT[petState.call.reason]}. Answer with {ANSWERS[petState.call.reason].join(' or ')}.
-            </p>
-          ) : (
-            <p className={`text-[12px] leading-snug mt-0.5 ${isSick?'text-accent':'text-zinc-200'}`} role={isSick?'status':undefined}>{nextAction()}</p>
-          )}
+          <div className="care-step" data-why={step.why}>
+            <p className={`text-[12px] leading-snug ${step.why==='call'||isSick?'text-accent':'text-zinc-200'}`} role={step.why==='call'||isSick?'status':undefined}>{step.text}</p>
+            {step.act&&onAct&&<button type="button" className="care-step-btn" onClick={()=>onAct(step.act!)} aria-label={`${STEP_LABEL[step.act]} ${dog.name}`}>{STEP_LABEL[step.act]}</button>}
+          </div>
           <p className="care-summary text-[11px] text-faint mt-1">
             <span className="data">Ready {Math.round(ready * 100)}%</span>
             <span className="data" title="Virtual calm-practice score; not a real-dog assessment">Calm {disciplineVal}%</span>

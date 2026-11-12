@@ -1,4 +1,4 @@
-import {describeAbsence} from './domain/absence';
+import {describeAbsence,welcomeBack} from './domain/absence';
 import {shouldAnnounceCall} from './domain/callAnnouncement';
 import {finishParkOuting} from './domain/parkOuting';
 import {downloadOwnedBackup} from './utils/downloadOwnedBackup';
@@ -488,7 +488,7 @@ export const App: React.FC = () => {
     noteTimer.current = window.setTimeout(() => setNote(null), NOTE_TTL_MS);
   };
 
-  useEffect(()=>{if(toldAbsence.current.has(activeDogId))return;const before=openingPets[activeDogId];if(!before)return;const report=describeAbsence(before,petState);toldAbsence.current.add(activeDogId);if(report)say(report);},[activeDogId]);
+  useEffect(()=>{if(toldAbsence.current.has(activeDogId))return;const before=openingPets[activeDogId];if(!before)return;const report=describeAbsence(before,petState);toldAbsence.current.add(activeDogId);if(report)say([welcomeBack(before,petState,currentDog.name),report].filter(Boolean).join(' '));},[activeDogId]);
 
   useEffect(() => () => {
     if (noteTimer.current) window.clearTimeout(noteTimer.current);
@@ -686,7 +686,7 @@ export const App: React.FC = () => {
       case 'care':
 
         if(labelsVisible)return <ControlLegend onClose={closeLabels}/>;
-        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} extras={careExtra?<CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>:undefined} onPantry={()=>{firstGuide.close();setNote(null);setCareExtra(careExtra==='food'?null:'food');setLabelsVisible(false);setIsDogMenuOpen(false);}} onHome={home=>void commitPet(s=>({...s,home}))} onPalette={palette=>handleUpdateCurrentDog(dog=>({...dog,avatarConfig:{...dog.avatarConfig,palette}}))} onCalm={action=>{void handleInteract(action);}}/>;
+        return isDogMenuOpen?<DogChooser dogs={dogs} activeId={activeDogId} onClose={closeDogChooser} onSelect={id=>{selectDog(id);closeDogChooser();}} onEnroll={()=>{closeDogChooser();setIsAddDogOpen(true);}}/>:<CarePanel dog={currentDog} petState={petState} extras={careExtra?<CareExtras kind={careExtra} dog={currentDog} state={petState} busy={isInteracting} onClose={()=>setCareExtra(null)} onBuy={async()=>{let note='';const saved=await commitPet(base=>{const result=buyFood(base);note=result.note;return result.state;});if(saved)say(note);}} onFeed={()=>handleInteract('feed')} onBed={handleBed} onPreference={async(wakeMinute,wakeBark)=>{const next=await commitPet(base=>({...base,game:{...gameState(base,currentDog.id),wakeMinute,wakeBark}}));if(next&&wakeBark)sound.bark();}}/>:undefined} onPantry={()=>{firstGuide.close();setNote(null);setCareExtra(careExtra==='food'?null:'food');setLabelsVisible(false);setIsDogMenuOpen(false);}} onHome={home=>void commitPet(s=>({...s,home}))} onPalette={palette=>handleUpdateCurrentDog(dog=>({...dog,avatarConfig:{...dog.avatarConfig,palette}}))} onCalm={action=>{void handleInteract(action);}} onAct={act=>{if(act==='bed')handleBed();else if(act==='practice'){setCareExtra(null);setActiveRegion('coach');}else void handleInteract(act);}}/>;
       case 'coach':
         return (
           <Suspense fallback={<RegionLoading label="Coach" />}>
