@@ -10,6 +10,8 @@ dist
 
 # Local-only secrets for wrangler dev.
 .dev.vars
+.env
+.env.*
 tsconfig.tsbuildinfo
 
 # Local-only Flux evidence sidecars. Generated cards, if kept, need a review.
