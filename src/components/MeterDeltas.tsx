@@ -24,17 +24,21 @@ const SHOW_MS=1800;
 // ponytail: module-level memory, because the stage may remount mid-action
 // (a care animation swaps its subtree) and a ref would forget the "before".
 let last:{id:string;v:Record<string,number>}|null=null;
+// A panel gone for more than this was not watching: a change made while it was away is not "what your care just did".
+let lastUnmount=0;const REMOUNT_MS=1200;
 
 /** The meters moved by the latest action, for a moment: key -> signed change. */
 export function useMeterDeltas(petState:PetState,dogId:string):Record<string,number>{
   const [shown,setShown]=useState<Record<string,number>>({});
   const timer=useRef<number>(0);
-  useEffect(()=>()=>window.clearTimeout(timer.current),[]);
+  const first=useRef(true);
+  useEffect(()=>()=>{window.clearTimeout(timer.current);lastUnmount=performance.now();},[]);
   const now=Object.fromEntries(Object.entries(READ).map(([k,f])=>[k,Math.round(f(petState))]));
   const reading=Object.values(now).join();
   useEffect(()=>{
-    const before=last;last={id:dogId,v:now};
+    const before=last,wasFirst=first.current;first.current=false;last={id:dogId,v:now};
     if(!before||before.id!==dogId)return;// switching dogs is not care
+    if(wasFirst&&performance.now()-lastUnmount>REMOUNT_MS)return;// came back to a changed panel: re-baseline, show nothing
     const changes=meterChanges(before.v,now);
     if(!changes.length)return;
     setShown(Object.fromEntries(changes.map(c=>[c.key,c.d])));

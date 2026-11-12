@@ -870,6 +870,10 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a tired dog is told to bed',nextStep({...calm,needs:{...calm.needs,energy:10}},n,noon).act==='bed');
   ok('a sleeping dog gets words but no control',nextStep({...calm,sleep:{...calm.sleep,asleep:true}},n,noon).act===undefined);
   ok('his lonely call is answered by one tap on Pet',(()=>{const s=nextStep({...calm,call:{reason:'lonely',since:noon}},n,noon);return s.why==='call'&&s.act==='pet';})());
+  ok('no step sentence guesses a gender: a female dog is never called him or his',[
+    {...calm,away:true},{...calm,arousal:5},{...calm,arousal:95},{...calm,trust:10},{...calm,needs:{...calm.needs,hunger:20}},
+    {...calm,needs:{...calm.needs,energy:10}},{...calm,sleep:{...calm.sleep,asleep:true}},{...calm,call:{reason:'lonely',since:noon}},
+  ].every(st=>!/\b(him|his|he|her|she|hers)\b/i.test(nextStep(st as typeof calm,'Mali',noon).text)));
   ok('a need outranks his call',nextStep({...calm,needs:{...calm.needs,hunger:20},call:{reason:'lonely',since:noon}},n,noon).why==='need');
   ok('a mess is cleaned, not groomed',nextStep({...calm,poopCount:1},n,noon).act==='clean');
   const open={...calm,wish:{...wishOf(fed,noon),kind:'walk' as const,done:false}};

@@ -21,7 +21,7 @@ const WISH_ACT:Partial<Record<string,StepAct>>={walk:'walk',play:'play',pet:'pet
 export function nextStep(s:PetState,name:string,now:number):Step{
   const life=dailyLife(s),mess=(s.poopCount??0)+life.peeCount,mood=dailyMood(s);
   const need=(text:string,act?:StepAct):Step=>({text,act,why:'need'});
-  if(s.away)return need(`${name} slipped out. Find him in the park; gentle pets bring him home.`);
+  if(s.away)return need(`${name} slipped out. Look in the park; gentle pets bring ${name} home.`);
   if(mood==='sick'){
     const c=sickCause(s);
     return c==='mess'?need(`${name} is ill from lying in mess. Clean up, then give medicine.`,'clean')
@@ -43,12 +43,12 @@ export function nextStep(s:PetState,name:string,now:number):Step{
   if(!w.done)return {text:`Today ${name} ${WISH_TEXT[w.kind]}.${w.kind==='cups'?' Tap the cups icon on the stage.':''}`,act:WISH_ACT[w.kind],why:'wish'};
   if(s.trust<35)return {text:`${name} needs gentle company. A stroke builds trust.`,act:'pet',why:'idle'};
   if(s.arousal>80)return {text:`${name} is wound up. A walk brings it down.`,act:'walk',why:'idle'};
-  if(s.arousal<20)return {text:`${name} is flat. A game wakes him up.`,act:'play',why:'idle'};
+  if(s.arousal<20)return {text:`${name} is flat. A game wakes ${name} up.`,act:'play',why:'idle'};
   if(readiness(s)>.7)return {text:`${name} is ready to learn. Open Practice.`,why:'idle'};
   return {text:`${name} is comfortable. Nothing is urgent.`,why:'idle'};
 }
 
-export const STEP_LABEL:Record<StepAct,string>={feed:'Feed',pet:'Pet',play:'Play',walk:'Walk',groom:'Groom',clean:'Clean',medicine:'Medicine',bed:'Bed',practice:'Practice',settle:'Quiet',rewardCalm:'Reward'};
+export const STEP_LABEL:Record<StepAct,string>={feed:'Feed',pet:'Pet',play:'Play',walk:'To park',groom:'Groom',clean:'Clean',medicine:'Medicine',bed:'Bed',practice:'Practice',settle:'Quiet',rewardCalm:'Reward'};
 
 /** Meters that moved by this much or more are worth showing. Decay drifts a point at a time. */
 export const DELTA_MIN=2;
