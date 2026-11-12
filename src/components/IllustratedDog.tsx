@@ -399,13 +399,13 @@ function IllustratedStage(props: Props & {url:string}) {
       // A critically damped step (a soft spring when he lowers himself) instead of a
       // symmetric smoothstep: it leaves rest gently and arrives without a stop.
       const eased=poseSpring(transition,settleKind?.62:1);
-      // The two drawings differ, so swapping them at the halfway point was a visible pop.
-      // The new drawing dissolves in over the middle of the morph (the old one is warped
-      // onto it) and the old one stays under it until its stray silhouette has gone.
-      const blendIn=smooth01(.36,.64,transition);
-      uniforms.morphAmount.value=1-eased;uniforms.opacity.value=transition<1?blendIn:1;
-      outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1-smooth01(.58,.9,transition);
-      outgoing.visible=transition<1&&outgoingUniforms.opacity.value>.01;skin.visible=transition>=1||blendIn>0;
+      // The two drawings differ in silhouette, so they are NEVER shown together: a cross-fade
+      // put a see-through second dog on screen mid-transition (reviewed, with screenshots).
+      // Exactly one opaque drawing per frame; the spring and the warp hide the swap.
+      const swapped=eased>=.5;
+      uniforms.morphAmount.value=1-eased;uniforms.opacity.value=1;
+      outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1;
+      outgoing.visible=transition<1&&!swapped&&!reduced.matches;skin.visible=transition>=1||swapped;
       uniforms.settling.value=transition<1?poseSettling(transition,settleKind===1):0;
       outgoingUniforms.settling.value=uniforms.settling.value;
       outgoingUniforms.fun.value.copy(uniforms.fun.value);outgoingUniforms.motion.value.copy(uniforms.motion.value);outgoingUniforms.more.value.copy(uniforms.more.value);outgoingUniforms.lifeAct.value.copy(uniforms.lifeAct.value);outgoingUniforms.temperament.value.copy(uniforms.temperament.value);outgoingUniforms.gaze.value.copy(uniforms.gaze.value);outgoingUniforms.wagT.value=uniforms.wagT.value;
