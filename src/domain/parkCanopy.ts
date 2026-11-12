@@ -15,11 +15,16 @@ export const TREES:readonly {id:string;x:number;y:number;s:number}[]=[
 ];
 /** Crown ellipse in a tree's own coordinates (inside the drawn crown). */
 export const CROWN={cx:4,cy:-86,rx:100,ry:70} as const;
+/** Hysteresis on the canopy rim so a dog pausing exactly on the edge does not
+ * flip between on-canopy and on-lawn from frame to frame, which would make the
+ * render order, paw contacts and grass shadow strobe. Two percent keeps the
+ * walkable area well inside the drawn crown (x -113..121, y -169..-4). */
+export const CANOPY_HYSTERESIS=0.02;
 /** Which canopy a park point stands on (world units, `unit` = park scale), or null. */
 export const canopyAt=(px:number,py:number,unit:number):string|null=>{
   for(const t of TREES){
     const k=t.s*unit,dx=(px-t.x*unit)/k-CROWN.cx,dy=(py-t.y*unit)/k-CROWN.cy;
-    if((dx/CROWN.rx)**2+(dy/CROWN.ry)**2<1)return t.id;
+    if((dx/CROWN.rx)**2+(dy/CROWN.ry)**2<1+CANOPY_HYSTERESIS)return t.id;
   }
   return null;
 };
