@@ -8,10 +8,10 @@
  * fails if the trees or the crown drift from these numbers.
  */
 export const TREES:readonly {id:string;x:number;y:number;s:number}[]=[
-  {id:'t1',x:-270,y:-210,s:.9},
-  {id:'t2',x:310,y:-75,s:1.15},
-  {id:'t3',x:-315,y:320,s:1.05},
-  {id:'t4',x:280,y:370,s:.85},
+  {id:'t1',x:-270,y:-210,s:1.1},
+  {id:'t2',x:310,y:-75,s:1.4},
+  {id:'t3',x:-315,y:320,s:1.2},
+  {id:'t4',x:280,y:370,s:1.0},
 ];
 /** Crown ellipse in a tree's own coordinates (inside the drawn crown). */
 export const CROWN={cx:4,cy:-86,rx:100,ry:70} as const;
