@@ -34,6 +34,8 @@ interface CarePanelProps {
   onCalm?:(action:'settle'|'rewardCalm')=>void;
   /** The one control beside the one next thing: feed, walk, bed, medicine... */
   onAct?:(act:StepAct)=>void;
+  /** An action is playing out; the step button waits instead of silently doing nothing. */
+  busy?:boolean;
 }
 
 type MeterKey = 'fullness' | 'energy' | 'hygiene' | 'happiness' | 'trust' | 'arousal';
@@ -78,7 +80,7 @@ function clockTime(at: number | null | undefined): string {
   return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette, onCalm, onAct }) => {
+export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=false, extras, onPantry, onHome, onPalette, onCalm, onAct, busy=false }) => {
   const deltas=useMeterDeltas(petState,dog.id);
   const details=useRef<HTMLDialogElement>(null);
   const [backupNote,setBackupNote]=useState('');
@@ -198,7 +200,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           <p className="label">Now</p>
           <div className="care-step" data-why={step.why}>
             <p className={`text-[12px] leading-snug ${step.why==='call'||isSick?'text-accent':'text-zinc-200'}`} role={step.why==='call'||isSick?'status':undefined}>{step.text}</p>
-            {step.act&&onAct&&<button type="button" className="care-step-btn" onClick={()=>onAct(step.act!)} aria-label={`${STEP_LABEL[step.act]} ${dog.name}`}>{STEP_LABEL[step.act]}</button>}
+            {step.act&&onAct&&<button type="button" className="care-step-btn" disabled={busy} onClick={()=>onAct(step.act!)} aria-label={`${STEP_LABEL[step.act]} ${dog.name}`}>{STEP_LABEL[step.act]}</button>}
           </div>
           <p className="care-summary text-[11px] text-faint mt-1">
             <span className="data">Ready {Math.round(ready * 100)}%</span>
