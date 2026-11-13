@@ -10,6 +10,20 @@
 #
 # Preserve each test's entry or play path and query when changing origins.
 #   DOG_URL=http://127.0.0.1:4189 npm run test:browser
+#
+# TWO ORIGINS, ON PURPOSE.
+#
+# Four tests import the project's own SOURCE (`/src/utils/cloud.ts`) inside
+# the page, to reach a module the built bundle does not expose. A built site
+# has no /src/, so those tests can only run against a dev server. Point
+# DOG_DEV_URL at one and the runner sends them there:
+#
+#   npx vite --port 3199 &                       # the dev origin
+#   DOG_URL=http://127.0.0.1:4189 \
+#   DOG_DEV_URL=http://127.0.0.1:3199 \
+#     bash scripts/run-browser-tests.sh
+#
+# Every other test runs against the built site, because that is what ships.
 set -u
 BASE="${DOG_URL:-http://127.0.0.1:5173}"
 LOG="${DOG_TEST_LOG:-/tmp/dog-browser-tests.log}"
@@ -51,6 +65,16 @@ for script in "$@"; do
     \?*) path="/$path" ;;
   esac
   url="${BASE%/}$path"
+
+  # A test that imports the project's own SOURCE (/src/...) needs a dev
+  # server: a built site has no /src/, so the import cannot resolve and the
+  # test fails on a page that is perfectly correct. Those tests are run
+  # against the dev origin when one is given.
+  origin="${BASE%/}"
+  if grep -q "import('/src/\|from '/src/" "$script" && [ -n "${DOG_DEV_URL:-}" ]; then
+    origin="${DOG_DEV_URL%/}"
+    url="${origin}${path}"
+  fi
 
   out="$(DOG_URL="$url" node "$script" 2>&1)"
   code=$?

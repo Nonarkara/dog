@@ -12,6 +12,7 @@ import {dailyLife,dailyMood} from './dailyLife';
 import {ANSWERS,CALL_TEXT} from './attention';
 import {sickCause,readiness} from './pet';
 import {wishFor,WISH_TEXT} from './life';
+import {calmNeed} from './calm';
 
 export type StepAct='feed'|'pet'|'play'|'walk'|'groom'|'clean'|'medicine'|'bed'|'practice'|'settle'|'rewardCalm';
 export interface Step{text:string;act?:StepAct;why:'need'|'call'|'wish'|'idle'}
@@ -45,6 +46,16 @@ export function nextStep(s:PetState,name:string,now:number):Step{
   if(s.arousal>80)return {text:`${name} is wound up. A walk brings it down.`,act:'walk',why:'idle'};
   if(s.arousal<20)return {text:`${name} is flat. A game wakes ${name} up.`,act:'play',why:'idle'};
   if(readiness(s)>.7)return {text:`${name} is ready to learn. Open Practice.`,why:'idle'};
+  // QUIET TIME HAS ITS DOOR HERE.
+  //
+  // The calm practice was fully built — the engine settles him, the dog drops
+  // into the down artwork, the reward pays — but nothing ever offered to
+  // START it, so the sentence in the care panel told the reader to offer
+  // quiet time and the app gave no way to do it. The next step is the one
+  // place this panel says "do this", so quiet time is offered here instead of
+  // a sentence that says nothing is urgent.
+  if(calmNeed(s)===null&&s.arousal>=20&&s.arousal<=80)
+    return need(`${name} could settle. Offer quiet time, then reward the calm.`,`settle`);
   return {text:`${name} is comfortable. Nothing is urgent.`,why:'idle'};
 }
 
