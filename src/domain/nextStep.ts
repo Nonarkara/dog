@@ -22,11 +22,11 @@ const WISH_ACT:Partial<Record<string,StepAct>>={walk:'walk',play:'play',pet:'pet
 export function nextStep(s:PetState,name:string,now:number):Step{
   const life=dailyLife(s),mess=(s.poopCount??0)+life.peeCount,mood=dailyMood(s);
   const need=(text:string,act?:StepAct):Step=>({text,act,why:'need'});
-  if(s.away)return need(`${name} slipped out. Look in the park; gentle pets bring ${name} home.`);
+  if(s.away)return need(`${name} slipped out to the park. Find and pet gently.`);
   if(mood==='sick'){
     const c=sickCause(s);
-    return c==='mess'?need(`${name} is ill from lying in mess. Clean up, then give medicine.`,'clean')
-      :c==='hunger'?need(`${name} is ill from going hungry. Give medicine, then a meal.`,'medicine')
+    return c==='mess'?need(`${name} is ill from the mess. Clean up, then medicine.`,'clean')
+      :c==='hunger'?need(`${name} is ill from hunger. Medicine, then a meal.`,'medicine')
       :need(`${name} is still unwell. Medicine and rest.`,'medicine');
   }
   if(mood==='sleeping')return need(`${name} is sleeping. Quiet time while energy returns.`);
@@ -41,10 +41,10 @@ export function nextStep(s:PetState,name:string,now:number):Step{
   if(mood==='bored')return need(`${name} is bored. A game or a sniff walk helps.`,'play');
   if(s.calmSince!==undefined)return {text:`${name} is resting quietly: watch, then reward.`,act:'rewardCalm',why:'idle'};
   const w=wishFor(s,now);
-  if(!w.done)return {text:`Today ${name} ${WISH_TEXT[w.kind]}.${w.kind==='cups'?' Tap the cups icon on the stage.':''}`,act:WISH_ACT[w.kind],why:'wish'};
+  if(!w.done)return {text:w.kind==='cups'?`Today ${name} wants three cups: tap them on the stage.`:`Today ${name} ${WISH_TEXT[w.kind]}.`,act:WISH_ACT[w.kind],why:'wish'};
   if(s.trust<35)return {text:`${name} needs gentle company. A stroke builds trust.`,act:'pet',why:'idle'};
   if(s.arousal>80)return {text:`${name} is wound up. A walk brings it down.`,act:'walk',why:'idle'};
-  if(s.arousal<20)return {text:`${name} is flat. A game wakes ${name} up.`,act:'play',why:'idle'};
+  if(s.arousal<20)return {text:`${name} is flat. A game will help.`,act:'play',why:'idle'};
   if(readiness(s)>.7)return {text:`${name} is ready to learn. Open Practice.`,why:'idle'};
   // QUIET TIME HAS ITS DOOR HERE.
   //

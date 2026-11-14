@@ -869,10 +869,10 @@ html {font-synthesis:none;}
 .care-console:not(.care-detail-view)>.care-body .care-summary,
 .care-console:not(.care-detail-view)>.care-body .care-together,
 .care-console:not(.care-detail-view)>.care-body .care-now>.label {display:none;}
-.care-console:not(.care-detail-view)>.panel-head {padding:1px 6px;}
+.care-console:not(.care-detail-view)>.panel-head {padding:0 6px;}
 .care-console:not(.care-detail-view) .care-details-toggle {display:block;font-size:12px;min-height:28px;padding:1px 4px;}
-.care-console:not(.care-detail-view)>.care-body {flex:none;padding:5px 6px;gap:4px;}
-.care-console:not(.care-detail-view) .care-now {padding-top:3px;}
+.care-console:not(.care-detail-view)>.care-body {flex:none;padding:4px 6px;gap:3px;}
+.care-console:not(.care-detail-view) .care-now {padding-top:1px;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console) {grid-template-rows:minmax(0,1fr) auto auto;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console)>.region-frame {container-type:normal;}
 .cockpit-workspace--wide {grid-template-rows:auto auto minmax(0,1fr);}
@@ -1262,7 +1262,6 @@ html {font-synthesis:none;}
 .cockpit>header>div{height:auto;min-height:44px;flex-wrap:wrap;row-gap:0;}
 .header-instruments{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0;}
 @media(max-width:639px){.header-instruments{flex:0 0 auto;margin-left:auto;gap:6px;}}
-.care-pantry-toggle{min-width:34px;min-height:34px;}
 @media(max-width:339px){
  .park-drawers{flex-wrap:nowrap;gap:2px;padding-inline:2px;}
  .park-drawers>button:nth-of-type(2)>span{display:none;}
@@ -1304,8 +1303,9 @@ html {font-synthesis:none;}
 .care-step{display:flex;align-items:center;gap:8px;}
 .care-step>p{flex:1 1 auto;min-width:0;}
 .care-step-btn{flex:none;min-height:32px;padding:0 12px;background:var(--accent);color:var(--bg-surface);border:1px solid var(--accent);font-size:13px;font-weight:700;line-height:1;}
-.care-console:not(.care-detail-view) .care-step>p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.care-console:not(.care-detail-view) .care-step-btn{min-height:18px;padding:1px 8px;font-size:11px;}
+/* The sentence is the advice: it wraps to two lines rather than losing its
+   second half to an ellipsis, and the button stays a real 32 px target. */
+.care-console:not(.care-detail-view) .care-step>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
 .care-step-btn:active{transform:scale(.97);}
 .care-step-btn:disabled{opacity:.45;cursor:default;}
 .care-step[data-why=idle]>.care-step-btn,.care-step[data-why=wish]>.care-step-btn{background:transparent;color:var(--accent);}

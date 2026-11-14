@@ -180,7 +180,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         <div className="care-now border-hairline-t">
           <p className="label">Now</p>
           <div className="care-step" data-why={step.why} aria-live="polite" aria-busy={busy||undefined}>
-            <p className={`text-[12px] leading-snug ${step.why==='call'||isSick?'text-accent':'text-zinc-200'}`} title={step.text} role={step.why==='call'||isSick?'status':undefined}>{step.text}</p>
+            <p className={`text-[12px] leading-snug ${step.why==='call'||isSick?'text-accent':'text-zinc-200'}`}>{step.text}</p>
             {step.act&&onAct&&<button type="button" className="care-step-btn" disabled={busy} aria-busy={busy||undefined} onClick={()=>onAct(step.act!)} aria-label={`${STEP_LABEL[step.act]} ${dog.name} now`}>{STEP_LABEL[step.act]}</button>}
           </div>
           <p className="care-summary text-[11px] text-faint mt-1">

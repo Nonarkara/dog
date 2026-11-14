@@ -96,7 +96,7 @@ export const ANSWERS: Record<CallReason, Answer[]> = {
 };
 
 export const CALL_TEXT: Record<CallReason, string> = {
-  toilet: 'is sniffing for a toilet spot; time to go outside',
+  toilet: 'is sniffing for a toilet spot; go outside',
   bored: 'is bored and looking for something to do',
   hungry: 'is hungry and looking at the bowl',
   dirty: 'is in a messy area and needs cleaning',

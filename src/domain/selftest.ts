@@ -885,6 +885,20 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a granted wish stops nagging',nextStep({...open,wish:{...open.wish!,done:true}},n,noon).why!=='wish');
   ok('a trick wish opens Practice',nextStep({...open,wish:{...open.wish!,kind:'trick'}},n,noon).act==='practice');
   ok('a cups wish has words but no false button',nextStep({...open,wish:{...open.wish!,kind:'cups'}},n,noon).act===undefined);
+  // The care console shows the sentence in at most two lines; on a 360 px
+  // phone that is about 72 characters (measured: 76 overflowed, 70 fit), and a
+  // name may be 24 characters long. A sweep of states reaches the branches; the
+  // count of distinct sentences proves the sweep is not testing one line.
+  {const name='Abcdefghijklmnopqrstuvwx',seen=new Set<string>();
+   for(const hunger of [10,80])for(const energy of [8,80])for(const hygiene of [10,90])for(const poopCount of [0,3])for(const bladder of [0,95])for(const boredom of [0,95])
+   for(const trust of [10,60])for(const arousal of [5,50,95])for(const sick of [false,true])for(const calmSince of [undefined,noon])
+   for(const extra of [{},{away:true},{sleep:{...calm.sleep,asleep:true}},...(['toilet','bored','hungry','dirty','lonely','sick','tantrum'] as const).map(reason=>({call:{reason,since:noon}})),...(['walk','play','pet','cups','trick'] as const).map(kind=>({wish:{...calm.wish!,kind,done:false}}))]){
+    const st={...calm,needs:{hunger,energy,hygiene},poopCount,life:{...calm.life!,bladder,boredom},trust,arousal,sick,calmSince,...extra} as typeof calm;
+    seen.add(nextStep(st,name,noon).text);}
+   const texts=[...seen];
+   ok('the step sweep reaches at least twenty different sentences',texts.length>=20);
+   ok('every step sentence fits two phone lines, even with a 24-character name',texts.every(t=>t.length<=72));
+   ok('no swept step sentence guesses a gender',texts.every(t=>!/\b(him|his|he|her|she|hers)\b/i.test(t)));}
   ok('a one-point drift is not shown as care',meterChanges({trust:60},{trust:61}).length===0);
   ok('a two-point move is shown, with its sign',(()=>{const c=meterChanges({trust:60,energy:50},{trust:63,energy:48});return c.length===2&&c[0].d===3&&c[1].d===-2;})());
   const then=createPetState(noon),at=(h:number)=>({...then,updatedAt:noon+h*3_600_000});
