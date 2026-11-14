@@ -1108,7 +1108,7 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
         {/* ---- 3. THE NOTE ------------------------------------------------
             What the import did, said once, in the panel, in a line. Nothing
             pops over the reader. */}
-        {petState?.away&&<p className="park-live-note" role="status">{myDog.name} is here, wary. Pet him gently, a few times, to bring him home.</p>}
+        {petState?.away&&<p className="park-live-note" role="status">{myDog.name} is here, wary. A few gentle pets bring your dog home.</p>}
         {liveNote&&!watching&&<p className="park-live-note" role="status">{liveNote}</p>}
         {note && (
           <div

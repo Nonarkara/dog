@@ -32,10 +32,10 @@ import type { BehaviourName, PetState } from './types';
 import { timingQuality } from './training';
 
 export const STAGES = [
-  { id: 'lure', label: 'Lure', act: 'Lure', how: 'Hold a treat at his nose and move your hand to guide him into the position.' },
+  { id: 'lure', label: 'Lure', act: 'Lure', how: "Hold a treat at your dog's nose and move your hand to guide your dog into the position." },
   { id: 'signal', label: 'Hand signal', act: 'Signal', how: 'Same hand movement, but with no treat in that hand. The treat comes from your other hand after the marker.' },
   { id: 'wordSignal', label: 'Word, then signal', act: 'Word + signal', how: 'Say the word once, pause a beat, then give the hand signal. The word starts to predict the signal.' },
-  { id: 'word', label: 'Word only', act: 'Say it', how: 'Say the word once and keep your hands still. If he does not respond in three seconds, go back a stage.' },
+  { id: 'word', label: 'Word only', act: 'Say it', how: 'Say the word once and keep your hands still. If there is no response in three seconds, go back a stage.' },
   { id: 'proof', label: 'Anywhere', act: 'Say it', how: 'The word alone, with a little distance, duration or distraction. Raise only one at a time.' },
 ] as const;
 
@@ -139,10 +139,10 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
     next.misses = lesson.misses + 1;
     if (repeated) {
       next.skill = clamp01(lesson.skill - 0.04);
-      verdict = 'He did not respond, and the cue was repeated.';
-      tip = 'Say it once. Repeating it teaches him that the cue is "sit, sit, sit".';
+      verdict = 'No response, and the cue was repeated.';
+      tip = 'Say it once. Repeating it teaches your dog that the cue is "sit, sit, sit".';
     } else {
-      verdict = 'He did not respond within three seconds.';
+      verdict = 'No response within three seconds.';
       tip = 'Good — you waited and did not repeat yourself.';
       score = 0.5;
     }
@@ -169,7 +169,7 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
   if (input.markDelayMs < 0) {
     next.streak = 0;
     next.skill = clamp01(lesson.skill - 0.03);
-    verdict = `Marked ${Math.abs(Math.round(input.markDelayMs))} ms before he finished.`;
+    verdict = `Marked ${Math.abs(Math.round(input.markDelayMs))} ms before the dog finished.`;
     tip = 'An early marker pays for "almost". Wait until the behaviour is complete.';
     return { lesson: next, score: 0.1, verdict, tip, trustDelta, stageChange };
   }
@@ -189,18 +189,18 @@ export function scoreTrial(lesson: Lesson, input: TrialInput, now: number = Date
   const ms = Math.round(input.markDelayMs);
   verdict =
     timing === 1
-      ? `Marked ${ms} ms after he finished: on time.`
+      ? `Marked ${ms} ms after the dog finished: on time.`
       : timing > 0
-        ? `Marked ${ms} ms after he finished: reduced game timing credit.`
-        : `Marked ${ms} ms after he finished: outside the game timing target.`;
+        ? `Marked ${ms} ms after the dog finished: reduced game timing credit.`
+        : `Marked ${ms} ms after the dog finished: outside the game timing target.`;
   tip = repeated
-    ? 'He did it, but you said the cue more than once. Next time say it once and wait.'
+    ? 'Done, but you said the cue more than once. Next time say it once and wait.'
     : !treated
       ? 'The marker is a promise. Always follow it with a treat, or the marker stops meaning anything.'
       : !treatOnTime
         ? 'Treat within two seconds of the marker.'
         : timing < 1
-          ? 'Watch for the moment he completes it, and mark exactly then.'
+          ? 'Watch for the moment it is complete, and mark exactly then.'
           : 'Clean rep. Cue, wait, mark, treat.';
 
   if (next.skill >= 0.8 && next.streak >= 5 && lesson.stage < 4) {
@@ -227,7 +227,7 @@ export function endPracticeSession(state:PetState):PetState {
 export function sessionAdvice(lesson: Lesson, lastScore: number, now: number = Date.now()): string | null {
   const long = lesson.sessionStartedAt !== undefined && now - lesson.sessionStartedAt > SESSION_MS;
   if ((long || lesson.sessionTrials >= SESSION_TRIALS) && lastScore >= 0.6) {
-    return 'That was a good one. End the session here — on a success — and give him a break.';
+    return 'That was a good one. End the session here — on a success — and give your dog a break.';
   }
   if (long || lesson.sessionTrials >= SESSION_TRIALS) {
     return 'Session is long enough. Take a break; there is no need to push for another response.';
@@ -243,36 +243,36 @@ export function sessionAdvice(lesson: Lesson, lastScore: number, now: number = D
  */
 export const REAL_DOG: Record<BehaviourName, { lure: string; mistake: string }> = {
   sit: {
-    lure: 'Treat at his nose, move it slowly up and back over his head. His bottom drops as his head rises. Mark the moment it touches the floor.',
-    mistake: 'Pushing his bottom down. Let the lure do it.',
+    lure: "Treat at your dog's nose, move it slowly up and back over your dog's head. The bottom drops as the head rises. Mark the moment it touches the floor.",
+    mistake: 'Pushing the bottom down. Let the lure do it.',
   },
   down: {
-    lure: 'From a sit, take the treat from his nose straight down to between his paws, then slowly along the floor. Mark when his elbows touch.',
-    mistake: 'Moving the hand too fast; he stands up to follow it.',
+    lure: "From a sit, take the treat from your dog's nose straight down to between the front paws, then slowly along the floor. Mark when the elbows touch.",
+    mistake: 'Moving the hand too fast; your dog stands up to follow it.',
   },
   stay: {
-    lure: 'Ask for a sit, show a flat palm, wait one second, mark, and treat him IN position. Add seconds before you add distance.',
+    lure: 'Ask for a sit, show a flat palm, wait one second, mark, and treat IN position. Add seconds before you add distance.',
     mistake: 'Adding distance and time together. Raise one at a time.',
   },
   come: {
-    lure: 'Say his name and the word once in a happy voice, then back away. Mark as he reaches you and treat at your feet.',
-    mistake: 'Calling him to end the fun or for something he dislikes. Coming must always pay.',
+    lure: 'Say your dog\'s name and the word once in a happy voice, then back away. Mark on arrival and treat at your feet.',
+    mistake: 'Calling your dog to end the fun or for something unpleasant. Coming must always pay.',
   },
   paw: {
-    lure: 'Hold a treat in a closed fist near his paw. When he paws at it, mark and open your hand.',
-    mistake: 'Grabbing his paw. Let him offer it.',
+    lure: 'Hold a treat in a closed fist near a front paw. When your dog paws at it, mark and open your hand.',
+    mistake: 'Grabbing the paw. Let your dog offer it.',
   },
   wait: {
-    lure: 'At a doorway or food bowl, hold still. The moment he pauses, mark and release him with "OK".',
-    mistake: 'Releasing him when he pushes forward. Only stillness opens the door.',
+    lure: 'At a doorway or food bowl, hold still. The moment your dog pauses, mark and release with "OK".',
+    mistake: 'Releasing when your dog pushes forward. Only stillness opens the door.',
   },
   leaveIt: {
-    lure: 'Show a treat in a closed fist. Ignore sniffing and licking. The moment he backs off, mark and pay from your OTHER hand.',
-    mistake: 'Paying with the treat he was told to leave.',
+    lure: 'Show a treat in a closed fist. Ignore sniffing and licking. The moment your dog backs off, mark and pay from your OTHER hand.',
+    mistake: 'Paying with the treat that was meant to be left.',
   },
   fetch: {
-    lure: 'Mark and treat any touch of the toy. Then only when he picks it up. Then only when he brings it closer.',
-    mistake: 'Chasing him for the toy. That turns fetch into keep-away.',
+    lure: 'Mark and treat any touch of the toy. Then only when your dog picks it up. Then only when your dog brings it closer.',
+    mistake: 'Chasing your dog for the toy. That turns fetch into keep-away.',
   },
 };
 

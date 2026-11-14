@@ -275,7 +275,7 @@ export function temperament(state: PetState): string {
   if (p.playDrive > 0.5) return 'a dog who works for the ball';
   if (p.sociability > 0.4) return 'a dog who wants company';
   if (p.boldness > 0.4) return 'a dog who is not afraid of anything';
-  if (p.sociability < -0.3) return 'a dog who keeps his own distance';
+  if (p.sociability < -0.3) return 'a dog who keeps their distance';
   if (p.boldness < -0.3) return 'a careful dog';
   return 'a steady dog';
 }

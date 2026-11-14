@@ -21,9 +21,9 @@ export type Character='Steady'|'Playful'|'Clingy'|'Independent'|'Clever';
 
 export const CHARACTER_TEXT:Record<Character,string>={
   Steady:'calm and easy-going. Raised on a bit of everything.',
-  Playful:'always ready for a game. All that play shaped him.',
+  Playful:'always ready for a game. All that play shaped this dog.',
   Clingy:'happiest right beside you. All those strokes did it.',
-  Independent:'self-reliant. He learned to wait for you on his own.',
+  Independent:'self-reliant. Learned to wait patiently without being asked.',
   Clever:'quick to learn. Words and cups came easily.',
 };
 

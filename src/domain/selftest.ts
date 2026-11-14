@@ -32,9 +32,9 @@ import { chooseActivity, type Activity } from './parkPersonality';
 import { newRoomName, parseClient, validRoom, withinRate, RATE_LIMIT, WORLD } from './parkProtocol';
 import { addTogether, answerCall, tickCall, CALL_FADES_MS } from './attention';
 import { noseAccuracy, pickCup } from './nose';
-import { characterOf, revealCharacter, logCare, wishFor, grantWish, birthday, outOfQuietHours, nextCallAt, WISH_TRUST } from './life';
+import { CHARACTER_TEXT, characterOf, revealCharacter, logCare, wishFor, grantWish, birthday, outOfQuietHours, nextCallAt, WISH_TRUST } from './life';
 import { captureOf, isUnlocked, lockedBehind, offerChance, pair, wrongMark, withCapture, LEARNED } from './capture';
-import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, type Lesson } from './lesson';
+import { dogResponds, newLesson, scoreTrial, practiceSession, endPracticeSession, STAGES, REAL_DOG, type Lesson } from './lesson';
 import { computeCanineVitals } from './canineVitals';
 
 let failures = 0;
@@ -889,6 +889,9 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   // phone that is about 72 characters (measured: 76 overflowed, 70 fit), and a
   // name may be 24 characters long. A sweep of states reaches the branches; the
   // count of distinct sentences proves the sweep is not testing one line.
+  // Dogs are male or female; written guidance that is not tied to a dog's
+  // recorded sex says "your dog", never "he".
+  ok('training guidance and character lines name no gender',[...STAGES.flatMap(x=>[x.label,x.how]),...Object.values(REAL_DOG).flatMap(x=>[x.lure,x.mistake]),...Object.values(CHARACTER_TEXT)].every(t=>!/\b(he|him|his|she|her|hers)\b/i.test(t)));
   {const name='Abcdefghijklmnopqrstuvwx',seen=new Set<string>();
    for(const hunger of [10,80])for(const energy of [8,80])for(const hygiene of [10,90])for(const poopCount of [0,3])for(const bladder of [0,95])for(const boredom of [0,95])
    for(const trust of [10,60])for(const arousal of [5,50,95])for(const sick of [false,true])for(const calmSince of [undefined,noon])

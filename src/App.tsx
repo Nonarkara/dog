@@ -515,7 +515,7 @@ export const App: React.FC = () => {
     const next=await commitPet(latest=>{
       // He ran away: only gentle pets in the park reach him (domain/runaway.ts).
       if(latest.away){
-        if(action==='pet'&&activeRegion==='commons'){const r=coax(latest,Date.now());message=r.home?`${currentDog.name} came home with you. Hungry, and a little wary — feed him.`:`${currentDog.name} let you come closer. Stay gentle.`;trigger='pet';return r.state;}
+        if(action==='pet'&&activeRegion==='commons'){const r=coax(latest,Date.now());message=r.home?`${currentDog.name} came home with you. Hungry, and a little wary. Feed your dog.`:`${currentDog.name} let you come closer. Stay gentle.`;trigger='pet';return r.state;}
         message=`${currentDog.name} isn't home: find your dog in the park.`;trigger=null;return latest;
       }
       if((action==='play'||action==='walk')&&latest.sick){message=`${currentDog.name} needs rest. We can play again after recovery.`;trigger=null;return latest;}
@@ -735,7 +735,7 @@ export const App: React.FC = () => {
             <a href="/" aria-label="Tama-Dog-Chi modes">Tama-Dog-Chi</a>
           </span>
 
-          {playMode()==='own'&&<span className="owned-growth" title="One minute of active attention on each of seven days grows him up; twenty-eight days and he is a senior. Who he becomes depends on how you raise him.">{growthLabel(petState)}</span>}
+          {playMode()==='own'&&<span className="owned-growth" title="One minute of active attention on each of seven days grows your puppy up; twenty-eight days makes a senior. Who your dog becomes depends on how you raise them.">{growthLabel(petState)}</span>}
           {/* The chooser uses the existing Care region instead of covering the dog. */}
           <div className="relative shrink-0">
             <button

@@ -24,7 +24,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
     await p.waitForSelector('canvas',{timeout:60000});
     await p.waitForTimeout(4000);
     await p.getByRole('tab',{name:'Coach',exact:true}).click();
-    await p.getByText('Words he knows',{exact:true}).click();
+    await p.getByText('Words Expo knows',{exact:true}).click();
     const box=p.getByRole('textbox',{name:'Say a word to Expo'});
     await box.waitFor({state:'visible'});
     await box.fill('hello');

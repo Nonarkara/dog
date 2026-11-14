@@ -146,7 +146,7 @@ with sync_playwright() as p:
         log_btn.click()
         time.sleep(0.4)
     # A real rep: he did it, then he was marked.
-    press(page, "He did it")
+    press(page, "Did it")
     time.sleep(0.6)
     press(page, "Marked")
     time.sleep(0.8)

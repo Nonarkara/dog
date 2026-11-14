@@ -6,7 +6,7 @@ export function WordBook({petState,onSay,name}:{petState:PetState;onSay?:(word:s
  const send=(e:React.FormEvent)=>{e.preventDefault();const clean=word.trim().toLowerCase();if(!clean||!onSay)return;onSay(clean);setWord('');};
  return (
       <details className="practice-attempts practice-attempts--fold border-hairline-t px-2 py-1.5">
-        <summary className="label">Words he knows</summary>
+        <summary className="label">Words {name} knows</summary>
         {/* The way in. A word is only a word if someone can say it to him, and
             this is where the words live, so the saying lives here too. */}
         {onSay&&<form onSubmit={send} className="mt-1 flex items-center gap-1">
@@ -25,7 +25,7 @@ export function WordBook({petState,onSay,name}:{petState:PetState;onSay?:(word:s
           const words = entries.slice(0, 5);
           if (!words.length) return (
             <p className="mt-1 text-[11px] leading-snug text-faint">
-              None yet. Say a word, then care for him within 30 seconds — the word starts to mean what followed it.
+              None yet. Say a word, then care for {name} within 30 seconds — the word starts to mean what followed it.
             </p>
           );
           return (
