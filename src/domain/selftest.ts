@@ -859,6 +859,10 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
      ok('a dog jittering inside the rim band does not flip, whether it started on the canopy or on the lawn',run('t1')===0&&run(null)===0);
      ok('leaving the canopy still happens once the dog is clearly past the rim',at(1.06,'t1')===null);
      ok('entering needs the inner rim: the band alone does not put a lawn dog on the canopy',at(1.02,null)===null&&at(.98,null)==='t1');}
+    const benchMatch=scenery.match(/translate\((-?\d+) (-?\d+)\)">.*?M-72 -4V-62M72 -4V-62/);
+    ok('park bench sits on the lawn in front of the back fence (never hidden by fence rails)',!!benchMatch&&Number(benchMatch[2])-62>-222&&Number(benchMatch[1])-84>44);
+    const lastTuft=scenery.lastIndexOf('M-12 2q-2-12-6-14'),firstTree=scenery.indexOf('M-83-55C-113-95');
+    ok('ground tufts and flower beds draw beneath tree canopies',lastTuft>0&&firstTree>lastTuft);
   }
 
 

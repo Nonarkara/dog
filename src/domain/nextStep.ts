@@ -39,7 +39,7 @@ export function nextStep(s:PetState,name:string,now:number):Step{
     return {text:`${name} ${CALL_TEXT[s.call.reason]}.`,act:first as StepAct,why:'call'};
   }
   if(mood==='bored')return need(`${name} is bored. A game or a sniff walk helps.`,'play');
-  if(s.calmSince!==undefined)return {text:`${name} is resting quietly. Watch, then reward calm.`,act:'rewardCalm',why:'idle'};
+  if(s.calmSince!==undefined)return {text:`${name} is resting quietly: watch, then reward.`,act:'rewardCalm',why:'idle'};
   const w=wishFor(s,now);
   if(!w.done)return {text:`Today ${name} ${WISH_TEXT[w.kind]}.${w.kind==='cups'?' Tap the cups icon on the stage.':''}`,act:WISH_ACT[w.kind],why:'wish'};
   if(s.trust<35)return {text:`${name} needs gentle company. A stroke builds trust.`,act:'pet',why:'idle'};
@@ -55,7 +55,7 @@ export function nextStep(s:PetState,name:string,now:number):Step{
   // place this panel says "do this", so quiet time is offered here instead of
   // a sentence that says nothing is urgent.
   if(calmNeed(s)===null&&s.arousal>=20&&s.arousal<=80)
-    return need(`${name} could settle. Offer quiet time, then reward the calm.`,`settle`);
+    return need(`${name} can settle: offer quiet time, then reward.`,`settle`);
   return {text:`${name} is comfortable. Nothing is urgent.`,why:'idle'};
 }
 

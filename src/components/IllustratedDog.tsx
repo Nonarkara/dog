@@ -288,7 +288,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const up=()=>{stroking=false;};
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
     let renders=0,last=0,next=0,lastInterval=0,start=performance.now();
-    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let wasTravelling=false,driftX=0,paceX=0,paceGoal=1,paceDir=1,pacePhase='idle',paceTurnUntil=0,fitRatio=1,strideShown=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
+    const times:number[]=[];let ambientLabel='watching',dailyAct:DogBehaviour='watching',dailyUntil=4,wasSleeping=false,wakePending=false,wakeStarted=-Infinity;let wasTravelling=false,wasLocomoting=false,wasMoving=false,locomotionChangedAt=-Infinity,movementStartedAt=-Infinity,driftX=0,paceX=0,paceGoal=1,paceDir=1,pacePhase='idle',paceTurnUntil=0,fitRatio=1,strideShown=0,nextBlink=performance.now()+2500,blinkStarted=-Infinity,nextGreeting=performance.now()+18000,nextDream=performance.now()+5000;
     let approachScale=1;
     const animate=(now:number)=>{
       frame=requestAnimationFrame(animate);if(document.hidden){last=0;next=0;times.length=0;return;}
@@ -297,7 +297,7 @@ function IllustratedStage(props: Props & {url:string}) {
       // A still dog only breathes, and breathing survives thirty frames a
       // second. Everything else — every expression, every step — runs at
       // sixty, so a movement is never sampled twice on the same beat.
-      const still=!state.interactionTrigger&&!state.poseRequest&&!fun.current&&!gameRef.current&&!findingRef.current&&now>=reaction.current.petUntil&&now-poseChangedAt>=transitionDuration&&STILL_BEHAVIOURS.includes(dailyAct)&&now-blinkStarted>=220;
+      const still=!state.interactionTrigger&&!state.poseRequest&&!fun.current&&!gameRef.current&&!findingRef.current&&now>=reaction.current.petUntil&&now-poseChangedAt>=transitionDuration&&now-locomotionChangedAt>=260&&STILL_BEHAVIOURS.includes(dailyAct)&&now-blinkStarted>=220;
       const targetFps=reduced.matches?6:state.petState.sleep?.asleep?12:still?30:60;
       const interval=1000/targetFps;canvas.dataset.targetFps=String(targetFps);
       if(!next)next=now;
@@ -438,7 +438,7 @@ function IllustratedStage(props: Props & {url:string}) {
       if(pacing){
         // He turns before he sets off. A dog that starts walking without
         // turning flips his face in a single frame, and that frame is a pop.
-        if(pacePhase==='idle'){pacePhase='turn';paceTurnUntil=now+TURN_MS;paceGoal=Math.random()<.5?1:-1;paceDir=paceGoal>0?1:-1;}
+        if(pacePhase==='idle'){pacePhase='turn';paceTurnUntil=now+TURN_MS;paceGoal=Math.random()<.5?1:-1;paceDir=paceGoal>0?1:-1;motionPhase=Math.round(motionPhase*2)/2;}
         if(pacePhase==='turn'){if(now>=paceTurnUntil)pacePhase='walk';}
         else{
           const goalX=paceGoal>0?floorHi:floorLo,dx=goalX-paceX;
@@ -466,8 +466,16 @@ function IllustratedStage(props: Props & {url:string}) {
       const turning=pacing&&pacePhase==='turn';
       const pivoting=!!atlas&&shownPose==='stand'&&transition===1&&!request&&(Math.abs(facingE.v)<.96||turning);
       const movement=!!atlas&&!reduced.matches&&!asleep&&!p.petState.sick&&shownPose==='stand'&&transition===1&&(!request||request.pose==='stand')&&(!action||action==='walk')&&!turning&&(zoomies||pacing||kind==='come'||kind==='turn'||kind==='away'||kind==='back');
+      const locomoting=!!(movement||pivoting)&&!!atlas;
+      if(locomoting!==wasLocomoting){wasLocomoting=locomoting;locomotionChangedAt=now;}
+      if(movement&&!wasMoving)movementStartedAt=now;
+      wasMoving=movement;
+      if(!reduced.matches&&now-locomotionChangedAt<260){
+        uniforms.settling.value+=poseSettling((now-locomotionChangedAt)/260,false)*.42;
+        outgoingUniforms.settling.value=uniforms.settling.value;
+      }
       canvas.dataset.motionReady=String(!!atlas);canvas.dataset.motionFrame='-1';canvas.dataset.pivoting='false';canvas.dataset.strideBlend='0';
-      if((movement||pivoting)&&atlas){
+      if(locomoting&&atlas){
         const delta=skin.position.x-lastMotionX;
         // The stride is measured against the drawing, not against a guess: the
         // park advances a walk by 0.30 of a tile's width and a run by 0.46.
@@ -506,7 +514,8 @@ function IllustratedStage(props: Props & {url:string}) {
         const cycle=index<32||walking?32:depthKind?16:0;
         const gaitFrame=depthKind?approachTime*14:motionPhase*cycle;
         const target=from.map(point=>[...point] as [number,number]);
-        if(cycle){const f=gaitFrame,part=f-Math.floor(f),base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
+        const strideEase=reduced.matches?1:smooth01(0,1,Math.min(1,(now-movementStartedAt)/160));
+        if(cycle){const f=gaitFrame,part=(f-Math.floor(f))*strideEase,base=index-Math.floor(f)%cycle,nextRig=sourceRig(artName,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){target[j][0]+=(nextRig[j][0]-from[j][0])*part;target[j][1]+=(nextRig[j][1]-from[j][1])*part;}}
         writeRig(uniforms.strideFrom.value,uniforms.strideTo.value,from,target);
         canvas.dataset.strideBlend=String(cycle?gaitFrame%1:0);canvas.dataset.pivoting=String(pivoting&&!movement);
         uniforms.art.value=atlas.texture;uniforms.artTile.value.set(...tileUv(index));uniforms.locomotion.value=1;uniforms.running.value=index<32?1:0;

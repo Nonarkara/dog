@@ -80,9 +80,9 @@ const DogAvatar3D = lazy(() =>
 const RiggedAvatar = lazy(() =>
   import('./components/RiggedAvatar').then((m) => ({ default: m.RiggedAvatar }))
 );
-const CommonsPanel = lazy(() =>
-  import('./components/CommonsPanel').then((m) => ({ default: m.CommonsPanel }))
-);
+const loadCommons = () =>
+  import('./components/CommonsPanel').then((m) => ({ default: m.CommonsPanel }));
+const CommonsPanel = lazy(loadCommons);
 const loadCoach = () =>
   import('./components/CoachPanel').then((m) => ({ default: m.CoachPanel }));
 const CoachPanel = lazy(loadCoach);
@@ -470,10 +470,11 @@ export const App: React.FC = () => {
   // An open call shows on the home-screen icon, when installed.
   useEffect(()=>{const n=navigator as Navigator&{setAppBadge?:(n:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};void (petState.call?n.setAppBadge?.(1):n.clearAppBadge?.())?.catch(()=>{});},[petState.call]);
 
-  // Coach and Record are where an owner goes next. Fetch them once the stage
-  // has settled, so tapping them opens a panel instead of a spinner.
+  // Commons, Coach and Record are where an owner goes next. Fetch them once the
+  // stage has settled, so tapping Walk or a panel opens immediately instead of a spinner.
   useEffect(()=>{const t=window.setTimeout(()=>{
     if(document.visibilityState!=='visible'||(navigator as Navigator&{connection?:{saveData?:boolean}}).connection?.saveData)return;
+    void loadCommons().catch(()=>{/* Optional prefetch; opening Commons still owns its loading state. */});
     void loadCoach().catch(()=>{/* Optional prefetch; opening Coach still owns its loading state. */});
     void loadRecord().catch(()=>{/* Optional prefetch; Record remains available on demand. */});
   },1500);return()=>window.clearTimeout(t);},[]);

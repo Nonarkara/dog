@@ -57,11 +57,24 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
 
     /* What the reader sees is what is asserted: the step itself. Quiet time
        settles him, so the step becomes the reward once the observation has
-       been waited out. */
+       been waited out. While an action plays, the next-step button disables
+       itself (with aria-busy) and the stage announces the action via status. */
     await p.locator('.care-step-btn').click();
+    await p.waitForSelector('.bar--note[role="status"]',{timeout:5000});
+    const busyState=await p.evaluate(()=>{
+      const btn=document.querySelector('.care-step-btn');
+      const stepEl=document.querySelector('.care-step');
+      const live=[...document.querySelectorAll('[role="status"],[aria-live="polite"]')].map(e=>e.textContent?.trim()).filter(Boolean);
+      return {disabled:!!btn?.disabled,ariaBusy:btn?.getAttribute('aria-busy'),stepLive:stepEl?.getAttribute('aria-live'),opacity:btn?parseFloat(getComputedStyle(btn).opacity):1,live};
+    });
+    assert.equal(busyState.disabled,true,'Next-step button must be disabled while an action is playing');
+    assert.equal(busyState.ariaBusy,'true','Next-step button must expose aria-busy="true" while an action is playing');
+    assert.equal(busyState.stepLive,'polite','Next-step container must announce changes politely to screen readers');
+    assert(busyState.opacity<0.7,`Disabled next-step button must grey out visually, got opacity ${busyState.opacity}`);
+    assert(busyState.live.length>0,'Screen-reader status region must announce the action');
     await p.waitForFunction(()=>{
       const el=document.querySelector('.care-step-btn');
-      return el && /^Reward/.test(el.getAttribute('aria-label')||'');
+      return el && !el.disabled && /^Reward/.test(el.getAttribute('aria-label')||'');
     },{timeout:60000});
     await p.locator('.care-step-btn').click();
     await p.waitForTimeout(1500);

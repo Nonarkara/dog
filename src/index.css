@@ -1304,6 +1304,8 @@ html {font-synthesis:none;}
 .care-step{display:flex;align-items:center;gap:8px;}
 .care-step>p{flex:1 1 auto;min-width:0;}
 .care-step-btn{flex:none;min-height:32px;padding:0 12px;background:var(--accent);color:var(--bg-surface);border:1px solid var(--accent);font-size:13px;font-weight:700;line-height:1;}
+.care-console:not(.care-detail-view) .care-step>p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.care-console:not(.care-detail-view) .care-step-btn{min-height:18px;padding:1px 8px;font-size:11px;}
 .care-step-btn:active{transform:scale(.97);}
 .care-step-btn:disabled{opacity:.45;cursor:default;}
 .care-step[data-why=idle]>.care-step-btn,.care-step[data-why=wish]>.care-step-btn{background:transparent;color:var(--accent);}

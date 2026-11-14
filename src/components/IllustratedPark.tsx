@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {canopyAt} from '../domain/parkCanopy';
 import * as THREE from 'three';
 import {PLAY_PERSONALITIES} from './dogPlay';
-import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,smooth01,walkIndex,tileUv,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
 import {landmarksFor,poseAnchors,type ArtPose} from './illustratedRig';
 import {growthStage} from '../domain/growth';
 import type {PetState} from '../domain/types';
@@ -21,7 +21,7 @@ export interface ParkApi {spawnNeighbor:(dog:MetaverseNeighborDog)=>void;removeN
  /** Live park: show a pet on a dog without counting it as yours (hearts only). */
  cheer:(id:string)=>void;
  /** Send your dog and a neighbour into a chase, and show the moment. */
- play:(id:string)=>void;}
+ play:(id?:string)=>void;}
 interface Props {appearance:DogProfile;dogId:string;name:string;petState?:PetState;neighbors:MetaverseNeighborDog[];zoom:number;focusId:string|null;onZoom:(zoom:number)=>void;onSelect:(id:string)=>void;onPet:()=>void;onSocialize:()=>void;onClean?:()=>void;onWalk?:(distance:number,seconds:number)=>void;onReady:(api:ParkApi)=>void;onError:(message:string)=>void;
  /** Watch mode: the camera frames the whole pack and your dog plays on its own. */
  ambient?:boolean;
@@ -128,9 +128,12 @@ export function IllustratedPark(props:Props){
    // A dog seen for the first time appears where it already is, not at a default spot.
    if(!a.hasWalked&&Math.hypot(a.x-a.tx,a.y-a.ty)>200*unit){a.x=a.tx;a.y=a.ty;}};
   const cheer=(id:string)=>{const a=actors.get(id);if(!a)return;const now=performance.now();a.petUntil=now+2200;a.tx=a.x;a.ty=a.y;sound.happyYip();};
-  const play=(id:string)=>{const a=actors.get(ownId),b=actors.get(id);if(!a||!b||!b.raster||b.remote||a.mode==='chase')return;
-   const now=performance.now();a.mode='chase';a.partner=b.id;a.bowUntil=now+900;a.until=now+5200;a.sniffUntil=0;
-   b.mode='flee';b.partner=a.id;b.until=a.until;b.sniffUntil=0;[b.tx,b.ty]=farPoint(b);
+  const play=(id?:string)=>{const a=actors.get(ownId);if(!a||a.mode==='chase')return;
+   const b=id&&id!==ownId?actors.get(id):[...actors.values()].filter(c=>!c.own&&!c.remote&&c.raster).sort((p,q)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(q.x-a.x,q.y-a.y))[0];
+   if(!b||!b.raster||b.remote)return;
+   const now=performance.now();a.mode='chase';a.partner=b.id;a.bowUntil=now+450;a.until=now+5600;a.sniffUntil=0;a.petUntil=0;face(a,b);
+   b.mode='flee';b.partner=a.id;b.until=a.until;b.bowUntil=0;b.sniffUntil=0;b.petUntil=0;[b.tx,b.ty]=farPoint(b,a);b.heading=Math.atan2(b.ty-b.y,b.tx-b.x);
+   a.tx=b.tx;a.ty=b.ty;a.heading=Math.atan2(b.y-a.y,b.x-a.x);
    latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});};
   let focus=props.focusId&&actors.has(props.focusId)?props.focusId:ownId,propFocus=props.focusId,cx=0,cy=35*unit,zoom=props.zoom,lastPet=-Infinity,lastSocial=-Infinity,lastMoment=new Map<string,number>();
   const pet=(id:string)=>{const a=actors.get(id);if(!a)return;focus=id;latest.current.onSelect(id);if(a.own&&!latest.current.petState?.away&&(latest.current.petState?.sleep.asleep||latest.current.petState?.sick))return;
@@ -159,7 +162,7 @@ export function IllustratedPark(props:Props){
   const up=(e:PointerEvent)=>{if(!pointers.has(e.pointerId))return;const start=pointers.get(e.pointerId)!;pointers.delete(e.pointerId);if(!pinching&&!strokeId&&!start.moved&&Math.hypot(e.clientX-start.startX,e.clientY-start.startY)<15){const own=actors.get(ownId)!;if(!latest.current.petState?.sleep.asleep&&!latest.current.petState?.sick){const p=point(e);endGreeting();own.tx=Math.max(-420*unit,Math.min(420*unit,p.x));own.ty=Math.max(-280*unit,Math.min(400*unit,p.y));const px=(own.tx/unit+275)/180,py=(own.ty/unit-90)/115,d=Math.hypot(px,py);if(d<1){own.tx=(-275+px/Math.max(d,.001)*180)*unit;own.ty=(90+py/Math.max(d,.001)*115)*unit;}focus=ownId;latest.current.onSelect(ownId);}}pinch=0;};
   const wheel=(e:WheelEvent)=>{e.preventDefault();latest.current.onZoom(zoom*Math.exp(-e.deltaY*.001));};
   // A greeting holds your dog still for a moment, but steering is always yours: any move input ends it at once.
-  const endGreeting=()=>{const o=actors.get(ownId);if(o&&!latest.current.ambient){o.sniffUntil=0;o.bowUntil=0;}};
+  const endGreeting=()=>{const o=actors.get(ownId);if(o&&!latest.current.ambient){o.sniffUntil=0;o.bowUntil=0;if(o.mode==='chase'){const pr=o.partner?actors.get(o.partner):null;settle(o,performance.now());if(pr&&pr.partner===o.id)settle(pr,performance.now());}}};
   const keys=new Set<string>(),typing=(t:EventTarget|null)=>t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||(t instanceof HTMLElement&&t.isContentEditable);
   const keydown=(e:KeyboardEvent)=>{if(typing(e.target)||e.ctrlKey||e.metaKey)return;const key=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();keys.add(key);focus=ownId;endGreeting();}};const stopKeyboard=(coast=false)=>{const own=actors.get(ownId);if(!own)return;const tail=coast&&own.speed>1?8*unit:0;own.tx=own.x+Math.cos(own.heading)*tail;own.ty=own.y+Math.sin(own.heading)*tail;if(!coast)own.speed=0;};
   const keyup=(e:KeyboardEvent)=>{const held=keys.delete(e.key.toLowerCase());if(held&&!keys.size)stopKeyboard(true);};const blur=()=>{if(keys.size)stopKeyboard();keys.clear();};
@@ -184,11 +187,17 @@ export function IllustratedPark(props:Props){
   const ownAvailable=()=>{const o=actors.get(ownId),s=latest.current.petState;return !!o&&!!o.raster&&!!s&&!s.away&&!s.sleep.asleep&&!s.sick&&!hungry()&&o.mode==='wander'&&o.speed<2&&Math.hypot(o.tx-o.x,o.ty-o.y)<6&&!keys.size&&!pointers.size;};
   let greetings=0;
   const canPlay=(b:Actor)=>!!b.raster&&!b.remote&&b.mode==='wander'&&(!b.own||ownFree());
-  const farPoint=(b:Actor):[number,number]=>{const angle=Math.random()*Math.PI*2,r=(170+Math.random()*130)*unit;return [clampX(b.x+Math.cos(angle)*r),clampY(b.y+Math.sin(angle)*r*.8)];};
+  const farPoint=(b:Actor,from?:Actor):[number,number]=>{
+   const base=from?Math.atan2(b.y-from.y,b.x-from.x)+(Math.random()-.5)*1.2:Math.random()*Math.PI*2;
+   const r=(190+Math.random()*120)*unit;
+   let tx=clampX(b.x+Math.cos(base)*r),ty=clampY(b.y+Math.sin(base)*r*.8);
+   if(from&&Math.hypot(tx-from.x,ty-from.y)<140*unit){const alt=Math.atan2(-from.y,-from.x)+(Math.random()-.5)*1.0;tx=clampX(b.x+Math.cos(alt)*r);ty=clampY(b.y+Math.sin(alt)*r*.8);}
+   return [tx,ty];
+  };
   const settle=(a:Actor,now:number)=>{a.mode='wander';a.partner=null;a.tx=a.x;a.ty=a.y;a.until=now+1500+Math.random()*2500;};
   const face=(a:Actor,b:Actor)=>{a.facing=b.x>a.x?-1:1;b.facing=a.x>b.x?-1:1;};
   // Places in the drawn park a dog can go to on purpose (park units).
-  const BOWL:[number,number]=[22,232],BENCH:[number,number]=[125,-168];
+  const BOWL:[number,number]=[22,232],BENCH:[number,number]=[145,-96];
   const LOOKOUTS:[number,number][]=[[-250,-150],[300,-40],[-190,330],[250,330]];
   const still=(m:Actor['mode'])=>m==='rest'||m==='sit'||m==='feed'||m==='nap';
   const goTo=(a:Actor,[x,y]:[number,number],then:'sit'|'feed'|'nap',now:number)=>{a.mode='walkto';a.then=then;a.tx=clampX(x*unit);a.ty=clampY(y*unit);a.until=now+20000;};
@@ -200,7 +209,7 @@ export function IllustratedPark(props:Props){
    const guest=!a.own&&!latest.current.ambient&&ownAvailable()?actors.get(ownId)!:null;
    const linger=(base:number)=>(base+Math.random()*base)*me.linger;
    switch(chooseActivity(a.artId,Math.random(),friends.length>0||!!guest)){
-    case 'chase':{if(!friends.length&&guest){a.mode='visit';a.partner=guest.id;a.tx=clampX(guest.x+(a.x<guest.x?-118:118)*unit);a.ty=clampY(guest.y+8*unit);a.until=now+7000;return;}const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b);a.bowUntil=now+900;a.until=b.until=now+5200;
+    case 'chase':{if(!friends.length&&guest){a.mode='visit';a.partner=guest.id;a.tx=clampX(guest.x+(a.x<guest.x?-118:118)*unit);a.ty=clampY(guest.y+8*unit);a.until=now+7000;return;}const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b,a);b.heading=Math.atan2(b.ty-b.y,b.tx-b.x);a.tx=b.tx;a.ty=b.ty;a.heading=Math.atan2(b.y-a.y,b.x-a.x);a.bowUntil=now+600;a.until=b.until=now+5200;
      const key=[a.id,b.id].sort().join('|')+':chase';
      if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});}
      return;}
@@ -218,12 +227,12 @@ export function IllustratedPark(props:Props){
    if((a.mode==='chase'||a.mode==='flee'||a.mode==='visit')&&!partner){settle(a,now);return;}
    if(a.mode==='chase'&&partner&&now>a.bowUntil){
     a.tx=partner.x;a.ty=partner.y;
-    if(Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);
+    if(now>a.bowUntil+650&&Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);
      const key=[a.id,partner.id].sort().join('|')+':tumble';
      if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'tumble',a:a.name,b:partner.name});}
      settle(a,now);settle(partner,now);return;}
    }
-   if(a.mode==='flee'&&Math.hypot(a.tx-a.x,a.ty-a.y)<20*unit)[a.tx,a.ty]=farPoint(a);
+   if(a.mode==='flee'&&Math.hypot(a.tx-a.x,a.ty-a.y)<20*unit)[a.tx,a.ty]=farPoint(a,partner);
    if(a.mode==='visit'&&partner&&Math.hypot(a.tx-a.x,a.ty-a.y)<10*unit){
     if(Math.hypot(partner.x-a.x,partner.y-a.y)<130*unit&&partner.mode!=='chase'&&partner.mode!=='flee'&&(!partner.own||ownAvailable())){a.bowUntil=now+800;partner.bowUntil=Math.max(partner.bowUntil,now+1000);a.sniffUntil=now+2400;partner.sniffUntil=Math.max(partner.sniffUntil,now+2400);face(a,partner);greetings++;canvas.dataset.greetings=String(greetings);
       if(partner.own){canvas.dataset.greetedOwn='true';if(now-lastSocial>30000){lastSocial=now;latest.current.onSocialize();}}}
@@ -250,7 +259,7 @@ export function IllustratedPark(props:Props){
    // top of each other. The one that is free to move steps aside, by walking.
    const placed=[...actors.values()].filter(a=>a.raster);
    for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){
-    const a=placed[i],b=placed[j];if(a.partner===b.id&&(a.mode==='chase'||a.mode==='flee'))continue;
+    const a=placed[i],b=placed[j];if((a.partner===b.id||b.partner===a.id)&&(a.mode==='chase'||a.mode==='flee'||a.mode==='visit'||b.mode==='visit'))continue;
     // Different elevations never press on each other: a dog up in a canopy
     // is not occupying the same ground as a dog on the lawn.
     if((a.onCanopy!==null)!==(b.onCanopy!==null))continue;
@@ -268,19 +277,20 @@ export function IllustratedPark(props:Props){
     mover.tx=clampX(mover.x+sign*nx*gap);mover.ty=clampY(mover.y+sign*ny*gap*.6);
    }
    for(const a of actors.values()){
-    if(!reduced.matches&&!a.remote&&(!a.own||ownFree()))behave(a,now);
+    if(!reduced.matches&&!a.remote&&(!a.own||ownFree()||a.mode==='chase'))behave(a,now);
     else if(a.own&&a.mode!=='wander')settle(a,now);
     if(a.own&&p.ambient&&hungry()&&!resting){a.tx=a.x;a.ty=a.y;}
     const distance=Math.hypot(a.tx-a.x,a.ty-a.y),moving=distance>2&&(a.own||!reduced.matches)&&!(a.own&&resting)&&now>a.petUntil&&now>a.sniffUntil&&now>a.bowUntil&&!still(a.mode);
     const desiredHeading=moving?Math.atan2(a.ty-a.y,a.tx-a.x):a.heading;
     const error=Math.atan2(Math.sin(desiredHeading-a.heading),Math.cos(desiredHeading-a.heading));
     a.heading=turnAngle(a.heading,desiredHeading,dt*4.4);
-    const playSpeed=a.mode==='chase'?90:a.mode==='flee'?80:a.mode==='visit'||a.mode==='walkto'?48:null;
+    const playSpeed=a.mode==='chase'?104:a.mode==='flee'?96:a.mode==='visit'||a.mode==='walkto'?52:null;
     const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?40:distance>100*unit||dx||dy?78:58):30))*unit*Math.min(1.08,PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error)):0;
     a.speed+=(wantedSpeed-a.speed)*(1-Math.exp(-dt*(moving?7:11)));
     if(!moving&&(now<a.petUntil||now<a.sniffUntil||now<a.bowUntil||still(a.mode)||(a.own&&resting)))a.speed=0;
     const step=moving?Math.min(distance,a.speed*dt):0;let traveled=0;
     if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;if(a.own&&traveled>.01)p.onWalk?.(traveled/unit,dt);}
+    else if(a.blend>.01){const nearest=Math.round(a.stride*2)/2;a.stride+=(nearest-a.stride)*Math.min(1,dt*10);}
     a.blend+=((traveled>.01?1:0)-a.blend)*(1-Math.exp(-dt*10));
     const view=viewFor(a.heading);if(step>.01)a.facing=view.facing;
     const pose:ArtPose=(a.own&&p.petState?.sleep.asleep)||(a.remote&&a.remoteAsleep)?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':now<a.bowUntil?'bow':a.mode==='rest'?'down':a.mode==='nap'?'sleep':a.mode==='sit'?'sit':a.mode==='feed'?'feed':a.own&&p.ambient&&hungry()?'sit':'stand';applyPose(a,pose);
@@ -296,9 +306,10 @@ export function IllustratedPark(props:Props){
     if(a.own)canvas.dataset.blink=u.blink.value.toFixed(3);
     let motionPoints:[number,number][]|null=null,contactFlags:boolean[]=[];
     if(animated){
-     const traveling=a.blend>.15&&!reduced.matches&&Math.abs(error)<.25;
+     const wasWalk=a.motionFrame>=0&&(a.motionFrame<48||a.motionFrame>=80);
+     const traveling=a.blend>(wasWalk?.08:.15)&&!reduced.matches&&Math.abs(error)<(wasWalk?.34:.25);
      const depth=traveling&&Math.abs(Math.sin(a.heading))>(a.motionFrame>=MOTION_LAYOUT.towardStart&&a.motionFrame<MOTION_LAYOUT.walkMidStart?.70:.84);
-     const side=traveling&&!depth,running=side&&a.speed>(a.motionFrame>=0&&a.motionFrame<32?78:92)*unit;
+     const side=traveling&&!depth,running=side&&(a.mode==='chase'||a.mode==='flee'?a.speed>58*unit:a.speed>(a.motionFrame>=0&&a.motionFrame<32?78:92)*unit);
      const turnIndex=(Math.round((((Math.PI-a.heading)/(Math.PI*2))%1+1)%1*32)%32);
      const index=side?(running?Math.floor(a.stride*32)%32:walkIndex(Math.floor(a.stride*32))):depth?(Math.sin(a.heading)>0?80:96)+Math.floor(a.stride*16)%16:48+turnIndex;
      a.motionFrame=index;a.raster=a.motionFrames[index];a.facing=side?view.facing:1;
@@ -306,12 +317,12 @@ export function IllustratedPark(props:Props){
      // IN-BETWEENS: a walk has 32 drawings (16 authored, 16 RIFE in-betweens), about 16 a second. Between two drawings the
      // legs are warped from this drawing's joints toward the next one's, so the stride
      // moves every frame instead of in stop-motion steps.
-     {const walking=side&&!running,cycle=side?32:depth?16:0;if(cycle){const f=a.stride*cycle,t=f-Math.floor(f),base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle);for(let j=4;j<16;j++){gait.points[j][0]+=(next[j][0]-from[j][0])*t;gait.points[j][1]+=(next[j][1]-from[j][1])*t;}}}
+     {const walking=side&&!running,cycle=side?32:depth?16:0,strideEase=smooth01(.06,.56,a.blend);if(cycle){const f=a.stride*cycle,t=(f-Math.floor(f))*strideEase,base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle),standRig=sourceRig(a.motionFile!,48+turnIndex);for(let j=4;j<16;j++){const gx=from[j][0]+(next[j][0]-from[j][0])*t,gy=from[j][1]+(next[j][1]-from[j][1])*t;gait.points[j][0]=standRig[j][0]+(gx-standRig[j][0])*strideEase;gait.points[j][1]=standRig[j][1]+(gy-standRig[j][1])*strideEase;}}}
      a.strideSize=(running?.46:depth?.30:.30)*a.w/.80;motionPoints=gait.points;contactFlags=frameArt(a.motionFile!,index).feet.map(point=>point[1]>.883);
-     u.running.value=running?1:0;u.runNeck.value.set(...runNeckFor(index));
+     u.running.value=running?1:0;u.runNeck.value.set(...runNeckFor(index));u.settling.value=!reduced.matches?Math.sin(smooth01(0,1,a.blend)*Math.PI)*.09:0;
      if(petting){motionPoints[0][0]+=.006;motionPoints[0][1]+=.003;}
      writeRig(u.strideFrom.value,u.strideTo.value,from,motionPoints);u.locomotion.value=1;u.morphAmount.value=0;
-    }else{a.motionFrame=-1;a.raster=a.poseRaster||a.raster;u.locomotion.value=0;u.running.value=0;}
+    }else{a.motionFrame=-1;a.raster=a.poseRaster||a.raster;u.locomotion.value=0;u.running.value=0;u.settling.value=0;}
     const r=a.raster;if(r){u.art.value=r.texture;u.artTile.value.copy(r.tile||v4Tile);}
     u.profile.value.set(a.artId==='mali-2022'?1.08:a.artId==='paolo-pug'?1.05:1,a.artId==='mali-2022'&&a.pose==='stand'?.65:0);u.morphAmount.value=animated||reduced.matches?0:Math.max(0,1-(now-a.poseAt)/420);u.time.value=reduced.matches?0:now/1000+a.phase;u.reduced.value=reduced.matches?1:0;u.puppy.value=1-growth.progress;
     u.motion.value.lerp(v4a.set(petting?1:0,moving?1:0,0,0),1-Math.exp(-dt*7));u.more.value.lerp(v4a.set(0,now<a.sniffUntil?1:0,a.own&&p.petState?.sick?1:0,0),1-Math.exp(-dt*5));
