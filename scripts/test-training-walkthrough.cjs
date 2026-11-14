@@ -4,14 +4,18 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-training-walkthrough';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true}),report=[];
 try{
- const fresh=async(w=390,h=844,reduced=false)=>{const p=await browser.newPage({viewport:{width:w,height:h},reducedMotion:reduced?'reduce':'no-preference'});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded',timeout:60000});await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>8);if(w<1024||h<820)await p.getByRole('tab',{name:'Coach',exact:true}).click();return p;};
+ const fresh=async(w=390,h=844,reduced=false)=>{const p=await browser.newPage({viewport:{width:w,height:h},reducedMotion:reduced?'reduce':'no-preference'});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded',timeout:60000});await p.bringToFront();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>8);
+  // The practice deck (lure, signal, word) now opens only for a word the dog has already learned by capture, and the words unlock in a fixed order. Learning eight words by hand is the capture game's own test, so seed Expo's eight as learned and reload.
+  if(!process.env.DOG_TRAINING_ENROLL_ONLY){await p.evaluate(()=>{const save=JSON.parse(localStorage.getItem('canine_os_save_v3')),pet=save.pets['expo-2021'];pet.capture={...pet.capture};for(const n of ['sit','down','paw','come','fetch','stay','wait','leaveIt'])pet.capture[n]={association:1,pairings:5};localStorage.setItem('canine_os_save_v3',JSON.stringify(save));});await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>8);}if(w<1024||h<600)await p.getByRole('tab',{name:'Coach',exact:true}).click();return p;};
  const deck=p=>p.locator('[data-practice-phase]');
+ const chip=(p,label)=>deck(p).getByRole('button',{name:new RegExp('^(✓ )?'+label+'$')});
+ const proof=async p=>{const b=p.getByRole('button',{name:/^Proof it/});await b.waitFor();await b.click();await deck(p).getByRole('button',{name:'Lure',exact:true}).waitFor();};
  const read=p=>p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')));
  const forceCue=async p=>{await p.evaluate(()=>{window.originalRandom=Math.random;Math.random=()=>.01;});await deck(p).getByRole('button',{name:'Lure',exact:true}).click();await p.evaluate(()=>{Math.random=window.originalRandom;});};
  const snap=async(p,name)=>{const c=await p.context().newCDPSession(p),{data}=await c.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const trial=async(p,name,label,capture)=>{
 await openToys(p);
-  const d=deck(p);await d.getByRole('button',{name:label,exact:true}).click();
+  const d=deck(p);await chip(p,label).click();await proof(p);
   await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.pose==='stand');
   await p.waitForTimeout(950); // Return from previous reward drawing before cueing a fresh action.
   const before=(await read(p)).pets['expo-2021'];
@@ -25,7 +29,7 @@ await openToys(p);
   await p.waitForFunction(()=>document.querySelector('[data-practice-phase]')?.dataset.practicePhase==='result');
   const after=(await read(p)).pets['expo-2021'];
   assert.equal(after.lessons[name].sessionTrials,(before.lessons?.[name]?.sessionTrials||0)+1);
-  assert(after.lessons[name].skill>(before.lessons?.[name]?.skill??.2),`${name} should earn skill: ${JSON.stringify(after.lessons[name])}`);
+  assert(after.lessons[name].skill>(before.lessons?.[name]?.skill??.2),`${name} should earn skill: ${JSON.stringify(after.lessons[name])} ${await d.innerText()}`);
   assert.deepEqual(after.behaviours,before.behaviours,'Virtual practice must not change self-reported real skills');
   report.push({name,viewport:p.viewportSize(),rendered,elapsedAfterRequest:+rendered.completedAt-start,lesson:after.lessons[name]});
   if(capture)await snap(p,`${p.viewportSize().width}-${name}`);
@@ -47,6 +51,6 @@ await openToys(p);
  }
  // Enrollment records only supplied facts, and must not copy the selected dog's photo.
  p=await fresh();await p.locator('[aria-controls="dog-switcher"]').click();await p.getByRole('option',{name:/Enroll another dog/}).click();const form=p.getByRole('dialog',{name:'Enroll a new dog'});await form.getByRole('textbox',{name:'Dog name',exact:true}).fill('Luna audit');await form.getByRole('textbox',{name:'Breed',exact:true}).fill('Mixed');await form.getByLabel('Sex',{exact:true}).selectOption('female');await form.getByRole('button',{name:'Create profile',exact:true}).click();await p.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).dogs.some(d=>d.name==='Luna audit'));
- const dog=(await read(p)).dogs.find(d=>d.name==='Luna audit');assert.equal(dog.birthDate,'');assert.equal(dog.isNeutered,null);assert.equal(dog.microchipId,'Not recorded');assert.equal(dog.primaryPhotoUrl,'');assert.equal(dog.weightKg,0);assert.equal(dog.primaryVetClinic,'');assert.equal(dog.emergencyPhone,'');assert.deepEqual(dog.personalityTraits,[]);assert.deepEqual(dog.quirks,[]);assert.equal(dog.tamagotchi.lastFed,0);report.push({enrolled:dog});await p.reload({waitUntil:'domcontentloaded'});assert.equal((await read(p)).dogs.find(d=>d.id===dog.id).isNeutered,null);await p.close();
+ const dog=(await read(p)).dogs.find(d=>d.name==='Luna audit');assert.equal(dog.birthDate,'');assert.equal(dog.isNeutered,null);assert.match(dog.microchipId,/^(Not recorded)?$/);/* no chip number was supplied: the raw record is empty, and load normalisation writes the "Not recorded" placeholder */assert.equal(dog.primaryPhotoUrl,'');assert.equal(dog.weightKg,0);assert.equal(dog.primaryVetClinic,'');assert.equal(dog.emergencyPhone,'');assert.deepEqual(dog.personalityTraits,[]);assert.deepEqual(dog.quirks,[]);assert.equal(dog.tamagotchi.lastFed,0);report.push({enrolled:dog});await p.reload({waitUntil:'domcontentloaded'});assert.equal((await read(p)).dogs.find(d=>d.id===dog.id).isNeutered,null);await p.close();
  fs.writeFileSync(out+'/report.json',JSON.stringify(report,null,2));console.log(process.env.DOG_TRAINING_ENROLL_ONLY?'PASS honest enrollment and reload.':'PASS rendered completion for eight actions, early marker reward, cancellation/reload, four viewports, reduced motion, honest enrollment.',out);
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

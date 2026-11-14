@@ -14,8 +14,8 @@
     "test:push": "node scripts/test-push.cjs",
     "test:browser": "bash scripts/run-browser-tests.sh",
     "gate:widths": "node scripts/breakpoints.mjs",
-    "gate": "widths=$(node scripts/breakpoints.mjs) && test -n \"$widths\" && node scripts/spatial/spatial-check.mjs --dir dist --baseline design/spatial-baseline.json --widths \"$widths\" --report",
-    "gate:live": "widths=$(node scripts/breakpoints.mjs) && test -n \"$widths\" && node scripts/spatial/spatial-check.mjs --base https://dog.nonarkara.org --baseline design/spatial-baseline.json --widths \"$widths\" --report",
+    "gate": "widths=$(node scripts/breakpoints.mjs) && test -n \"$widths\" && node scripts/spatial/spatial-check.mjs --dir dist --routes '/,/?mode=play,/?mode=own' --baseline design/spatial-baseline.json --widths \"$widths\" --report",
+    "gate:live": "widths=$(node scripts/breakpoints.mjs) && test -n \"$widths\" && node scripts/spatial/spatial-check.mjs --base https://dog.nonarkara.org --routes '/,/?mode=play,/?mode=own' --baseline design/spatial-baseline.json --widths \"$widths\" --report",
     "gate:falsify": "node scripts/spatial/spatial-falsify.mjs dist"
   },
   "dependencies": {
