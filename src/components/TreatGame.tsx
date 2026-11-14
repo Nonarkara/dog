@@ -30,17 +30,19 @@ export function TreatGame({name,nose,host,onTurn,onLook,onReact,onClose,onComple
   const [tapped,setTapped]=useState<number|null>(null);
   const [text,setText]=useState('');
   const alive=useRef(true);
+  const hiding=useRef(false); // a double tap lands before the phase re-renders; without this it ran two rounds at once
   const cb=useRef({onTurn,onLook,onReact,onComplete});cb.current={onTurn,onLook,onReact,onComplete};
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;cb.current.onTurn(false);};},[]);
 
   // Each round starts with his back to you.
   useEffect(()=>{
-    setPhase('hide');setBone(null);setOpen([]);setTapped(null);setSlots([0,1,2]);
+    hiding.current=false;setPhase('hide');setBone(null);setOpen([]);setTapped(null);setSlots([0,1,2]);
     cb.current.onTurn(true);setText(`${name} turned away. Tap a cup to hide the bone.`);
   },[round,name]);
 
   const hide=async(cup:number)=>{
-    if(phase!=='hide')return;
+    if(phase!=='hide'||hiding.current)return;
+    hiding.current=true;
     setPhase('hiding');setBone(cup);setOpen([cup]);sound.ballBounce();
     await wait(650);if(!alive.current)return;
     setOpen([]);await wait(350);
@@ -84,6 +86,7 @@ export function TreatGame({name,nose,host,onTurn,onLook,onReact,onClose,onComple
   useEffect(()=>{
     const keys=(e:KeyboardEvent)=>{
       if((e.target as HTMLElement|null)?.closest('input,textarea,select'))return;
+      if(document.querySelector('.control-reference'))return; // the labels help owns the keys while it is open
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();}
       else if(/^[123]$/.test(e.key)&&phase==='hide'){e.preventDefault();e.stopPropagation();void hide(slots.indexOf(+e.key-1));}
     };

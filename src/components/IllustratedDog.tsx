@@ -99,6 +99,9 @@ function IllustratedStage(props: Props & {url:string}) {
     lastPee.current=at;
   },[life.lastPeedAt]);
   const [finding,setFinding]=useState(false);const findingRef=useRef(false);
+  // A pet never cancels a wiggle, or the boop that the same cheek touch started; anything else it replaces.
+  const boop=useRef(false);
+  const petKeeps=()=>fun.current?.kind==='wiggle'||(fun.current?.kind==='tilt'&&boop.current);
   const stopFun=()=>{if(funTimer.current)clearTimeout(funTimer.current);fun.current=null;setTrick(null);};
   const clearCheer=()=>{if(cheerTimer.current)clearTimeout(cheerTimer.current);setCheer(null);};
   const showCheer=(text:string)=>{if(cheerTimer.current)clearTimeout(cheerTimer.current);setCheer({id:performance.now(),text});cheerTimer.current=setTimeout(()=>setCheer(null),2000);};
@@ -108,7 +111,7 @@ function IllustratedStage(props: Props & {url:string}) {
     if(!fromGame&&(!canPlay()||gameRef.current||findingRef.current))return;
     if(funTimer.current)clearTimeout(funTimer.current);if(!fromGame)setFetchConfused(false);
     const now=performance.now(),next={kind,started:now,until:now+(kind==='highfive'?8000:kind==='zoomies'||kind==='come'?4000:kind==='turn'?2000:kind==='away'?60000:kind==='back'?600:2400)};
-    fun.current=next;setTrick(next);
+    fun.current=next;setTrick(next);boop.current=false;
     const text=kind==='highfive'?'Tap my paw!':kind==='bow'?'Come on, let’s play!':kind==='zoomies'?(dog.id==='paolo-pug'?'Tiny pug zoomies!':'Zoomies!'):kind==='tilt'?'Did you say… treat?':kind==='come'?'Let me have a sniff!':kind==='turn'?'A little look around.':personality.greeting;
     if(!findingRef.current&&kind!=='away'&&kind!=='back')showCheer(text);
     funTimer.current=setTimeout(()=>{fun.current=null;setTrick(null);},next.until-now);
@@ -129,7 +132,7 @@ function IllustratedStage(props: Props & {url:string}) {
     closeFinding();
     if(action!=='play')setFetchConfused(false);
     if(action==='settle'||action==='scold'||action==='rewardCalm')closeGame();
-    if(action!=='pet'||fun.current?.kind!=='wiggle')stopFun();
+    if(action!=='pet'||!petKeeps())stopFun();
     if(action!=='pet')clearCheer();
     if(action==='pet'||action==='groom'||action==='communicate')sound.happyYip();
     if(action==='pet'){reaction.current.pets++;if(reaction.current.pets%3===0&&fun.current?.kind!=='wiggle')runTrick('wiggle',true);else if(!fun.current)showCheer(touchRef.current||`${dog.name} loves that!`);}
@@ -154,7 +157,7 @@ function IllustratedStage(props: Props & {url:string}) {
   useEffect(()=>()=>{if(gameTimer.current)clearTimeout(gameTimer.current);},[]);
 
   const pet=(message=`${dog.name} loves that!`,part?:TouchPart)=>{
-    if(fun.current&&fun.current.kind!=='wiggle')stopFun();
+    if(fun.current&&!petKeeps())stopFun();
     const now=performance.now();reaction.current.petUntil=now+1800;
     if(now-reaction.current.lastPet>2300){reaction.current.lastPet=now;latest.current.onPet?.(part);showCheer(message);}
   };
@@ -282,7 +285,7 @@ function IllustratedStage(props: Props & {url:string}) {
     const down=(event:PointerEvent)=>{if(hit(event)){
       stroking=true;canvas.setPointerCapture(event.pointerId);petAt(event);
       const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
-      if((motionTouchPart(x,y,hitAtlasFrame)||touchPart(x,y))==='cheeks'){runTrick('tilt',true);showCheer('Boop!');}
+      if((motionTouchPart(x,y,hitAtlasFrame)||touchPart(x,y))==='cheeks'){runTrick('tilt',true);boop.current=true;showCheer('Boop!');}
     }else{const parent=canvas.closest('.illustrated-stage');const button=parent?.querySelector<HTMLButtonElement>('.dog-daily-status button');if(button){const b=button.getBoundingClientRect();if(event.clientX>=b.left&&event.clientX<=b.right&&event.clientY>=b.top&&event.clientY<=b.bottom)button.click();}}};
     const move=(event:PointerEvent)=>{const q=point(event);reaction.current.aimX=(q.x-.5)*2;reaction.current.aimY=(q.y-.5)*2;if(stroking&&hit(event))petAt(event);};
     const up=()=>{stroking=false;};

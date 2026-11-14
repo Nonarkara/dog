@@ -7,6 +7,7 @@ import {recordSources,recordExport} from '../utils/recordProvenance';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
 import {TREES,CROWN,canopyAt} from './parkCanopy';
 import {parkScenery} from '../components/parkScenery';
+import {DOG_THEMES} from '../data/dogThemes';
 /**
  * THE ENGINE'S OWN PROOF.
  *
@@ -909,6 +910,19 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a few hours away: glad you are back',/glad you are back/.test(welcomeBack(then,at(2),n)||''));
   ok('half a day away: he missed you',/missed you/.test(welcomeBack(then,at(8),n)||''));
   ok('a dog who ran away does not greet you',welcomeBack(then,{...at(8),away:true as never},n)===null);
+}
+
+console.log('\nPALETTE CONTRAST');
+{
+  // Every palette's ink, muted and action text reads at WCAG AA (4.5:1) on all three of its grounds.
+  const lum=(hex:string)=>{const c=hex.slice(1).match(/../g)!.map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
+  const ratio=(a:string,b:string)=>{const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+  type T=typeof DOG_THEMES[string];
+  const fails=Object.entries(DOG_THEMES).flatMap(([id,t])=>(['paper','ground','field'] as const).flatMap(bg=>(['ink','muted','action'] as const).filter(fg=>ratio((t as T)[fg],(t as T)[bg])<4.5).map(fg=>`${id} ${fg}/${bg}`)));
+  const buttons=Object.entries(DOG_THEMES).filter(([,t])=>ratio(t.paper,t.action)<4.5).map(([id])=>id);
+  ok('every palette text colour reads at AA on every ground',fails.length===0,fails.join(', '));
+  ok('filled-button text (paper on action) reads at AA in every palette',buttons.length===0,buttons.join(', '));
+  ok('the contrast check fails a planted low-contrast pair',ratio('#bbbbbb','#ffffff')<4.5);
 }
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);

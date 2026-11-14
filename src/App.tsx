@@ -233,7 +233,7 @@ export const App: React.FC = () => {
   const [isDogMenuOpen, setIsDogMenuOpen] = useState(false);
   const [labelsVisible,setLabelsVisible]=useState(false);
   const regionBeforeLabels=useRef<RegionKey>('care');
-  const closeLabels=()=>{setLabelsVisible(false);setActiveRegion(regionBeforeLabels.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="Show control labels"]')?.focus());};
+  const closeLabels=()=>{setLabelsVisible(false);setActiveRegion(regionBeforeLabels.current);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label^="Show control labels"]')?.focus());};
   const toggleLabels=()=>{
     if(labelsVisible){closeLabels();return;}
     regionBeforeLabels.current=isDogMenuOpen?regionBeforeChooser.current:activeRegion;

@@ -25,9 +25,16 @@ type TipKey=keyof typeof TIPS;
 function seenTips():Partial<Record<TipKey,boolean>>{try{const raw=JSON.parse(localStorage.getItem(modeKey('tama_dog_chi_tips_v1'))||'{}');return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};}catch{return {};}}
 export function useFirstPlayTips(){
  const [tip,setTip]=useState<TipKey|null>(null);
- const show=(key:TipKey)=>{const seen=seenTips();if(seen[key])return;setTip(key);try{localStorage.setItem(modeKey('tama_dog_chi_tips_v1'),JSON.stringify({...seen,[key]:true}));}catch{/* A guide preference must never block care or the canonical save. */}};
+ const asked=useRef(false);
+ const show=(key:TipKey)=>{const seen=seenTips();if(seen[key])return;asked.current=true;setTip(key);try{localStorage.setItem(modeKey('tama_dog_chi_tips_v1'),JSON.stringify({...seen,[key]:true}));}catch{/* A guide preference must never block care or the canonical save. */}};
+ // A guide lasts until the next control you press: the dog's answer to that press must not sit under it.
  const capture=(event:React.MouseEvent)=>{
-  const element=event.target instanceof Element?event.target.closest('button,[role="tab"],input[type="checkbox"]'):null;if(!element)return;
+  asked.current=false;route(event);
+  const element=event.target instanceof Element?event.target.closest('button,[role="tab"],input[type="checkbox"],summary'):null;
+  if(element&&!asked.current&&!element.closest('.first-play-tip'))setTip(null);
+ };
+ const route=(event:React.MouseEvent)=>{
+  const element=event.target instanceof Element?event.target.closest('button,[role="tab"],input[type="checkbox"],summary'):null;if(!element)return;
   const label=(element.getAttribute('aria-label')||element.getAttribute('title')||element.textContent||'').trim();
   if(element.getAttribute('aria-controls')==='dog-switcher'){show('dogs');return;}
   if(element.closest('.dog-toys')){if(label!=='Find the treat')show('tricks');return;}
@@ -46,7 +53,7 @@ export function useFirstPlayTips(){
   if(/^Pet /.test(label)){show('pet');return;}
   if(/^Clean|^Groom/.test(label)){show('clean');return;}
   if(/^Walk /.test(label)){show('walk');return;}
-  if(/Talk to your dog|^Say a word/.test(label)){show('talk');return;}
+  if(/Talk to your dog|^Say a word|^Words .+ knows$/.test(label)){show('talk');return;}
   if(/Quiet time|Watch calm|Reward calm/.test(label))show('calm');
  };
  return {tip,show,capture,close:()=>setTip(null)};
