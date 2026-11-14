@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 /**
  * THE GAIT.
  *
@@ -249,6 +250,7 @@ const RUN = [0, 32];
       await phone.screenshot({path:`/tmp/dog-nov5-gait-${width}.png`});
       if(width<400){
         await phone.getByRole('button',{name:'Tricks and toys',exact:true}).click();
+await openToys(p);
         await phone.getByRole('button',{name:'Zoomies',exact:true}).click();
         const zoom=await phone.evaluate(async()=>{
           const samples=[],start=performance.now();

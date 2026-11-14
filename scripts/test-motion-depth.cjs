@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const{chromium}=require('playwright'),assert=require('node:assert/strict');
 const base=process.env.DOG_URL||'http://127.0.0.1:4192';
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
@@ -18,6 +19,7 @@ const base=process.env.DOG_URL||'http://127.0.0.1:4192';
    observer.observe(canvas,{attributes:true,attributeFilter:['data-frames']});
  });
  await p.waitForFunction(()=>window.comeSamples.length>0);
+await openToys(p);
  await p.getByRole('button',{name:'Come closer',exact:true}).click();
  await p.waitForFunction(()=>window.comeSamples.at(-2)?.trick==='come'&&window.comeSamples.at(-1).trick!=='come');
  const samples=await p.evaluate(()=>window.comeSamples);

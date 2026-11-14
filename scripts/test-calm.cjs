@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const {chromium}=require('playwright');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
@@ -18,6 +19,7 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-calm';fs.mkdirSync(out,{recursive:
   const pose=art=>page.waitForFunction(art=>document.querySelector('canvas')?.dataset.artPose===art&&document.querySelector('canvas')?.dataset.transition==='0',art);
   await page.getByRole('textbox',{name:'Say a word to Expo'}).waitFor();
   assert.equal(await page.getByRole('button',{name:/Scold/}).count(),0);
+await openToys(page);
   const before=await state();if(width===390){await page.getByRole('button',{name:'Find the treat',exact:true}).click();await page.locator('.treat-game').waitFor();}
   await page.getByRole('button',{name:'Quiet time',exact:true}).press('Enter');
   await page.locator('.treat-game').waitFor({state:'detached'});

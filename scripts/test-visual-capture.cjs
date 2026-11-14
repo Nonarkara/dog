@@ -1,8 +1,10 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
 const base=process.env.DOG_URL||'http://127.0.0.1:4180',out=process.env.DOG_EVIDENCE||'/tmp/dog-nov2';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),errors=[],report=[];try{
  const p=await b.newPage({viewport:{width:390,height:844}});p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error'&&/shader|WebGLProgram/.test(m.text()))errors.push(m.text())});await p.clock.setFixedTime(new Date(2026,10,2,12));
  const ready=()=>p.waitForFunction(()=>+document.querySelector('.region-stage canvas')?.dataset.frames>5),read=()=>p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);
+await openToys(p);
  await p.goto(base+'/?mode=play');await ready();assert.equal(await p.getByRole('button',{name:'High five',exact:true}).count(),0);await p.getByRole('button',{name:'Tricks and toys',exact:true}).click();assert(await p.getByRole('button',{name:'High five',exact:true}).isVisible());await p.getByRole('button',{name:'Tricks and toys',exact:true}).click();
  // A quiet corner preserves the exact renderer and care controls.
  const oldCanvas=await p.locator('.region-stage canvas').elementHandle();await p.getByRole('button',{name:'Quiet companion view'}).click();assert.equal(await p.getByRole('tab',{name:'Coach',exact:true}).count(),0);assert(await p.getByRole('button',{name:'Feed Expo',exact:true}).isVisible());assert(await oldCanvas.evaluate(e=>e.isConnected));await p.screenshot({path:out+'/quiet390.png'});await p.getByRole('button',{name:'Quiet companion view'}).click();

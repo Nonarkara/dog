@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-training-walkthrough';fs.mkdirSync(out,{recursive:true});
@@ -9,6 +10,7 @@ try{
  const forceCue=async p=>{await p.evaluate(()=>{window.originalRandom=Math.random;Math.random=()=>.01;});await deck(p).getByRole('button',{name:'Lure',exact:true}).click();await p.evaluate(()=>{Math.random=window.originalRandom;});};
  const snap=async(p,name)=>{const c=await p.context().newCDPSession(p),{data}=await c.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const trial=async(p,name,label,capture)=>{
+await openToys(p);
   const d=deck(p);await d.getByRole('button',{name:label,exact:true}).click();
   await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.pose==='stand');
   await p.waitForTimeout(950); // Return from previous reward drawing before cueing a fresh action.

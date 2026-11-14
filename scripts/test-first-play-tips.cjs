@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/tama-first-play';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true});try{const p=await b.newPage({viewport:{width:390,height:667}});await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url);await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>5);
@@ -6,6 +7,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
  await p.getByRole('button',{name:'Feed Expo',exact:true}).click();await tip('feed');await p.getByRole('button',{name:/3 meals · 6 coins/}).click();await tip('coins');await p.getByRole('button',{name:'Close care extras'}).click();
  await p.getByRole('button',{name:'Clean Expo',exact:true}).click();await tip('clean');await p.waitForTimeout(2100);await p.getByRole('button',{name:'Play Expo',exact:true}).click();await tip('play');await p.getByRole('button',{name:'Close fetch introduction'}).click();await p.waitForTimeout(2100);
  await p.getByRole('button',{name:'Talk to your dog'}).click();await tip('talk');await p.getByRole('button',{name:'Talk to your dog'}).click();await p.getByRole('button',{name:'Put Expo to bed',exact:true}).click();await tip('bed');await p.getByRole('button',{name:'Close care extras'}).click();
+await openToys(p);
  await p.getByRole('button',{name:'High five',exact:true}).click();await tip('tricks');await p.getByRole('tab',{name:'Coach',exact:true}).click();await tip('coach');
  // A reload remembers seen action types, independent of canonical dog progress.
  await p.reload();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>5);await p.getByRole('button',{name:'Pet Expo',exact:true}).click();assert.equal(await p.locator('.first-play-tip').count(),0);

@@ -1,3 +1,4 @@
+const{openToys}=require('./fixtures/open-toys.cjs');
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true});try{
 const p=await b.newPage({viewport:{width:1280,height:720}});
@@ -10,6 +11,7 @@ await p.waitForFunction(()=>{const d=document.querySelector('canvas')?.dataset;r
 await p.getByRole('button',{name:'Pet Expo',exact:true}).click();
 await p.waitForTimeout(1800);
 const tip=p.getByRole('button',{name:'Close first-play tip'});if(await tip.count())await tip.click();
+await openToys(p);
 if(!await p.getByRole('button',{name:'High five',exact:true}).isVisible())await p.getByRole('button',{name:'Tricks and toys'}).click();await p.getByRole('button',{name:'High five',exact:true}).click();
 await p.getByRole('button',{name:'Give Expo a high five'}).waitFor();await p.waitForTimeout(500);
 const q=await p.evaluate(()=>{const c=document.querySelector('.region-stage canvas'),r=c.getBoundingClientRect(),target=document.querySelector('.paw-target').getBoundingClientRect(),v=Math.max(1.08,1/(r.width/r.height)),m=window.pawMatrix;return {actual:target.x+target.width/2,expected:r.x+r.width*(.5+(m.x-.58*m.sx)/(2*v*r.width/r.height)),root:m.x};});
