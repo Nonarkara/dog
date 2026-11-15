@@ -690,7 +690,7 @@
 .cockpit .illustration-puddle,.cockpit .illustration-mess {background:transparent;border:0;}
 
 /* Care is a short fixed readout, not a scrolling record. */
-.region-care .care-body {container-name:dog-care;overflow:clip;padding:8px;gap:6px;}
+.care-console .care-body {container-name:dog-care;overflow:clip;padding:8px;gap:6px;}
 .care-meter-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;flex:none;}
 .care-meter {display:grid;grid-template-columns:20px minmax(0,1fr);grid-template-rows:auto 4px;gap:3px 3px;align-content:start;}
 .care-meter-symbols {display:contents;}
@@ -802,9 +802,9 @@ html {font-synthesis:none;}
 @media(max-width:639px){
  .command-speech {order:10;flex-basis:100%;}
  .command-bar {justify-content:space-between;}
- .region-care .care-body {padding:5px;gap:3px;}
- .region-care .care-meter-grid {gap:3px 10px;}
- .region-care .care-history {gap:2px 6px;}
+ .care-console .care-body {padding:5px;gap:3px;}
+ .care-console .care-meter-grid {gap:3px 10px;}
+ .care-console .care-history {gap:2px 6px;}
 }
 /* The world is a destination; people and chat are optional, bounded drawers. */
 .cockpit-workspace--park {display:flex;padding:4px;}
