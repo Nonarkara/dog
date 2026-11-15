@@ -50,7 +50,7 @@ const READINGS:Reading[]=[
     key:'person',
     label:'Dr Non',
     body:<>
-      <p>Dr Non Arkaraprasertkul (ดร.นน อัครประเสริฐกุล) builds civic systems in Thailand and Southeast Asia: smart-city dashboards for Phuket and Bangkok, Axiom and TKCPMO, the OTOP product registry, a tsunami evacuation system, a Kuching municipality dashboard, Thailand's Digital Valley, and FloodDash for the map work. Dozens of repositories, and the rules the agents obey sit at the root of them.</p>
+      <p>Dr Non Arkaraprasertkul (<span lang="th">ดร.นน อัครประเสริฐกุล</span>) builds civic systems in Thailand and Southeast Asia: smart-city dashboards for Phuket and Bangkok, Axiom and TKCPMO, the OTOP product registry, a tsunami evacuation system, a Kuching municipality dashboard, Thailand's Digital Valley, and FloodDash for the map work. Dozens of repositories, and the rules the agents obey sit at the root of them.</p>
       <p>He does not write the code. He writes the law the code obeys, and the law is short: one screen and no scroll, boxes that fit their contents, one accent colour, no gradients, no rounded corners, and the agent that builds never signs off its own work.</p>
       <p>That law is why there is one dog in the middle of this screen and everything else under him.</p>
     </>,

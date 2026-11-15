@@ -44,7 +44,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
       pets['expo-2021']=s;raw.pets=pets;
       localStorage.setItem(key,JSON.stringify(raw));
     });
-    await p.reload({waitUntil:'domcontentloaded'});
+    await p.reload({waitUntil:'domcontentloaded',timeout:120000});
     await p.waitForSelector('.region-care',{timeout:60000});
     await p.waitForTimeout(4000);
 
