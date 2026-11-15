@@ -1275,8 +1275,8 @@ html {font-synthesis:none;}
 .cloud-save-dialog{max-width:36ch;padding:24px;}.cloud-save-dialog p{margin-top:12px;}
 
 /* A short lesson earns its own height, not the remaining desktop column. */
-.cockpit-workspace--wide .desktop-detail>.region-coach{flex:0 1 auto;height:auto;max-height:100%;}
-.cockpit-workspace--wide .desktop-detail>.region-coach>.panel-body{flex:0 1 auto;}
+.cockpit-workspace--wide .desktop-detail>.region-coach{flex:0 1 auto;height:auto;max-height:min(360px,100%);}
+.cockpit-workspace--wide .desktop-detail>.region-coach>.panel-body{flex:0 1 auto;padding-block:4px;}
 
 /* Explicit pantry/bedtime tasks stay beside the readout; never over the dog. */
 .care-console--extras .care-now{display:none;}

@@ -1087,17 +1087,23 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
                     aria-pressed={isSelected}
                     className="w-full min-h-0 px-2 py-[3px] border-0 bg-transparent hover:bg-elevated flex items-center gap-2 justify-start text-left"
                   >
+                    {/* A dog's name and its breed are ONE identity, so they
+                        sit together. They used to each take half the row,
+                        which pushed the breed into the middle of the screen
+                        and left it looking like a third column that had
+                        nothing to do with the name. The state goes to the
+                        edge; the middle is allowed to be empty. */}
                     <span
-                      className={`font-display text-[11px] truncate min-w-0 flex-1 ${
+                      className={`font-display text-[11px] truncate shrink-0 ${
                         isSelected ? 'text-accent' : 'text-zinc-100'
                       }`}
                     >
                       {row.name}
                     </span>
-                    <span title={row.breed} className="text-[10px] text-faint truncate min-w-0 flex-1">
+                    <span title={row.breed} className="text-[10px] text-faint truncate min-w-0">
                       {row.breed}
                     </span>
-                    <span className="label shrink-0">{row.action}</span>
+                    <span className="label shrink-0 ml-auto">{row.action}</span>
                   </button>
                 </li>
               );
