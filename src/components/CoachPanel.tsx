@@ -384,8 +384,8 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
             The columns come from the count instead — eight divides by four
             and by eight — and the panel's own width decides which, because
             the panel is what the words have to fit inside. */}
-        <div className="@container shrink-0 px-2 py-1.5">
-          <div className="grid grid-cols-4 gap-1 @2xl:grid-cols-8">
+        <div className="@container/dog-coach shrink-0 px-2 py-1.5">
+          <div className="grid grid-cols-4 gap-1 @2xl/dog-coach:grid-cols-8">
           {BEHAVIOURS.map((b) => {
             const active = b.name === behaviourName;
             return (
