@@ -5,6 +5,7 @@ import {DEFAULT_DOGS} from '../data/defaultDogs';
 import {dogTheme} from '../data/dogThemes';
 import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {ADOPTION_KEY,readAdoption,cleanDogName} from '../utils/playMode';
+import {ReadingButton,ReadingMenu} from './ReadingMenu';
 import {chooseVisitRecord,fetchVisitChoice,type VisitPermission} from '../utils/careLog';
 const EmailSignIn=lazy(()=>import('./EmailSignIn').then(m=>({default:m.EmailSignIn})));
 const ParkConsent=lazy(()=>import('./ParkConsent').then(m=>({default:m.ParkConsent})));
@@ -29,16 +30,18 @@ export function Entry(){
  };
  const signIn=(provider:string)=>provider==='email'?setEmailOpen(true):location.assign(`/api/auth/${provider}/start?back=${encodeURIComponent(`/?mode=own${invite}`)}`);
  const [choosing,setChoosing]=useState(mode==='own'&&!adoption),[selected,setSelected]=useState(adoption?.dogId??'oreo-frenchie'),[artReady,setArtReady]=useState(false),[error,setError]=useState(''),[restore,setRestore]=useState<{raw:string;name:string}|null>(null);
+ // The reading takes the choices' place under the dog. Nothing covers him.
+ const [reading,setReading]=useState(false);
  if(mode==='own'&&!synced)return <main className="entry-loading" data-workspace-loading="true">Fetching your dog…</main>;
  if(mode!=='play'&&cloudConflict)return <main className="entry-sync-choice cockpit" style={dogTheme(owned?.dogId||'expo-2021')}><h1>Two homes, two dogs</h1><p>This browser has {owned?.name||'a companion'}. {cloudConflict.dog?`This account has ${cloudConflict.dog.name}. Bringing that dog here replaces the browser copy.`:'This is a different account. Save this browser’s dog here only if it belongs to you.'}</p><button type="button" onClick={()=>{try{downloadOwnedBackup(owned?.name||'local-dog');}catch{setSyncError('Could not download the browser dog. No save was changed.');}}}>Download browser dog</button><button type="button" onClick={async()=>{try{await resolveCloudDog(cloudConflict);setOwned(readAdoption());setCloudConflict(null);setSyncError('');}catch{setSyncError('Could not load the account dog. No upload was made.');}}}>{cloudConflict.dog?'Bring account dog here':'Save this dog to this account'}</button><button type="button" onClick={async()=>{try{await signOut();setMe({...cloudConflict,user:null,dog:null});setCloudConflict(null);}catch{setSyncError('Sign-out did not finish. Please try again.');}}}>Sign out · keep browser dog</button>{syncError&&<p role="alert">{syncError}</p>}</main>;
  if(mode==='play'||mode==='own'&&owned)return <Suspense fallback={<main className="entry-loading" data-study-ready="false" data-workspace-loading="true">Opening Tama-Dog-Chi…</main>}><App/></Suspense>;
  const dog=DEFAULT_DOGS.find(d=>d.id===selected)!;
  const adopt=()=>{try{localStorage.setItem(ADOPTION_KEY,JSON.stringify({dogId:dog.id,at:Date.now(),seed:crypto.randomUUID(),name:cleanDogName(dogName)||dog.name}));location.assign(`/?mode=own${invite}`);}catch{setError('This browser could not save your puppy. Allow browser storage and try again.');}};
  return <main className="entry cockpit" style={dogTheme(selected)} data-study-ready="true">
-  <header className="entry-head"><h1>Tama-Dog-Chi</h1>{choosing&&<button type="button" className="btn-quiet" onClick={()=>setChoosing(false)}><ArrowLeft size={18}/>Back</button>}</header>
+  <header className="entry-head"><h1>Tama-Dog-Chi</h1><span className="entry-head-tools">{choosing&&<button type="button" className="btn-quiet" onClick={()=>setChoosing(false)}><ArrowLeft size={18}/>Back</button>}<ReadingButton onOpen={()=>setReading(true)}/></span></header>
   <div className="entry-dog">{!artReady&&<svg className="entry-dog-skeleton" viewBox="0 0 400 320" aria-hidden="true"><path d="M105 113L83 57L137 81L175 48L185 121Q245 100 300 148Q332 100 348 126Q356 167 314 177L312 271H275L268 212H189L171 276H135L142 195Q84 203 70 159L42 145L67 125Z" fill="var(--stage-ground)" stroke="var(--border-dim)" strokeWidth="3"/></svg>}<img onLoad={()=>setArtReady(true)} onError={()=>setError('The preview could not load. You can still choose a mode or another dog.')} src={`/dogs/${art[selected]}.webp`} alt={`${dog.name}, your illustrated dog companion`} width="768" height="768" fetchPriority="high"/><span>{invite&&!choosing?'A friend invited you to their park. Choose a dog to bring.':choosing?'A little dog. Your own story.':'A little company, whenever you need it.'}</span></div>
   <div className="entry-choices">
-   {choosing?<>
+   {reading?<ReadingMenu onClose={()=>setReading(false)}/>:choosing?<>
     <div role="group" aria-label="Choose your puppy" className="adoption-dogs">{DEFAULT_DOGS.map(d=><button key={d.id} type="button" aria-pressed={selected===d.id} onClick={()=>{if(selected!==d.id){setArtReady(false);setSelected(d.id);setError('');}}}>{d.name}</button>)}</div>
     <p className="entry-note">{dog.breed} · Puppy → adult over 7 care days</p>
     <label className="adoption-name"><span>Name</span><input value={dogName} maxLength={24} placeholder={dog.name} onChange={e=>setDogName(e.target.value)} aria-label="Your dog's name"/></label>

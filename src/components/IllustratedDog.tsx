@@ -68,7 +68,13 @@ function IllustratedStage(props: Props & {url:string}) {
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const [motionReady,setMotionReady]=useState(false);
-  const [toysOpen,setToysOpen]=useState(()=>window.innerWidth>=1024);
+  /* The tricks start CLOSED, on every screen.
+     On a wide stage they used to open by themselves, and seven icons stood
+     over the picture like a strip left on the floor. The dog is the hero:
+     the tricks belong under him or at his edge, not over the room. The
+     first-use guide is already waiting for the click that opens them, so
+     nothing is hidden that the owner was going to be shown anyway. */
+  const [toysOpen,setToysOpen]=useState(false);
   const [game, setGame] = useState<{round:number; score:number; target:'left'|'right'; busy:boolean; result:string}|null>(null);
   const gameRef=useRef(game); gameRef.current=game;
   const gameTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
