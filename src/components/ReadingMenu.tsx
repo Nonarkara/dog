@@ -16,7 +16,7 @@
  * each design note records, and the history the repository carries. Nothing
  * here is filler, and nothing here sells anything.
  */
-import React,{useRef,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {BookOpen,X} from 'lucide-react';
 
 type ReadingKey='made'|'idea'|'person';
@@ -61,6 +61,7 @@ export function ReadingMenu({onClose}:{onClose:()=>void}){
   const [active,setActive]=useState<ReadingKey>('made');
   const tabs=useRef<Partial<Record<ReadingKey,HTMLButtonElement|null>>>({});
   const reading=READINGS.find(r=>r.key===active)??READINGS[0];
+  useEffect(()=>{tabs.current.made?.focus();},[]);
 
   const onKeyDown=(event:React.KeyboardEvent<HTMLButtonElement>)=>{
     const index=READINGS.findIndex(r=>r.key===active);
@@ -76,7 +77,9 @@ export function ReadingMenu({onClose}:{onClose:()=>void}){
     tabs.current[key]?.focus();
   };
 
-  return <section className="entry-reading" aria-label="Read about this project">
+  return <section id="entry-reading" className="entry-reading" aria-label="Read about this project" onKeyDown={event=>{
+    if(event.key==='Escape'){event.preventDefault();onClose();}
+  }}>
     <header className="entry-reading-head">
       <span className="label">Read</span>
       <button type="button" className="btn-quiet" onClick={onClose} aria-label="Close the reading"><X size={18} aria-hidden="true"/></button>
@@ -111,8 +114,8 @@ export function ReadingMenu({onClose}:{onClose:()=>void}){
   </section>;
 }
 
-export function ReadingButton({onOpen}:{onOpen:()=>void}){
-  return <button type="button" className="btn-quiet entry-reading-open" onClick={onOpen} aria-label="Read about this project">
+export function ReadingButton({expanded,onClick,buttonRef}:{expanded:boolean;onClick:()=>void;buttonRef:React.Ref<HTMLButtonElement>}){
+  return <button type="button" className="btn-quiet entry-reading-open" ref={buttonRef} onClick={onClick} aria-label="Read about this project" aria-expanded={expanded} aria-controls={expanded?'entry-reading':undefined}>
     <BookOpen size={18} aria-hidden="true"/>
   </button>;
 }

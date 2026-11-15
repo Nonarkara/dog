@@ -38,7 +38,9 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
       const dog=document.querySelector('.entry-dog').getBoundingClientRect();
       return {dogH:Math.round(dog.height),vh:window.innerHeight};
     });
-    await entry.getByRole('button',{name:'Read about this project'}).click();
+    const opener=entry.getByRole('button',{name:'Read about this project'});
+    await opener.focus();
+    await entry.keyboard.press('Enter');
     await entry.waitForSelector('.entry-reading',{timeout:30000});
     await entry.waitForTimeout(600);
     const reading=await entry.evaluate(()=>{
@@ -61,13 +63,17 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play';
     assert.equal(reading.choicesGone,true,'The choices step aside while the reading is open');
 
     /* The keyboard reaches every reading. */
-    await entry.getByRole('tab',{name:'How this was made'}).focus();
+    assert.equal(await entry.getByRole('tab',{name:'How this was made'}).evaluate(el=>el===document.activeElement),true,'Opening takes focus to the first reading tab');
     await entry.keyboard.press('ArrowRight');
     assert.equal(await entry.getByRole('tab',{name:'The idea'}).getAttribute('aria-selected'),'true','ArrowRight moves to the next reading');
     await entry.keyboard.press('End');
     assert.equal(await entry.getByRole('tab',{name:'Dr Non'}).getAttribute('aria-selected'),'true','End reaches the last reading');
+    await entry.keyboard.press('Escape');
+    await entry.locator('.entry-reading').waitFor({state:'hidden'});
+    assert.equal(await opener.evaluate(el=>el===document.activeElement),true,'Escape returns focus to the reading button');
+    await opener.click();
     await entry.getByRole('button',{name:'Close the reading'}).click();
-    await entry.waitForTimeout(400);
+    assert.equal(await opener.evaluate(el=>el===document.activeElement),true,'Close returns focus to the reading button');
     assert.equal(await entry.locator('.entry-choice').count()>0,true,'Closing the reading brings the choices back');
     assert.deepEqual(errors,[]);
     console.log('PASS the tricks start closed and the reading opens under the dog;',`dog keeps ${reading.dogShare}% of the frame`);
