@@ -246,8 +246,8 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           words have to fit inside — four columns of two rows in a narrow
           coach panel, one row of eight when the panel is wide enough to
           hold them. */}
-      <div className="@container/dog-coach shrink-0 px-2 py-1.5">
-        <div className="grid grid-cols-4 gap-1 @2xl/dog-coach:grid-cols-8">
+      <div className="shrink-0 px-2 py-1.5">
+        <div className="grid grid-cols-4 gap-1">
         {BEHAVIOURS.map((b) => {
           const behind=lockedBehind(petState,b.name);
           return (
