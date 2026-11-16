@@ -83,6 +83,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   const [backupNote,setBackupNote]=useState('');
   const [booth,setBooth]=useState(false);
   const [vitalsOpen,setVitalsOpen]=useState(false);
+  /* The details copy is mounted only while the dialog is open.
+     It used to live in the DOM from the start, so the page carried two
+     care consoles: every meter, every line, twice. Six bars read as
+     twelve, and a screen reader could meet the console twice. */
+  const [detailsOpen,setDetailsOpen]=useState(false);
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -123,7 +128,7 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         </span>
         {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
         {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} game vitals`} title="Game vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
-        {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>details.current?.showModal()}>History & details ↗</button>}
+        {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>{setDetailsOpen(true);details.current?.showModal();}}>History & details ↗</button>}
         {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
       </header>
 
@@ -227,9 +232,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
           </p>
         </div>
       </div>
-      {!detailView&&<dialog ref={details} className="care-details-dialog" aria-label={`${dog.name} care details`} onClick={e=>{if(e.target===e.currentTarget)details.current?.close();}}>
+      {!detailView&&<dialog ref={details} className="care-details-dialog" aria-label={`${dog.name} care details`} onClose={()=>setDetailsOpen(false)} onClick={e=>{if(e.target===e.currentTarget)details.current?.close();}}>
+        {detailsOpen&&<>
         <button type="button" className="btn-quiet care-details-close" onClick={()=>details.current?.close()}>Close ×</button>
         <CarePanel dog={dog} petState={petState} detailView onHome={onHome} onPalette={onPalette}/>
+        </>}
       </dialog>}
       {booth&&<PhotoBooth dog={dog} artUrl={ILLUSTRATIONS[dog.id]??''} onClose={()=>setBooth(false)}/>}
       {vitalsOpen&&<VitalsModal dog={dog} petState={petState} onClose={()=>setVitalsOpen(false)}/>}
