@@ -12,14 +12,17 @@ const VALID_POSES = ['stand', 'sit', 'down', 'bow', 'paw', 'pet', 'feed', 'sleep
 
 const args = process.argv.slice(2);
 const flag = (name, fallback = '') => {
+  const eq = args.find((a) => a.startsWith(`${name}=`));
+  if (eq) return eq.slice(name.length + 1);
   const i = args.indexOf(name);
-  return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
+  return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback;
 };
 
 const dog = flag('--dog', 'expo');
 const pose = flag('--pose', 'stand');
 const tier = flag('--tier', 'authored-anchor');
-const dryRun = args.includes('--dry-run');
+const seed = Number(flag('--seed', '42'));
+const dryRun = args.includes('--dry-run') || flag('--dry-run') === 'true';
 
 if (!VALID_DOGS.includes(dog)) {
   console.error(`Unknown dog "${dog}". Expected one of: ${VALID_DOGS.join(', ')}`);
@@ -43,6 +46,7 @@ const outWebp = path.join(outDir, `${dog}-${pose}.webp`);
 const meta = {
   dog,
   pose,
+  seed: Number.isFinite(seed) ? seed : 42,
   source: `public/dogs/${refFile}`,
   output: `public/dogs/sprites/${dog}-${pose}.webp`,
   tier,
