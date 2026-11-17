@@ -1,0 +1,16 @@
+{
+  "name": "mali",
+  "kind": "animal",
+  "design": "public/dogs/mali.webp",
+  "description": "a cream/biscuit compact dog, small build, perked ears, short tail, Rose companion Wada plate 55 (deep ink #653b49, quiet field #f0d9dd, one deep action #8b475d), NonArchitecture flat cel linework, #614c37 ink contour, no gradients, no drop shadows",
+  "height_m": 0.4,
+  "camera": "topdown",
+  "pitch": 50,
+  "facings": 4,
+  "mirror": false,
+  "actions": [],
+  "wadaPlate": 55,
+  "wadaColors": { "ground": "#faeeee", "paper": "#fff8f5", "field": "#f0d9dd", "line": "#d9b8bf", "ink": "#653b49", "muted": "#795760", "action": "#8b475d" },
+  "accent": "#f59e0b",
+  "notes": "Dog stands at park height. Front-facing reference. Coat markings consistent across all poses. Wada palette locked - no colours outside the 2-4 combo plus amber accent. MSH readable at 104-128px on 390px screen."
+}

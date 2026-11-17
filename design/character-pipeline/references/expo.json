@@ -1,0 +1,16 @@
+{
+  "name": "expo",
+  "kind": "animal",
+  "design": "public/dogs/expo.webp",
+  "description": "a warm saddle-and-white dog with a white chest and blaze, medium build, floppy ears, long tail curling up, Forest guardian Wada plate 294 (deep ink #294434, quiet field #e1e9d5, one deep action #386344), NonArchitecture flat cel linework, #614c37 ink contour, no gradients, no drop shadows",
+  "height_m": 0.5,
+  "camera": "topdown",
+  "pitch": 50,
+  "facings": 4,
+  "mirror": false,
+  "actions": [],
+  "wadaPlate": 294,
+  "wadaColors": { "ground": "#f4f3e4", "paper": "#fbfaee", "field": "#e1e9d5", "line": "#bbc6a9", "ink": "#294434", "muted": "#526449", "action": "#386344" },
+  "accent": "#f59e0b",
+  "notes": "Dog stands at park height. Front-facing reference. Coat markings consistent across all poses. Wada palette locked - no colours outside the 2-4 combo plus amber accent. MSH readable at 104-128px on 390px screen."
+}

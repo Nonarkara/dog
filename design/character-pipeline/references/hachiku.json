@@ -1,0 +1,16 @@
+{
+  "name": "hachiku",
+  "kind": "animal",
+  "design": "public/dogs/hachiku.webp",
+  "description": "a ginger shiba with cream urajiro, medium build, pointed ears, curled tail over back, Quiet devotion Wada plate 50 (deep ink #563b60, quiet field #e9e0ed, one deep action #79527f), NonArchitecture flat cel linework, #614c37 ink contour, no gradients, no drop shadows",
+  "height_m": 0.45,
+  "camera": "topdown",
+  "pitch": 50,
+  "facings": 4,
+  "mirror": false,
+  "actions": [],
+  "wadaPlate": 50,
+  "wadaColors": { "ground": "#f3edf4", "paper": "#fdf8f4", "field": "#e9e0ed", "line": "#cbb9cf", "ink": "#563b60", "muted": "#725d79", "action": "#79527f" },
+  "accent": "#f59e0b",
+  "notes": "Dog stands at park height. Front-facing reference. Coat markings consistent across all poses. Wada palette locked - no colours outside the 2-4 combo plus amber accent. MSH readable at 104-128px on 390px screen."
+}
