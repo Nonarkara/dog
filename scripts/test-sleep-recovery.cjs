@@ -20,7 +20,8 @@ fs.mkdirSync(out,{recursive:true});
  await page.reload();
  const state=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021']);
  await page.getByRole('button',{name:/Bedtime and wake options for/i}).click();
- await page.getByText('Expo is restless. Give Expo some quiet time before trying bed again.',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Tuck Expo in',exact:true}).click();
+ await page.getByText('Expo is restless. Give him some quiet time before trying bed again.',{exact:true}).waitFor();
  const before=await state();assert.equal(before.sleep.asleep,false);
  // Move wall time; normal browser intervals must apply recovery without a click.
  await page.clock.setFixedTime(night+2*3600000);
@@ -28,7 +29,7 @@ fs.mkdirSync(out,{recursive:true});
  await page.waitForFunction(()=>document.querySelector('canvas')?.dataset.artPose==='sleep'&&document.querySelector('canvas')?.dataset.transition==='0');
  const after=await state();assert(after.needs.energy>before.needs.energy);assert(after.trust<=before.trust,'Rest cannot manufacture care rewards');
  assert(after.sleep.restlessness>=0&&after.sleep.restlessness<=1);
- await page.reload();await page.getByRole('button',{name:'Expo is asleep',exact:true}).waitFor();
+ await page.reload();await page.getByTitle('Expo is asleep · Bedtime options').waitFor();
  await page.waitForFunction(()=>document.querySelector('canvas')?.dataset.artPose==='sleep'&&document.querySelector('canvas')?.dataset.transition==='0');
  assert((await state()).sleep.asleep,'Recovery persists after reload');
  await page.screenshot({path:out+'/recovered-sleep.png'});

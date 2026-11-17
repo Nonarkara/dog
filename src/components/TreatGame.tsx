@@ -86,7 +86,7 @@ export function TreatGame({name,nose,host,onTurn,onLook,onReact,onClose,onComple
   useEffect(()=>{
     const keys=(e:KeyboardEvent)=>{
       if((e.target as HTMLElement|null)?.closest('input,textarea,select'))return;
-      if(document.querySelector('.control-reference'))return; // the labels help owns the keys while it is open
+      if(document.querySelector('.control-reference,.dog-chooser'))return; // open overlays own the keys while open
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();}
       else if(/^[123]$/.test(e.key)&&phase==='hide'){e.preventDefault();e.stopPropagation();void hide(slots.indexOf(+e.key-1));}
     };

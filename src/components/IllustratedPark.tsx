@@ -295,7 +295,12 @@ export function IllustratedPark(props:Props){
     const view=viewFor(a.heading);if(step>.01)a.facing=view.facing;
     const pose:ArtPose=(a.own&&p.petState?.sleep.asleep)||(a.remote&&a.remoteAsleep)?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':now<a.bowUntil?'bow':a.mode==='rest'?'down':a.mode==='nap'?'sleep':a.mode==='sit'?'sit':a.mode==='feed'?'feed':a.own&&p.ambient&&hungry()?'sit':'stand';applyPose(a,pose);
     // Puppies draw smaller, but never below the 120px a finger needs to pet them.
-    const growth=a.own&&p.petState?growthStage(p.petState):{scale:.62+.38*a.grown,progress:a.grown};a.w=Math.max(120,(a.own?166:142)*unit*growth.scale);
+    const growth=a.own&&p.petState?growthStage(p.petState):{scale:.62+.38*a.grown,progress:a.grown};
+    // 1-point eye-level perspective: dogs further back (y -> -280) shrink smoothly;
+    // dogs closer to the viewer (y -> +400) grow naturally, matching the path & lawn bands.
+    const perspective=Math.max(.85,Math.min(1.22,1+(a.y/unit-20)*.00048));
+    const minTouch=p.ambient?120:120/Math.min(1,Math.max(.85,zoom));
+    a.w=Math.max(minTouch,(a.own?166:142)*unit*growth.scale*perspective);
     const u=a.mesh.material.uniforms,petting=now<a.petUntil;
     // Each resting dog blinks on its own clock; moving atlas eyes are drawn
     // into their directional pose and must not inherit the standing-eye mask.
@@ -332,13 +337,13 @@ export function IllustratedPark(props:Props){
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
     const on=canopyAt(a.x,a.y,unit,a.onCanopy);a.onCanopy=on;
     a.mesh.renderOrder=on?CANOPY_RENDER_ORDER:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
-     for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'opacity',!on&&point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
+     for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'rx',String(4*unit*perspective));attr(a.contacts[i],'ry',String(1.6*unit*perspective));attr(a.contacts[i],'opacity',!on&&point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
     if(a.own){const pawsJson=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));if(pawsJson!==lastPawsJson){lastPawsJson=pawsJson;canvas.dataset.paws=pawsJson;}canvas.dataset.gaitBlend=String(a.blend);}
-    attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit));attr(a.shadow,'opacity',on&&a.raster?'0':(a.raster?'.12':'0'));
-    attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit));attr(a.label,'font-size',String(14*unit));attr(a.label,'opacity',a.raster?'1':'0');
-    attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit})`);attr(a.heart,'opacity',petting?'1':'0');
-    if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit}) scale(${unit})`);attr(a.bubble,'opacity',(a.remote?a.remoteHungry&&!a.remoteAsleep:hungry()&&!resting)&&a.raster?'1':'0');}
+    attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit*perspective));attr(a.shadow,'opacity',on&&a.raster?'0':(a.raster?'.12':'0'));
+    attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit*perspective));attr(a.label,'font-size',String(14*unit*(.88+.12*perspective)));attr(a.label,'opacity',a.raster?'1':'0');
+    attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14*perspective-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit*perspective})`);attr(a.heart,'opacity',petting?'1':'0');
+    if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit*perspective}) scale(${unit*perspective})`);attr(a.bubble,'opacity',(a.remote?a.remoteHungry&&!a.remoteAsleep:hungry()&&!resting)&&a.raster?'1':'0');}
    }
    // LIVE: tell friends' screens what your dog decided, not where every frame
    // is. A new message only when the goal moves 20 units or the activity

@@ -871,7 +871,7 @@ html {font-synthesis:none;}
 .care-console:not(.care-detail-view)>.care-body .care-now>.label {display:none;}
 .care-console:not(.care-detail-view)>.panel-head {padding:0 6px;}
 .care-console:not(.care-detail-view) .care-details-toggle {display:block;font-size:12px;min-height:28px;padding:1px 4px;}
-.care-console:not(.care-detail-view)>.care-body {flex:none;padding:4px 6px;gap:3px;}
+.care-console:not(.care-detail-view)>.care-body {flex:none;padding:2px 6px;gap:3px;}
 .care-console:not(.care-detail-view) .care-now {padding-top:1px;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console) {grid-template-rows:minmax(0,1fr) auto auto;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console)>.region-frame {container-type:normal;}

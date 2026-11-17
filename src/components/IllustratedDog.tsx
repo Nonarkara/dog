@@ -272,7 +272,7 @@ function IllustratedStage(props: Props & {url:string}) {
     let pendingResize=false,lastWidth=0,lastHeight=0,barSpace=.23,lastChromeRead=-Infinity;
     const measureChrome=()=>{const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();barSpace=toysBox?(canvasBox.right-toysBox.left+6)/Math.max(1,canvasBox.width)*(camera.right-camera.left):.23;};
     const resize=()=>{pendingResize=false;const w=container.clientWidth,h=container.clientHeight;if(!w||!h||w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
-    const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(container);resize();
+    const observer=new ResizeObserver(()=>{resize();});observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
     const hit=(event:PointerEvent)=>{
       const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
@@ -312,11 +312,12 @@ function IllustratedStage(props: Props & {url:string}) {
       if(!next)next=now;
       // A change of rate must not cost a frame: re-grid the schedule instead
       // of waiting out the interval the previous rate left behind.
+      if(pendingResize)resize();
       if(interval!==lastInterval){lastInterval=interval;next=now;}
       if(now+interval*.25<next)return;
       const dt=last?Math.min((now-last)/1000,.1):1/60;last=now;next+=interval;
       if(next<now-interval)next=now+interval;
-      if(!uniforms.art.value)return;if(pendingResize)resize();
+      if(!uniforms.art.value)return;
       if(now-lastChromeRead>350){measureChrome();lastChromeRead=now;}
       uniforms.art.value=textures.get(shownPose)||uniforms.art.value;uniforms.artTile.value.set(1,1,0,0);uniforms.locomotion.value=0;uniforms.running.value=0;hitAtlasFrame=-1;
       const p=latest.current,asleep=!!p.petState.sleep?.asleep,t=(now-start)/1000;
