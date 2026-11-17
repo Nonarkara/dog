@@ -19,6 +19,8 @@
 
 /** Off until the owner has seen and approved the generated art (house rule: AI art is shown before it ships). */
 export const PLAY_MOMENT_CARDS=false;
+/** Off until generated character sprites in public/dogs/sprites/ pass owner review. */
+export const SPRITE_GEN_REVIEW=false;
 
 export type DogPlayKind = 'chase' | 'tumble';
 

@@ -341,7 +341,7 @@ export function IllustratedPark(props:Props){
     }
     if(a.own){const pawsJson=JSON.stringify(a.contacts.map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy')),dot.getAttribute('opacity')==='.18']));if(pawsJson!==lastPawsJson){lastPawsJson=pawsJson;canvas.dataset.paws=pawsJson;}canvas.dataset.gaitBlend=String(a.blend);}
     attr(a.shadow,'cx',String(a.x));attr(a.shadow,'cy',String(a.y+2));attr(a.shadow,'rx',String(a.w*.33));attr(a.shadow,'ry',String(6*unit*perspective));attr(a.shadow,'opacity',on&&a.raster?'0':(a.raster?'.12':'0'));
-    attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit*perspective));attr(a.label,'font-size',String(14*unit*(.88+.12*perspective)));attr(a.label,'opacity',a.raster?'1':'0');
+    attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit*perspective));attr(a.label,'font-size',String((perspective<.96?13:14)*unit));attr(a.label,'opacity',a.raster?'1':'0');
     attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14*perspective-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit*perspective})`);attr(a.heart,'opacity',petting?'1':'0');
     if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit*perspective}) scale(${unit*perspective})`);attr(a.bubble,'opacity',(a.remote?a.remoteHungry&&!a.remoteAsleep:hungry()&&!resting)&&a.raster?'1':'0');}
    }

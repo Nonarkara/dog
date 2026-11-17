@@ -1,5 +1,5 @@
 import {IllustratedPark} from './IllustratedPark';
-import {dogPlayMoment,PLAY_MOMENT_CARDS,type DogPlayKind,type DogPlayMoment} from '../utils/fluxDogPlay';
+import {dogPlayMoment,PLAY_MOMENT_CARDS,SPRITE_GEN_REVIEW,type DogPlayKind,type DogPlayMoment} from '../utils/fluxDogPlay';
 import {growthStage} from '../domain/growth';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -518,7 +518,8 @@ export const CommonsPanel: React.FC<CommonsPanelProps> = ({ myDog, onPet,onClean
     const starter=DEFAULT_DOGS.find(d=>d.id===myDog.id);
     const originalCoat=starter&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>starter.avatarConfig[k]===myDog.avatarConfig[k]);
     if(artFile&&originalCoat&&!myDog.avatarConfig.customModelUrl){
-      new THREE.TextureLoader().load(`/dogs/${artFile}.webp`,texture=>{
+      const spriteUrl=SPRITE_GEN_REVIEW?`/dogs/sprites/${artFile}-stand.webp`:`/dogs/${artFile}.webp`;
+      new THREE.TextureLoader().load(spriteUrl,texture=>{
         if(disposed){texture.dispose();return;}
         texture.colorSpace=THREE.SRGBColorSpace;textures.push(texture);
         ownArt=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.15}));
