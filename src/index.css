@@ -913,7 +913,7 @@ html {font-synthesis:none;}
 .entry-head-tools {display:flex;align-items:center;gap:6px;}
 
 /* Entry is a choice, not a landing-page essay. */
-.entry {padding:clamp(12px,3vw,32px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;}
+.entry {padding:clamp(12px,3vw,32px);display:grid;grid-template-rows:auto auto auto;gap:12px;}
 /* The head is the SAME column as the choices below it.
 
    It used to span the whole frame, so on a desktop screen the wordmark sat
