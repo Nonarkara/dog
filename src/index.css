@@ -696,7 +696,11 @@
 .care-meter-symbols {display:contents;}
 .care-meter .meter-symbol {grid-column:1;grid-row:1;align-self:center;}
 .care-meter-value {grid-column:2;grid-row:1;align-self:center;}
-.care-meter [role="progressbar"] {grid-column:1/-1;grid-row:2;}
+.care-meter [role="progressbar"] {grid-column:1/-1;grid-row:2;
+   /* The empty track is the scale: at bg-elevated it was nearly the same
+      cream as the panel and the 0–100 range disappeared. accent-faint is
+      the same green as the fill, lighter, so the gauge reads whole. */
+   background:var(--accent-faint);}
 /* A low meter's word lives in the value slot, never a third row: a taller
    meter changes the care console's height and reflows the record below. */
 .care-meter .care-meter-value>.label {font-size:12px;line-height:1.2;text-transform:none;min-width:0;}
@@ -871,7 +875,9 @@ html {font-synthesis:none;}
 .care-console:not(.care-detail-view)>.care-body .care-now>.label {display:none;}
 .care-console:not(.care-detail-view)>.panel-head {padding:0 6px;}
 .care-console:not(.care-detail-view) .care-details-toggle {display:block;font-size:12px;min-height:28px;padding:1px 4px;}
-.care-console:not(.care-detail-view)>.care-body {flex:none;padding:2px 6px;gap:3px;}
+/* 6px of air under the header rule: at 2px the meter digits touched the
+   line above them, which reads as a collision, not as a group. */
+.care-console:not(.care-detail-view)>.care-body {flex:none;padding:6px 6px 4px;gap:3px;}
 .care-console:not(.care-detail-view) .care-now {padding-top:1px;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console) {grid-template-rows:minmax(0,1fr) auto auto;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console)>.region-frame {container-type:normal;}
@@ -1088,10 +1094,12 @@ html {font-synthesis:none;}
 /* Six meters in one row whenever they fit: icon, number, bar. The bar says "percent". */
 @container dog-care (min-width:21.25em){.care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 8px;}}
 .care-console:not(.care-detail-view) .care-meter-value .text-faint {display:none;}
-.care-console:not(.care-detail-view) .care-meter-value>.data {font-size:15px;}
+/* The number is the payload of its cell: 17px semibold ink against a
+   15px muted icon — one clear step, no third size in the row. */
+.care-console:not(.care-detail-view) .care-meter-value>.data {font-size:17px;font-weight:600;}
 .care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:15px;height:15px;}
 .care-console:not(.care-detail-view) .care-meter {grid-template-columns:16px minmax(0,1fr);}
-.care-console:not(.care-detail-view) .care-meter-value>.label {font-size:11px;line-height:1.2;}
+.care-console:not(.care-detail-view) .care-meter-value>.label {font-size:12px;line-height:1.2;letter-spacing:.04em;}
 .care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.35;}
 /* Coach: one row of commands, label-sized actions, no stretched slabs. */
 .region-coach>.panel-head {padding:1px 6px;}
@@ -1322,7 +1330,9 @@ html {font-synthesis:none;}
 /* Each care action rings the meter it moved and puts the change where the number was. */
 .care-meter [role="progressbar"]>div{transition:width .6s ease-out;}
 .care-meter[data-moved]{outline:1px solid var(--accent);outline-offset:1px;animation:care-ring 1.8s ease-out forwards;}
-.care-meter-delta{font-size:15px;line-height:1;color:var(--accent);font-weight:700;}
+/* The delta lands in the same slot at the same size, so the number never
+   jumps when it changes: colour and weight carry the change instead. */
+.care-meter-delta{font-size:17px;line-height:1;color:var(--accent);font-weight:700;}
 .care-meter[data-moved=down] .care-meter-delta{color:#9a2a22;}
 @keyframes care-ring{0%,70%{outline-color:var(--accent);}100%{outline-color:transparent;}}
 @media(prefers-reduced-motion:reduce){.care-meter[data-moved]{animation:none;}.care-meter [role="progressbar"]>div{transition:none;}}
