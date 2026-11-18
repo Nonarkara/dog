@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {canopyAt} from '../domain/parkCanopy';
+import {canopyAt,TREES} from '../domain/parkCanopy';
 import * as THREE from 'three';
 import {PLAY_PERSONALITIES} from './dogPlay';
 import {PARK_VERTEX,PARK_FRAGMENT,MOTION_LAYOUT,MOTION_FLOOR,smooth01,walkIndex,tileUv,unwarpMotionPoint,runNeckFor,turnAngle,viewFor,sourceRig,gaitRig,writeRig,frameArt,type MotionArtName} from './parkMotion';
@@ -10,6 +10,7 @@ import {DEFAULT_DOGS} from '../data/defaultDogs';
 import type {DogProfile} from '../types/dog';
 import type {MetaverseNeighborDog} from '../types/dog';
 import {parkScenery} from './parkScenery';
+import {depthScale,touchFallback} from '../domain/parkDepth';
 import {sound} from '../utils/proceduralAudio';
 import {chooseActivity,personalityOf} from '../domain/parkPersonality';
 import type {LiveIntent} from '../domain/parkProtocol';
@@ -154,7 +155,11 @@ export function IllustratedPark(props:Props){
     const py=Math.min(r.h-1,Math.floor(y*r.h))+(r.originY||0);
     const pixel=py*(r.pixelWidth||r.w)+px;
     return r.pixels[r.alphaOnly?pixel:pixel*4+3]>32;
-   });
+   })??(()=>{
+    // A far dog can draw smaller than a finger: 120 screen px at the zoom being drawn (parkDepth.touchFallback).
+    const drawn=[...actors.values()].filter(a=>a.raster);
+    return drawn[touchFallback(drawn,p.x,p.y,120/zoom)];
+   })();
   };
   const pointers=new Map<number,{x:number;y:number;startX:number;startY:number;moved:boolean}>();let pinching=false,pinch=0,strokeId:string|null=null;
   const down=(e:PointerEvent)=>{if(!pointers.size){pinching=false;strokeId=null;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false});canvas.setPointerCapture(e.pointerId);if(pointers.size>1){pinching=true;strokeId=null;const[a,b]=[...pointers.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);return;}const a=hit(point(e));if(a){strokeId=a.id;pet(a.id);}};
@@ -198,7 +203,8 @@ export function IllustratedPark(props:Props){
   const face=(a:Actor,b:Actor)=>{a.facing=b.x>a.x?-1:1;b.facing=a.x>b.x?-1:1;};
   // Places in the drawn park a dog can go to on purpose (park units).
   const BOWL:[number,number]=[22,232],BENCH:[number,number]=[145,-96];
-  const LOOKOUTS:[number,number][]=[[-250,-150],[300,-40],[-190,330],[250,330]];
+  // The two front lookouts sit beside the near trunks (TREES t3, t4).
+  const LOOKOUTS:[number,number][]=[[-250,-150],[300,-40],[TREES[2].x+125,330],[TREES[3].x-30,330]];
   const still=(m:Actor['mode'])=>m==='rest'||m==='sit'||m==='feed'||m==='nap';
   const goTo=(a:Actor,[x,y]:[number,number],then:'sit'|'feed'|'nap',now:number)=>{a.mode='walkto';a.then=then;a.tx=clampX(x*unit);a.ty=clampY(y*unit);a.until=now+20000;};
   const choose=(a:Actor,now:number)=>{
@@ -209,11 +215,11 @@ export function IllustratedPark(props:Props){
    const guest=!a.own&&!latest.current.ambient&&ownAvailable()?actors.get(ownId)!:null;
    const linger=(base:number)=>(base+Math.random()*base)*me.linger;
    switch(chooseActivity(a.artId,Math.random(),friends.length>0||!!guest)){
-    case 'chase':{if(!friends.length&&guest){a.mode='visit';a.partner=guest.id;a.tx=clampX(guest.x+(a.x<guest.x?-118:118)*unit);a.ty=clampY(guest.y+8*unit);a.until=now+7000;return;}const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b,a);b.heading=Math.atan2(b.ty-b.y,b.tx-b.x);a.tx=b.tx;a.ty=b.ty;a.heading=Math.atan2(b.y-a.y,b.x-a.x);a.bowUntil=now+600;a.until=b.until=now+5200;
+    case 'chase':{if(!friends.length&&guest){a.mode='visit';a.partner=guest.id;a.tx=clampX(guest.x+(a.x<guest.x?-118:118)*unit*depthScale(guest.y/unit));a.ty=clampY(guest.y+8*unit);a.until=now+7000;return;}const b=friend();a.mode='chase';a.partner=b.id;b.mode='flee';b.partner=a.id;[b.tx,b.ty]=farPoint(b,a);b.heading=Math.atan2(b.ty-b.y,b.tx-b.x);a.tx=b.tx;a.ty=b.ty;a.heading=Math.atan2(b.y-a.y,b.x-a.x);a.bowUntil=now+600;a.until=b.until=now+5200;
      const key=[a.id,b.id].sort().join('|')+':chase';
      if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'chase',a:a.name,b:b.name});}
      return;}
-    case 'visit':{const b=guest&&(!friends.length||Math.random()<.45)?guest:friend();a.mode='visit';a.partner=b.id;a.tx=clampX(b.x+(a.x<b.x?-118:118)*unit);a.ty=clampY(b.y+8*unit);a.until=now+7000;return;}
+    case 'visit':{const b=guest&&(!friends.length||Math.random()<.45)?guest:friend();a.mode='visit';a.partner=b.id;a.tx=clampX(b.x+(a.x<b.x?-118:118)*unit*depthScale(b.y/unit));a.ty=clampY(b.y+8*unit);a.until=now+7000;return;}
     case 'rest':a.mode='rest';a.tx=a.x;a.ty=a.y;a.until=now+linger(7000);return;
     case 'nap':a.mode='nap';a.tx=a.x;a.ty=a.y;a.until=now+linger(9000);return;
     case 'lookout':{const spot=LOOKOUTS.reduce((best,p)=>Math.hypot(p[0]*unit-a.x,p[1]*unit-a.y)<Math.hypot(best[0]*unit-a.x,best[1]*unit-a.y)&&Math.random()<.7?p:best,pick(LOOKOUTS));goTo(a,spot,'sit',now);return;}
@@ -227,14 +233,14 @@ export function IllustratedPark(props:Props){
    if((a.mode==='chase'||a.mode==='flee'||a.mode==='visit')&&!partner){settle(a,now);return;}
    if(a.mode==='chase'&&partner&&now>a.bowUntil){
     a.tx=partner.x;a.ty=partner.y;
-    if(now>a.bowUntil+650&&Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);
+    if(now>a.bowUntil+650&&Math.hypot(partner.x-a.x,partner.y-a.y)<58*unit*depthScale(partner.y/unit)){a.sniffUntil=partner.sniffUntil=now+1800;face(a,partner);
      const key=[a.id,partner.id].sort().join('|')+':tumble';
      if(now-(lastMoment.get(key)??-Infinity)>30000){lastMoment.set(key,now);latest.current.onDogPlay?.({kind:'tumble',a:a.name,b:partner.name});}
      settle(a,now);settle(partner,now);return;}
    }
    if(a.mode==='flee'&&Math.hypot(a.tx-a.x,a.ty-a.y)<20*unit)[a.tx,a.ty]=farPoint(a,partner);
    if(a.mode==='visit'&&partner&&Math.hypot(a.tx-a.x,a.ty-a.y)<10*unit){
-    if(Math.hypot(partner.x-a.x,partner.y-a.y)<130*unit&&partner.mode!=='chase'&&partner.mode!=='flee'&&(!partner.own||ownAvailable())){a.bowUntil=now+800;partner.bowUntil=Math.max(partner.bowUntil,now+1000);a.sniffUntil=now+2400;partner.sniffUntil=Math.max(partner.sniffUntil,now+2400);face(a,partner);greetings++;canvas.dataset.greetings=String(greetings);
+    if(Math.hypot(partner.x-a.x,partner.y-a.y)<130*unit*depthScale(partner.y/unit)&&partner.mode!=='chase'&&partner.mode!=='flee'&&(!partner.own||ownAvailable())){a.bowUntil=now+800;partner.bowUntil=Math.max(partner.bowUntil,now+1000);a.sniffUntil=now+2400;partner.sniffUntil=Math.max(partner.sniffUntil,now+2400);face(a,partner);greetings++;canvas.dataset.greetings=String(greetings);
       if(partner.own){canvas.dataset.greetedOwn='true';if(now-lastSocial>30000){lastSocial=now;latest.current.onSocialize();}}}
     settle(a,now);return;
    }
@@ -288,19 +294,17 @@ export function IllustratedPark(props:Props){
     const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?40:distance>100*unit||dx||dy?78:58):30))*unit*Math.min(1.08,PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error)):0;
     a.speed+=(wantedSpeed-a.speed)*(1-Math.exp(-dt*(moving?7:11)));
     if(!moving&&(now<a.petUntil||now<a.sniffUntil||now<a.bowUntil||still(a.mode)||(a.own&&resting)))a.speed=0;
-    const step=moving?Math.min(distance,a.speed*dt):0;let traveled=0;
-    if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;if(a.own&&traveled>.01)p.onWalk?.(traveled/unit,dt);}
+    const step=moving?Math.min(distance,a.speed*depthScale(a.y/unit)*dt):0;let traveled=0;
+    if(step>.001){const oldX=a.x,oldY=a.y;let nx=a.x+Math.cos(a.heading)*step,ny=a.y+Math.sin(a.heading)*step;const px=(nx/unit+275)/180,py=(ny/unit-90)/115,d=Math.hypot(px,py);if(d<1){nx=(-275+px/Math.max(d,.001)*180)*unit;ny=(90+py/Math.max(d,.001)*115)*unit;}a.x=nx;a.y=ny;traveled=Math.hypot(a.x-oldX,a.y-oldY);a.stride+=traveled/a.strideSize;if(traveled<.01){a.tx=a.x;a.ty=a.y;a.speed=0;}a.hasWalked=true;if(a.own&&traveled>.01)p.onWalk?.(traveled/unit/depthScale(oldY/unit),dt);}
     else if(a.blend>.01){const nearest=Math.round(a.stride*2)/2;a.stride+=(nearest-a.stride)*Math.min(1,dt*10);}
     a.blend+=((traveled>.01?1:0)-a.blend)*(1-Math.exp(-dt*10));
     const view=viewFor(a.heading);if(step>.01)a.facing=view.facing;
     const pose:ArtPose=(a.own&&p.petState?.sleep.asleep)||(a.remote&&a.remoteAsleep)?'sleep':a.own&&p.petState?.sick?'sick':now<a.petUntil&&a.motionFile?'pet':now<a.bowUntil?'bow':a.mode==='rest'?'down':a.mode==='nap'?'sleep':a.mode==='sit'?'sit':a.mode==='feed'?'feed':a.own&&p.ambient&&hungry()?'sit':'stand';applyPose(a,pose);
-    // Puppies draw smaller, but never below the 120px a finger needs to pet them.
+    // Puppies and far dogs draw smaller; hit() gives any dog under 120px a 120px touch box.
     const growth=a.own&&p.petState?growthStage(p.petState):{scale:.62+.38*a.grown,progress:a.grown};
-    // 1-point eye-level perspective: dogs further back (y -> -280) shrink smoothly;
-    // dogs closer to the viewer (y -> +400) grow naturally, matching the path & lawn bands.
-    const perspective=Math.max(.85,Math.min(1.22,1+(a.y/unit-20)*.00048));
-    const minTouch=p.ambient?120:120/Math.min(1,Math.max(.85,zoom));
-    a.w=Math.max(minTouch,(a.own?166:142)*unit*growth.scale*perspective);
+    // One-point perspective (parkDepth.ts): the same ground line that sizes the trees and props.
+    const perspective=depthScale(a.y/unit);
+        a.w=(a.own?166:142)*unit*growth.scale*perspective;
     const u=a.mesh.material.uniforms,petting=now<a.petUntil;
     // Each resting dog blinks on its own clock; moving atlas eyes are drawn
     // into their directional pose and must not inherit the standing-eye mask.
@@ -371,7 +375,7 @@ export function IllustratedPark(props:Props){
    if(mess&&(!messSite||mess>messSite.count))messSite={x:own.x+own.w*.35,y:own.y,count:mess};if(!mess)messSite=null;
    cleanup.dataset.kind=(p.petState?.poopCount??0)>0?'poop':'pee';cleanup.hidden=!mess||!p.onClean;if(messSite){cleanup.style.left=`${(messSite.x-cx)*zoom+width/2}px`;cleanup.style.top=`${(messSite.y-cy)*zoom+height/2}px`;}
 
-   renderer.render(scene,camera);canvas.dataset.frames=String(++frames);canvas.dataset.motionReady=String(own.motionFrames.length===MOTION_LAYOUT.frames);canvas.dataset.motionFrame=String(own.motionFrame);canvas.dataset.heading=String(own.heading);canvas.dataset.stride=String(own.stride);canvas.dataset.speed=String(own.speed);canvas.dataset.contacts=String(own.contacts.filter(c=>c.getAttribute('opacity')==='.18').length);canvas.dataset.focusX=String((target.x-cx)*zoom+width/2);canvas.dataset.focusY=String((target.y-target.h/2-cy)*zoom+height/2);canvas.dataset.focusWidth=String(target.w*zoom);canvas.dataset.focusHeight=String(target.h*zoom);canvas.dataset.zoom=zoom.toFixed(3);canvas.dataset.dogX=String((own.x-cx)*zoom+width/2);canvas.dataset.dogY=String((own.y-own.h/2-cy)*zoom+height/2);canvas.dataset.dogWidth=String(own.w*zoom);canvas.dataset.dogHeight=String(own.h*zoom);canvas.dataset.dogWorldX=String(own.x);canvas.dataset.dogWorldY=String(own.y);canvas.dataset.visibleDogs=String(visible);canvas.dataset.artPose=own.pose;canvas.dataset.artSource=own.mesh.material.uniforms.art.value?.userData.asset||'';canvas.dataset.dogCount=String(actors.size);canvas.dataset.smallestDogWidth=String(Math.min(...[...actors.values()].map(a=>a.w*zoom)));canvas.dataset.petDog=focus;canvas.dataset.lastPet=String(lastPet);canvas.dataset.drawCalls=String(renderer.info.render.calls);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.ownCanopy=String(own.onCanopy??'');
+   renderer.render(scene,camera);canvas.dataset.frames=String(++frames);canvas.dataset.motionReady=String(own.motionFrames.length===MOTION_LAYOUT.frames);canvas.dataset.motionFrame=String(own.motionFrame);canvas.dataset.heading=String(own.heading);canvas.dataset.stride=String(own.stride);canvas.dataset.speed=String(own.speed);canvas.dataset.contacts=String(own.contacts.filter(c=>c.getAttribute('opacity')==='.18').length);canvas.dataset.focusX=String((target.x-cx)*zoom+width/2);canvas.dataset.focusY=String((target.y-target.h/2-cy)*zoom+height/2);canvas.dataset.focusWidth=String(target.w*zoom);canvas.dataset.focusHeight=String(target.h*zoom);canvas.dataset.zoom=zoom.toFixed(3);canvas.dataset.dogX=String((own.x-cx)*zoom+width/2);canvas.dataset.dogY=String((own.y-own.h/2-cy)*zoom+height/2);canvas.dataset.dogWidth=String(own.w*zoom);canvas.dataset.dogHeight=String(own.h*zoom);canvas.dataset.dogWorldX=String(own.x);canvas.dataset.dogWorldY=String(own.y);canvas.dataset.visibleDogs=String(visible);canvas.dataset.artPose=own.pose;canvas.dataset.artSource=own.mesh.material.uniforms.art.value?.userData.asset||'';canvas.dataset.dogCount=String(actors.size);canvas.dataset.smallestDogWidth=String(Math.min(...[...actors.values()].map(a=>a.w*zoom)));if(frames%10===0)canvas.dataset.dogBoxes=JSON.stringify([...actors.values()].filter(a=>a.raster).map(a=>({id:a.id,x:Math.round((a.x-cx)*zoom+width/2),y:Math.round((a.y-cy)*zoom+height/2),w:Math.round(a.w*zoom),h:Math.round(a.h*zoom),pet:now<a.petUntil})));canvas.dataset.petDog=focus;canvas.dataset.lastPet=String(lastPet);canvas.dataset.drawCalls=String(renderer.info.render.calls);canvas.dataset.triangles=String(renderer.info.render.triangles);canvas.dataset.ownCanopy=String(own.onCanopy??'');
   };frame=requestAnimationFrame(animate);
   return()=>{disposed=true;cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',blur);canvas.removeEventListener('webglcontextlost',contextLost);canvas.removeEventListener('webglcontextrestored',contextRestored);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('wheel',wheel);actors.forEach(a=>a.mesh.material.dispose());geometry.dispose();rasters.forEach(p=>p.then(r=>r.texture.dispose()).catch(()=>{}));renderer.dispose();cleanup.remove();canvas.remove();scenery.remove();overlay.remove();};
  },[props.dogId,props.name,props.appearance.avatarConfig.pattern,props.appearance.avatarConfig.baseColor,props.appearance.avatarConfig.secondaryColor,props.appearance.avatarConfig.maskColor,props.appearance.avatarConfig.customModelUrl]);

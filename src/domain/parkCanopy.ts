@@ -1,3 +1,4 @@
+import {depthScale} from './parkDepth';
 /**
  * Tree canopies are elevated, walkable platforms in the flat 2D park: a dog
  * standing on one draws above ground dogs and casts no grass shadow or paw dots.
@@ -7,11 +8,17 @@
  * ellipse is centred on it and kept inside it. A test reads the scenery and
  * fails if the trees or the crown drift from these numbers.
  */
+/** A tree is TREE_SIZE times a dog-scale tree, then sized by depth at its trunk base. */
+const TREE_SIZE=1.2;
+/** Front trees are capped so their crowns frame the lawn instead of covering it. */
+export const TREE_MAX=1.3;
+const tree=(id:string,x:number,y:number)=>({id,x,y,s:Math.round(Math.min(TREE_MAX,TREE_SIZE*depthScale(y+65))*100)/100});
 export const TREES:readonly {id:string;x:number;y:number;s:number}[]=[
-  {id:'t1',x:-270,y:-210,s:1.1},
-  {id:'t2',x:310,y:-75,s:1.4},
-  {id:'t3',x:-315,y:320,s:1.2},
-  {id:'t4',x:280,y:370,s:1.0},
+  tree('t1',-270,-210),
+  tree('t2',310,-75),
+  // The two near trees stand wide so their big crowns frame the lawn instead of covering it.
+  tree('t3',-420,320),
+  tree('t4',360,370),
 ];
 /** Crown ellipse in a tree's own coordinates (inside the drawn crown). */
 export const CROWN={cx:4,cy:-86,rx:100,ry:70} as const;

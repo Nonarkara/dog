@@ -5,9 +5,10 @@ import {DOG_BEHAVIOURS,behaviourPool,chooseBehaviour} from '../components/dogBeh
 import {newIdle,stepIdle,idlePool,idleWeight, type IdleContext} from '../components/fallbackIdle';
 import {recordSources,recordExport} from '../utils/recordProvenance';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
-import {TREES,CROWN,canopyAt} from './parkCanopy';
+import {TREES,CROWN,canopyAt,TREE_MAX} from './parkCanopy';
 import {parkScenery} from '../components/parkScenery';
 import {DOG_THEMES} from '../data/dogThemes';
+import {depthScale,REFERENCE,touchFallback} from './parkDepth';
 /**
  * THE ENGINE'S OWN PROOF.
  *
@@ -860,8 +861,10 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
      ok('a dog jittering inside the rim band does not flip, whether it started on the canopy or on the lawn',run('t1')===0&&run(null)===0);
      ok('leaving the canopy still happens once the dog is clearly past the rim',at(1.06,'t1')===null);
      ok('entering needs the inner rim: the band alone does not put a lawn dog on the canopy',at(1.02,null)===null&&at(.98,null)==='t1');}
-    const benchMatch=scenery.match(/translate\((-?\d+) (-?\d+)\)">.*?M-72 -4V-62M72 -4V-62/);
-    ok('park bench sits on the lawn in front of the back fence (never hidden by fence rails)',!!benchMatch&&Number(benchMatch[2])-62>-222&&Number(benchMatch[1])-84>44);
+    // The bench is drawn on its ground line: translate(x groundY) scale(k) translate(0 -ground).
+    const benchMatch=scenery.match(/translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\) translate\(0 (-?[\d.]+)\)">[^]*?M-72 -4V-62M72 -4V-62/);
+    const [bx,by,bk,bg]=benchMatch?benchMatch.slice(1,5).map(Number):[0,0,0,0],benchTop=by+(-62+bg)*bk,benchLeft=bx-84*bk;
+    ok('park bench sits on the lawn in front of the back fence (never hidden by fence rails)',!!benchMatch&&benchTop>-222&&benchLeft>44,`top ${benchTop} left ${benchLeft}`);
     const lastTuft=scenery.lastIndexOf('M-12 2q-2-12-6-14'),firstTree=scenery.indexOf('M-83-55C-113-95');
     ok('ground tufts and flower beds draw beneath tree canopies',lastTuft>0&&firstTree>lastTuft);
   }
@@ -912,6 +915,18 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a dog who ran away does not greet you',welcomeBack(then,{...at(8),away:true as never},n)===null);
 }
 
+console.log('\nPARK PERSPECTIVE');
+{
+  ok('the middle of the lawn is true size',near(depthScale(REFERENCE),1));
+  ok('size shrinks steadily toward the horizon',depthScale(-252)<depthScale(-100)&&depthScale(-100)<depthScale(200)&&depthScale(200)<depthScale(400));
+  ok('a dog at the back fence is a little over half the size of one at the front',depthScale(-252)/depthScale(400)>.5&&depthScale(-252)/depthScale(400)<.6);
+  const dogs=[{x:0,y:0,w:80,h:60},{x:300,y:0,w:200,h:150}];
+  ok('a tap just beside a small far dog pets it',touchFallback(dogs,52,-20,120)===0);
+  ok('a tap beside a full-size dog finds no dog (it walks)',touchFallback(dogs,300+50,-140,120)===-1&&touchFallback(dogs,300,-4,120)===-1);
+  ok('a tap beyond the 120 px box finds no dog',touchFallback(dogs,61,-20,120)===-1&&touchFallback(dogs,0,-121,120)===-1);
+  ok('the nearest small dog wins',touchFallback([{x:0,y:0,w:80,h:60},{x:40,y:0,w:80,h:60}],30,-10,120)===1);
+  ok('every tree is sized by its trunk base, so a nearer tree is never smaller',TREES.every(t=>near(t.s,Math.round(Math.min(TREE_MAX,1.2*depthScale(t.y+65))*100)/100))&&TREES.filter(t=>t.y>0).every(n=>TREES.filter(t=>t.y<0).every(f=>n.s>f.s)));
+}
 console.log('\nPALETTE CONTRAST');
 {
   // Every palette's ink, muted and action text reads at WCAG AA (4.5:1) on all three of its grounds.
