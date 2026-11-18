@@ -343,7 +343,10 @@ export function IllustratedPark(props:Props){
     // Park tails spool like stage tails: quick to speed up, slow to settle.
     const wagTarget=u.motion.value.x>.1||u.fun.value.x>.05?13:3+u.temperament.value.y*5;
     u.wagT.value+=(wagTarget-u.wagT.value)*(1-Math.exp(-dt*(wagTarget>u.wagT.value?9:1.8)));
-    const on=canopyAt(a.x,a.y,unit,a.onCanopy);a.onCanopy=on;
+    // Trees are solid trunks on the lawn, not elevated platforms: dogs walk
+    // behind a tree's trunk base (drawn behind the foreground tree overlay),
+    // never on top of its leaves.
+    const on=null;a.onCanopy=on;
     a.mesh.renderOrder=on?CANOPY_RENDER_ORDER:Math.round(a.y+1000);if(r){const size=animated?a.w/.80:a.w/(r.right-r.left);a.h=size*(r.bottom-r.top);a.mesh.scale.set(a.facing*size/2,size/2,1);a.mesh.position.set(a.x-(animated?0:((r.left+r.right)/2-.5)*size*a.facing),-a.y+(r.bottom-.5)*size,0);a.mesh.updateMatrixWorld();
      for(let i=0;i<4;i++){const point=motionPoints?.[12+i];attr(a.contacts[i],'cx',String(a.x+(point?point[0]-.5:0)*size*a.facing));attr(a.contacts[i],'cy',String(a.y+(point?point[1]-MOTION_FLOOR:0)*size+1));attr(a.contacts[i],'rx',String(4*unit*perspective));attr(a.contacts[i],'ry',String(1.6*unit*perspective));attr(a.contacts[i],'opacity',!on&&point&&contactFlags[i]&&a.blend>.2?'.18':'0');}
     }
