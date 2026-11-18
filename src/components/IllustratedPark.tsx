@@ -331,7 +331,7 @@ export function IllustratedPark(props:Props){
      // legs are warped from this drawing's joints toward the next one's, so the stride
      // moves every frame instead of in stop-motion steps.
      {const walking=side&&!running,cycle=side?32:depth?16:0,strideEase=smooth01(.06,.56,a.blend);if(cycle){const f=a.stride*cycle,t=(f-Math.floor(f))*strideEase,base=index-(Math.floor(f)%cycle),next=sourceRig(a.motionFile!,walking?walkIndex(Math.floor(f)+1):base+(Math.floor(f)+1)%cycle),standRig=sourceRig(a.motionFile!,48+turnIndex);for(let j=4;j<16;j++){const gx=from[j][0]+(next[j][0]-from[j][0])*t,gy=from[j][1]+(next[j][1]-from[j][1])*t;gait.points[j][0]=standRig[j][0]+(gx-standRig[j][0])*strideEase;gait.points[j][1]=standRig[j][1]+(gy-standRig[j][1])*strideEase;}}}
-     a.strideSize=(running?.46:depth?.30:.30)*a.w/.80;motionPoints=gait.points;contactFlags=frameArt(a.motionFile!,index).feet.map(point=>point[1]>.883);
+     a.strideSize=(running?.46:depth?.30:.30)*(a.own?166:142)*unit*growth.scale/.80;motionPoints=gait.points;contactFlags=frameArt(a.motionFile!,index).feet.map(point=>point[1]>.883);
      u.running.value=running?1:0;u.runNeck.value.set(...runNeckFor(index));u.settling.value=!reduced.matches?Math.sin(smooth01(0,1,a.blend)*Math.PI)*.09:0;
      if(petting){motionPoints[0][0]+=.006;motionPoints[0][1]+=.003;}
      writeRig(u.strideFrom.value,u.strideTo.value,from,motionPoints);u.locomotion.value=1;u.morphAmount.value=0;
