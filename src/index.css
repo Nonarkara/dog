@@ -1293,10 +1293,25 @@ html {font-synthesis:none;}
 .care-pantry-toggle{min-width:28px;min-height:28px;padding:4px;}
 @media(max-width:339px){.park-drawers{flex-wrap:wrap;}.park-drawers .park-camera{margin-left:auto;}.park-selected-inline{min-width:0;}}
 .pantry-guide{font-size:13px;line-height:1.35;}.pantry-guide summary{cursor:pointer;min-height:24px;}.pantry-guide p{padding-block:4px;}
-/* Keep the command cluster together when a player enlarges the handwriting. */
+/* Keep the command cluster on one compact row across every phone width. */
 .cockpit>header>div{height:auto;min-height:44px;flex-wrap:wrap;row-gap:0;}
 .header-instruments{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0;}
-@media(max-width:639px){.header-instruments{flex:0 0 auto;margin-left:auto;gap:6px;}}
+.cockpit:has(.cockpit-workspace--park) .companion-toggle{display:none;}
+.park-navigation--home{border-color:var(--border-strong);background:var(--stage-ground);color:var(--text-main);}
+@media(max-width:639px){
+ .cockpit>header>div{flex-wrap:nowrap;gap:4px;padding-inline:6px;}
+ .app-brand{font-size:13px;}
+ .cockpit>header [aria-controls="dog-switcher"]{padding-inline:5px;gap:3px;font-size:13px;max-width:112px;overflow:hidden;text-overflow:ellipsis;}
+ .header-instruments{flex:0 0 auto;margin-left:auto;gap:2px;}
+ .header-instruments>button{min-width:32px;min-height:34px;padding:4px 5px;}
+ .park-navigation--home span{display:none;}
+}
+@media(max-width:479px){.owned-growth{display:none;}}
+@media(max-width:359px){
+ .cockpit>header>div{gap:3px;padding-inline:5px;}
+ .app-brand{font-size:12px;}
+ .cockpit>header [aria-controls="dog-switcher"]{padding-inline:4px;gap:2px;font-size:12px;max-width:96px;}
+}
 @media(max-width:339px){
  .park-drawers{flex-wrap:nowrap;gap:2px;padding-inline:2px;}
  .park-drawers>button:nth-of-type(2)>span{display:none;}

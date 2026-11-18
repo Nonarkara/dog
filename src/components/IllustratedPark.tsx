@@ -9,7 +9,7 @@ import type {PetState} from '../domain/types';
 import {DEFAULT_DOGS} from '../data/defaultDogs';
 import type {DogProfile} from '../types/dog';
 import type {MetaverseNeighborDog} from '../types/dog';
-import {parkScenery} from './parkScenery';
+import {parkScenery,PARK_FOREGROUND_PROPS} from './parkScenery';
 import {depthScale,touchFallback} from '../domain/parkDepth';
 import {sound} from '../utils/proceduralAudio';
 import {chooseActivity,personalityOf} from '../domain/parkPersonality';
@@ -72,6 +72,10 @@ export function IllustratedPark(props:Props){
   // Signals that must never be hidden behind a dog (the hungry bowl) live on
   // a layer above the canvas, sharing the scenery's coordinates.
   const overlay=document.createElementNS(NS,'svg');overlay.setAttribute('class','park-overlay');overlay.setAttribute('aria-hidden','true');host.append(overlay);
+  // Upright props whose ground base sits in front of a dog draw above the canvas,
+  // so a dog behind the sign or bench stands BEHIND it rather than on top of it.
+  const fgPropsGroup=document.createElementNS(NS,'g');fgPropsGroup.setAttribute('class','park-foreground-props');fgPropsGroup.setAttribute('stroke-linecap','round');fgPropsGroup.setAttribute('stroke-linejoin','round');fgPropsGroup.setAttribute('transform',`scale(${unit})`);overlay.append(fgPropsGroup);
+  const fgProps=PARK_FOREGROUND_PROPS.map(prop=>{const wrap=document.createElementNS(NS,'g');wrap.setAttribute('data-fg-prop',prop.id);wrap.setAttribute('opacity','0');wrap.innerHTML=prop.svg;fgPropsGroup.append(wrap);return {...prop,el:wrap};});
   // The names, in the overlay, so nothing in the scene can hide them.
   const names=document.createElementNS(NS,'g');names.setAttribute('class','park-dog-labels');overlay.append(names);
   const canvas=renderer.domElement;canvas.style.touchAction='none';canvas.dataset.renderer='illustrated-park';
@@ -348,6 +352,16 @@ export function IllustratedPark(props:Props){
     attr(a.label,'x',String(a.x));attr(a.label,'y',String(a.y+17*unit*perspective));attr(a.label,'font-size',String((perspective<.96?13:14)*unit));attr(a.label,'opacity',a.raster?'1':'0');
     attr(a.heart,'transform',`translate(${a.x} ${a.y-a.h-14*perspective-(reduced.matches?0:(2200-Math.max(0,a.petUntil-now))*.014)}) scale(${unit*perspective})`);attr(a.heart,'opacity',petting?'1':'0');
     if(a.bubble){attr(a.bubble,'transform',`translate(${a.x+a.w*.3} ${a.y-a.h-30*unit*perspective}) scale(${unit*perspective})`);attr(a.bubble,'opacity',(a.remote?a.remoteHungry&&!a.remoteAsleep:hungry()&&!resting)&&a.raster?'1':'0');}
+   }
+   for(const prop of fgProps){
+    let behind=false,front=false;
+    for(const a of actors.values()){
+     if(!a.raster||a.onCanopy!==null)continue;
+     const ax=a.x/unit,ay=a.y/unit,hw=(a.w/unit)*.42,top=ay-a.h/unit;
+     if(ax+hw<=prop.left||ax-hw>=prop.right||top>=prop.groundY||ay<=prop.topY)continue;
+     if(ay<prop.groundY)behind=true;else front=true;
+    }
+    attr(prop.el,'opacity',behind&&!front?'1':'0');
    }
    // LIVE: tell friends' screens what your dog decided, not where every frame
    // is. A new message only when the goal moves 20 units or the activity

@@ -44,8 +44,17 @@ const bowl=`<g transform="${onGround(66,225,8)}">${contact(0,8,38,9)}<path d="M-
 const hoop=`<g transform="${onGround(-95,-148,42)}">${contact(-30,42,12,3.4)}${contact(30,42,12,3.4)}<path d="M-30 42V-10M30 42V-10" stroke="${INK}" stroke-width="7"/><circle cy="-14" r="26" fill="none" stroke="#386344" stroke-width="10"/><circle cy="-14" r="26" fill="none" stroke="#526449" stroke-width="3" stroke-dasharray="5 7"/></g>`;
 const jump=`<g transform="${onGround(250,50,48)}">${contact(-34,48,12,3.4)}${contact(34,48,12,3.4)}${contact(0,48,40,5)}<path d="M-34 48V-22M34 48V-22" stroke="${INK}" stroke-width="7"/><path d="M-38-18H38" stroke="#b37736" stroke-width="9"/><path d="M-38-4H38" stroke="#eadbc0" stroke-width="6"/></g>`;
 const aframe=`<g transform="${onGround(-100,300+46*.8-46,46,.8)}">${contact(0,46,96,12)}<path d="M-74 44L-8-58H10L-56 44Z" fill="#eadbc0" stroke="${INK}" stroke-width="3"/><path d="M74 44L8-58H-10L56 44Z" fill="#e2d0ae" stroke="${INK}" stroke-width="3"/><path d="M-84 44H84" stroke="#77624e" stroke-width="7"/><path d="M-52 12l6 9M-30-22l6 9M32-20l-6 9M54 10l-6 9" stroke="${TIMBER}" stroke-width="4"/></g>`;
-const sign=`<g transform="${onGround(-30,-80,34)}">${contact(0,34,16,4.5)}<path d="M0 34V-34" stroke="${INK}" stroke-width="7"/><path d="M-22-38H26L34-26L26-14H-22Z" fill="#a77b4d" stroke="${INK}" stroke-width="2"/><path d="M-14-26H18" stroke="#eadbc0" stroke-width="2"/></g>`;
+const sign=`<g transform="${onGround(-28,-96,38)}">${contact(0,38,16,4.5)}<path d="M0 38V-38" stroke="${INK}" stroke-width="7"/><path d="M-22-42H26L34-30L26-18H-22Z" fill="#a77b4d" stroke="${INK}" stroke-width="2"/><path d="M-14-30H18" stroke="#eadbc0" stroke-width="2"/></g>`;
 const ball=`<g transform="${onGround(-40,12,9)}">${contact(0,9,12,3.4)}<circle r="10" fill="#e8d9a0" stroke="#526449"/><path d="M-8-5q13 2 13 13M-3-9q-1 11-6 12" fill="none" stroke="${CREAM}" stroke-width="2"/></g>`;
+export interface ParkForegroundProp {id:string;groundY:number;topY:number;left:number;right:number;svg:string;}
+export const PARK_FOREGROUND_PROPS:readonly ParkForegroundProp[]=[
+ {id:'hoop',groundY:-106,topY:-176,left:-126,right:-64,svg:hoop},
+ {id:'bench',groundY:-104,topY:-194,left:72,right:220,svg:bench},
+ {id:'sign',groundY:-58,topY:-130,left:-48,right:4,svg:sign},
+ {id:'jump',groundY:98,topY:24,left:210,right:290,svg:jump},
+ {id:'bowl',groundY:233,topY:206,left:36,right:96,svg:bowl},
+ {id:'aframe',groundY:336.8,topY:230,left:-186,right:-14,svg:aframe},
+];
 const pads=[[-212,116,13],[-186,130,9],[-318,60,11]].map(([x,y,r],i)=>`<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${f(r*.5)}" fill="#8fae86" stroke="#526449" stroke-width="1.4"/><path d="M${x} ${y}l${r} ${-r*.2}" stroke="#526449" stroke-width="1.4"/>${i===0?`<circle cx="${x+4}" cy="${y-5}" r="3.4" fill="#e0a9b0"/><circle cx="${x+4}" cy="${y-5}" r="1.3" fill="${CREAM}"/>`:''}`).join('');
 const sideHedge=(sign:number)=>{const x=(y:number)=>sign*(530+(y+252)*.04);let d=`M${sign*1600} -300V1300H${f(x(1300))}`;for(let y=1300,i=0;y>-252;y-=40,i++)d+=`Q${f(x(y-20)+sign*-12*(.6+rnd(i+70)*.4))} ${y-20} ${f(x(y-40))} ${y-40}`;return d+'Z';};
 export function parkScenery(){return `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="park-scenery" viewBox="-200 -300 400 600">
