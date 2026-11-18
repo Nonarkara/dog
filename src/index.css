@@ -805,7 +805,7 @@ html {font-synthesis:none;}
 .command-speech[hidden] {display:none;}
 @media(max-width:639px){
  .command-speech {order:10;flex-basis:100%;}
- .command-bar {justify-content:space-between;}
+ .command-bar>button:first-of-type {margin-left:auto;}
  .care-console .care-body {padding:5px;gap:3px;}
  .care-console .care-meter-grid {gap:3px 10px;}
  .care-console .care-history {gap:2px 6px;}
@@ -1092,13 +1092,21 @@ html {font-synthesis:none;}
 .cockpit main>[role=tablist]>[role=tab],.cockpit .desktop-region-tabs>[role=tab] {min-height:32px;padding-block:2px;}
 .cockpit main>[role=tablist]>[role=tab] svg {width:18px;height:18px;}
 /* Six meters in one row whenever they fit: icon, number, bar. The bar says "percent". */
-@container dog-care (min-width:21.25em){.care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 8px;}}
 .care-console:not(.care-detail-view) .care-meter-value .text-faint {display:none;}
-/* The number is the payload of its cell: 17px semibold ink against a
-   15px muted icon — one clear step, no third size in the row. */
-.care-console:not(.care-detail-view) .care-meter-value>.data {font-size:17px;font-weight:600;}
-.care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:15px;height:15px;}
-.care-console:not(.care-detail-view) .care-meter {grid-template-columns:16px minmax(0,1fr);}
+/* Scale digits with container width so 3-digit "100" never collides into the
+   next meter's icon on phones while preserving hierarchy above the muted icon. */
+.care-console:not(.care-detail-view) .care-meter-value>.data {font-size:clamp(13.5px,3.6cqi,17px);font-weight:600;font-variant-numeric:tabular-nums;}
+.care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:13px;height:13px;}
+.care-console:not(.care-detail-view) .care-meter {grid-template-columns:14px minmax(0,1fr);gap:3px 2px;}
+@container dog-care (min-width:21.25em){
+ .care-console:not(.care-detail-view) .care-meter-grid {grid-template-columns:repeat(6,minmax(0,1fr));gap:3px 8px;}
+ .care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:14px;height:14px;}
+}
+@container dog-care (min-width:37.5em){
+ .care-console:not(.care-detail-view) .care-meter-grid {gap:3px 10px;}
+ .care-console:not(.care-detail-view) .care-meter .meter-symbol svg {width:15px;height:15px;}
+ .care-console:not(.care-detail-view) .care-meter {grid-template-columns:16px minmax(0,1fr);gap:3px 3px;}
+}
 .care-console:not(.care-detail-view) .care-meter-value>.label {font-size:12px;line-height:1.2;letter-spacing:.04em;}
 .care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.35;}
 /* Coach: one row of commands, label-sized actions, no stretched slabs. */
@@ -1152,6 +1160,7 @@ html {font-synthesis:none;}
 .capture-game {display:flex;flex-direction:column;gap:4px;padding:4px 6px;border-top:1px solid var(--border);}
 .capture-progress {display:flex;align-items:baseline;gap:8px;}
 .capture-progress .data {margin-left:auto;font-size:12px;}
+.capture-meter {margin-left:auto;display:inline-flex;gap:1px;line-height:1;}
 .capture-stars i {font-style:normal;color:var(--border-strong);}
 .capture-stars i[data-on=true] {color:var(--accent);}
 .capture-status {font-size:13px;line-height:1.35;min-height:2.7em;}
@@ -1321,7 +1330,7 @@ html {font-synthesis:none;}
 .care-console--extras>.panel-head{display:none;}
 .care-console .care-extras .panel-head{padding-block:1px;}
 .care-console .care-extras .panel-head button{min-height:32px;padding-block:2px;}
-@container dog-care (min-width:17.5em){.care-console:not(.care-detail-view) .care-meter-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;}}
+@container dog-care (min-width:17.5em) and (max-width:21.24em){.care-console:not(.care-detail-view) .care-meter-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;}}
 @media(max-width:639px){.header-instruments .park-navigation{padding-inline:6px;}}
 @media(max-width:339px){
  .command-bar.icon-commands :is(button.btn,button.btn-quiet,button.btn-accent){width:32px;min-width:32px;height:32px;min-height:32px;padding:2px;}

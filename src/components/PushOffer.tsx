@@ -31,7 +31,7 @@ export const PushOffer:React.FC<{name:string;answered:number;detail:boolean}>=({
     <div className="push-offer-controls"><button type="button" className="btn-quiet border-hairline" disabled={busy} aria-label={on?`Turn off calls for this browser`:`Let ${name} call when the app is closed`} onClick={()=>void change()}>{on?<BellOff size={15} aria-hidden="true"/>:<Bell size={15} aria-hidden="true"/>}{busy?'One moment…':on?'Turn off calls':'Calls when away'}</button>
     {on&&detail&&<label><input type="checkbox" checked={followup} disabled={busy} onChange={e=>{try{setFollowupEnabled(e.target.checked);setFollowup(e.target.checked);setNote('Applies next time you leave.');}catch{setNote('Could not save that choice. Try again.');}}}/>One gentle follow-up</label>}</div>
     {on&&detail&&<p>Scheduled 07:00–22:00 in your device’s time. Up to {followup?'two calls':'one call'} while away; delivery can be delayed.</p>}
-    {!on&&<p>One daytime call while away. A follow-up is optional.</p>}
+    {!on&&detail&&<p>One daytime call while away. A follow-up is optional.</p>}
     {!on&&Notification.permission==='denied'&&<p>Calls are blocked in browser settings.</p>}
     {note&&<p role="status">{note}</p>}
   </div>;
