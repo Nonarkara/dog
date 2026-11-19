@@ -48,6 +48,17 @@ low = min((obj.matrix_world @ Vector(c)).z for c in obj.bound_box)
 obj.location.z -= low
 bpy.context.view_layer.update()
 
+# SMOOTH THE RECONSTRUCTION NOISE.
+#
+# The shape stage reconstructs fur as spikes. Two light passes of a Laplacian
+# smooth remove the noise without eating the silhouette — the texture, when
+# it lands, carries the fur; the geometry only has to carry the animal.
+for _ in range(2):
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.vertices_smooth(factor=0.5, repeat=1)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
 verts = obj.data.vertices
 corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
 xs, ys, zs = zip(*corners)
@@ -60,25 +71,15 @@ print(
 mat = bpy.data.materials.new("judge")
 mat.use_nodes = True
 bsdf = mat.node_tree.nodes["Principled BSDF"]
-bsdf.inputs["Base Color"].default_value = (0.55, 0.55, 0.57, 1)
-bsdf.inputs["Roughness"].default_value = 0.75
+bsdf.inputs["Base Color"].default_value = (0.62, 0.60, 0.58, 1)
+bsdf.inputs["Roughness"].default_value = 0.72
 obj.data.materials.clear()
 obj.data.materials.append(mat)
-
-# Light and world.
-bpy.ops.object.light_add(type="SUN", location=(4, -6, 8))
-sun = bpy.context.object
-sun.data.energy = 3.0
-sun.rotation_euler = (math.radians(50), 0, math.radians(35))
-bpy.ops.object.light_add(type="AREA", location=(-4, -3, 5))
-fill = bpy.context.object
-fill.data.energy = 400
-fill.data.size = 6
 
 world = bpy.data.worlds.new("judge-world")
 bpy.context.scene.world = world
 world.use_nodes = True
-world.node_tree.nodes["Background"].inputs[0].default_value = (0.06, 0.06, 0.07, 1)
+world.node_tree.nodes["Background"].inputs[0].default_value = (0.11, 0.11, 0.13, 1)
 
 # Camera, framed on the real bounds.
 scene = bpy.context.scene
@@ -109,6 +110,38 @@ half_fov = min(cam_data.angle_x, cam_data.angle_y) / 2
 dist = radius / math.sin(half_fov * 0.88)
 
 focus.location = target
+
+# THE LIGHT GOES WITH THE CAMERA.
+#
+# A key light on the far side of the subject renders a silhouette, and a
+# silhouette is not evidence of a model. So the sun travels with the camera
+# around the turntable, with a soft fill opposite and a low rim to lift the
+# dark coat off the dark ground.
+sun_data = bpy.data.lights.new("sun", type="SUN")
+sun_data.energy = 4.0
+sun = bpy.data.objects.new("sun", sun_data)
+scene.collection.objects.link(sun)
+sun.parent = cam
+sun.location = (2.5, -3.5, 4.0)
+sun.rotation_euler = (math.radians(45), 0, math.radians(35))
+
+fill_data = bpy.data.lights.new("fill", type="AREA")
+fill_data.energy = 900
+fill_data.size = 8
+fill = bpy.data.objects.new("fill", fill_data)
+scene.collection.objects.link(fill)
+fill.parent = cam
+fill.location = (-3.5, 2.5, 2.5)
+fill.rotation_euler = (math.radians(65), 0, math.radians(-125))
+
+rim_data = bpy.data.lights.new("rim", type="AREA")
+rim_data.energy = 500
+rim_data.size = 5
+rim = bpy.data.objects.new("rim", rim_data)
+scene.collection.objects.link(rim)
+rim.parent = cam
+rim.location = (-1.5, 4.0, 1.2)
+rim.rotation_euler = (math.radians(80), 0, math.radians(-160))
 
 for name, angle in (("front", 180), ("right", 90), ("back", 0), ("left", 270)):
     rad = math.radians(angle)

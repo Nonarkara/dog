@@ -814,6 +814,7 @@ export const App: React.FC = () => {
                     url={currentDog.avatarConfig.customModelUrl}
                     interactionTrigger={interactionTrigger}
                     onInteractionEnd={() => setInteractionTrigger(null)}
+                    onPet={() => handleInteract('pet')}
                   />
                 ) : (
                   <IllustratedDog
