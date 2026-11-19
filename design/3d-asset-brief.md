@@ -75,3 +75,57 @@ No Meshy/Tripo/Fal/Replicate/Hugging Face generation credential was exposed in t
 - [Meshy web-app rigging](https://docs.meshy.ai/en/webapp/guides/3d-model/rigging)
 - [Meshy public rigging API](https://docs.meshy.ai/en/api/rigging)
 - [Meshy pricing and export terms](https://www.meshy.ai/pricing/)
+
+## There IS a pipeline, and it runs here
+
+The assessment above was right about the credential and wrong about the
+conclusion: no hosted generator was reachable, but nothing needed one.
+
+**The image generator is already installed.** `mcode-tools connector
+__matrix__generate_image` is Flux, and it takes `input_urls` — so it does
+image-to-image. The owner's own photographs go in, and a clean studio plate
+comes out: one subject, full body, plain background, exact markings. That
+plate is the input every 3D model wants, and it is what makes the model a
+model *of this animal* rather than of a generic dog.
+
+**The mesh generator runs locally, on Apple Silicon.** [AssetFurnace]
+(`github.com/Bingeljell/image-to-3dlab`, Apache-2.0) is the whole chain:
+picture → textured, rigged, animated `.glb`, with auto-rig and 21 move clips.
+The route that needs no compiler is Hunyuan3D-MLX, pure MLX:
+
+```
+git clone --depth 1 https://github.com/Bingeljell/image-to-3dlab.git
+uv sync --project hunyuan_mlx/shape && uv sync --project hunyuan_mlx/paint
+hunyuan_mlx/shape/.venv/bin/python hunyuan_mlx/download_weights.py --yes
+```
+
+13.3 GB of weights. **They must not live in `/tmp`** — macOS cleans it on
+its own schedule, and 8 GB were lost that way once. Put them in
+`~/.cache/assetfurnace`. The xet transfer backend stalls at zero bytes on the
+two big files; `scripts/fetch-hunyuan-paint-weights.sh` fetches them with
+curl instead, at about 20 MB/s.
+
+**The whole recipe is one command now.**
+
+```
+python3 scripts/make-dog-model.py --image public/expo/expo-single.jpg --out public/expo/expo.glb
+```
+
+It checks the weights, generates, renders the mesh from four sides with
+Blender, and reports the triangle count and the delivery budget against the
+targets above.
+
+**Expo's reference plate already exists.** `public/expo/expo-single.jpg` is a
+photoreal full-body studio render made from Expo's own photographs, with the
+mask, blaze, mane, ear carriage, amber eyes and plume tail all preserved.
+
+**What still stands.** The rig is the hard part and it is not done:
+`RiggedAvatar` now frames from the model's real bounds, crossfades clips,
+says so when a rig has no clip for what the dog is doing, falls back to the
+drawn animal on load failure, and takes a touch — but a mesh is a body, not
+a performance. The Rigify pipeline in AssetFurnace
+(`scripts/blender_build_rig.py`, `blender_bind_rig.py`,
+`blender_quadruped_pipeline.py`) is the route, and it wants a human eye on
+each stage.
+
+[AssetFurnace]: https://github.com/Bingeljell/image-to-3dlab
