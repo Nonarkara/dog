@@ -51,8 +51,13 @@ for (const m of text.matchAll(/@(media|container)([^{]*)\{/g)) {
  * at 279px is a viewport of 289px — and a sweep that visits only viewport
  * breakpoints steps straight over it. The instrument names these cliffs
  * when the sweep misses one, so the widths it asks for live here.
+ *
+ * 1238 is the coach's vocabulary: its panel is 400px wide (25rem) at that
+ * viewport, which is where eight words over one row become eight words
+ * over two. The sweep has to stand on that cliff to measure both sides of
+ * it.
  */
-const CONTAINER_CLIFF_VIEWPORTS = [289, 290, 350, 610];
+const CONTAINER_CLIFF_VIEWPORTS = [289, 290, 350, 610, 1237, 1238, 1239];
 
 if (process.argv.includes('--with-css')) console.error("stylesheets: " + paths.join(", "));
 console.log(
