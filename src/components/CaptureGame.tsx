@@ -130,10 +130,19 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
   const stage=typeof document!=='undefined'?document.querySelector('.stage-frame'):null;
   return (
     <div className="capture-game" data-capture-phase={phase} data-capture-doing={doing}>
-      <div className="capture-progress" aria-label={`${word}: ${stars} of 5`}>
+      {/* ONE FACT, ONE PLACE. The five stars ARE the count; a "3/5 to learn"
+          line beside them said the same thing twice in two languages. While
+          he is learning the stars carry the number, and the meter carries the
+          count for anyone who cannot read the glyphs. Once he has learned it
+          the meter is full, so the word replaces it instead of repeating it. */}
+      <div className="capture-progress">
         <span className="label">Teach “{word}”</span>
-        <span className="capture-stars" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} data-on={i<stars}>★</i>)}</span>
-        <span className="data">{c.association>=LEARNED?'Learned ✓':`${stars}/5 to learn`}</span>
+        {c.association>=LEARNED
+          ? <span className="data">Learned ✓</span>
+          : <span className="capture-meter" role="progressbar" aria-valuemin={0} aria-valuemax={5}
+              aria-valuenow={stars} aria-label={`${word}: ${stars} of 5`}>
+              <span className="capture-stars" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} data-on={i<stars}>★</i>)}</span>
+            </span>}
       </div>
       <TrainingSteps name={name} word={word} step={phase==='marked'?2:doing?1:0}/>
       <p className="capture-status" aria-live="polite">{unavailable??(status||`Watch for ${word.toLowerCase()}.`)}</p>

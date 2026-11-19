@@ -81,6 +81,11 @@ const TRAITS: { key: keyof Personality; label: string }[] = [
 const CHIP = 'training-word';
 /** The secondary rep buttons. The primary pair keeps the house button height. */
 const SMALL_BTN = 'min-h-0 h-[26px] px-2 py-0 text-[10px]';
+/** THE FOUR OUTCOMES OF A REP: the timed pair above, the untimed pair below.
+    They hug their words — a 220px slab around "Did it" was five times the
+    width of the thing it said — and they share one height, because they are
+    the same kind of control and used to be two different sizes. */
+const OUTCOME_BTN = 'min-h-0 h-[32px] px-2.5 text-[11px]';
 /** The tiny buttons in the head and beside the manual field. */
 const TINY_BTN = 'min-h-0 h-[24px] px-1 py-0 text-[9px] leading-none';
 /** Fields sit in a 22px row so the instrument stays an instrument. */
@@ -383,9 +388,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
             Eight words in a row that wraps leave one alone on the last line.
             The columns come from the count instead — eight divides by four
             and by eight — and the panel's own width decides which, because
-            the panel is what the words have to fit inside. */}
-        <div className="shrink-0 px-2 py-1.5">
-          <div className="grid grid-cols-4 gap-1">
+            the panel is what the words have to fit inside. Every chip hugs
+            its word: a quarter-panel cell around "Sit" was a box five times
+            the width of the thing it held. */}
+        <div className="dog-vocab shrink-0 px-2 py-1.5">
+          <div className="dog-vocab-row">
           {BEHAVIOURS.map((b) => {
             const active = b.name === behaviourName;
             return (
@@ -467,7 +474,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                   type="button"
                   onClick={armTimer}
                   disabled={phase === 'armed'||isSavingRep}
-                  className={`btn flex-1 text-[11px] ${
+                  className={`btn ${OUTCOME_BTN} ${
                     phase === 'armed' ? 'btn-quiet border-hairline' : 'btn-accent'
                   }`}
                 >
@@ -477,7 +484,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                   type="button"
                   onClick={markNow}
                   disabled={phase !== 'armed'||isSavingRep}
-                  className={`btn flex-1 text-[11px] ${
+                  className={`btn ${OUTCOME_BTN} ${
                     phase === 'armed' ? 'btn-accent' : 'btn-quiet border-hairline'
                   }`}
                 >
@@ -490,7 +497,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                   type="button"
                   onClick={() => applyRep({ performed: true, marked: false })}
                   disabled={isSavingRep}
-                  className={`btn btn-quiet border-hairline flex-1 ${SMALL_BTN}`}
+                  className={`btn btn-quiet border-hairline ${OUTCOME_BTN}`}
                 >
                   Not marked
                 </button>
@@ -498,7 +505,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
                   type="button"
                   onClick={() => applyRep({ performed: false, marked: false })}
                   disabled={isSavingRep}
-                  className={`btn btn-quiet border-hairline flex-1 ${SMALL_BTN}`}
+                  className={`btn btn-quiet border-hairline ${OUTCOME_BTN}`}
                 >
                   Didn&apos;t perform
                 </button>

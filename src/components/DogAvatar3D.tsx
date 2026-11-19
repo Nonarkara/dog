@@ -903,6 +903,26 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     const earTwitch = { last: -99, next: 3 + Math.random() * 5, side: 1 };
     const wagE = { f: 3, a: 0.15, phase:0 };
 
+    // THE RESIZE BELONGS TO A FRAME. Setting the canvas size clears the
+    // buffer, and a ResizeObserver callback is delivered outside the
+    // animation frame, so the 3D fallback blinked out for a paint whenever
+    // its container changed size. The observer only asks; the frame does the
+    // work, resizing and drawing in the same frame.
+    let pendingResize = false;
+    const applyResize = () => {
+      pendingResize = false;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (!w || !h) return;
+      fitCamera(w, h);
+      renderer.setSize(w, h);
+    };
+    const handleResize = () => { pendingResize = true; };
+    window.addEventListener('resize', handleResize);
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
+    applyResize();
+
     const animate = () => {
       animFrameId.current = requestAnimationFrame(animate);
       const frameNow = performance.now();
@@ -910,6 +930,7 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
       const asleep = ps.sleep?.asleep ?? false;
       const act = interactionState.current;
       const busy = act.timer > 0 || gameLeap.current.dir !== null || (petting.spot !== null && frameNow < petting.until) || !!performanceRef.current.poseRequest;
+      if (pendingResize) applyResize();
       const minInterval = reducedMotion ? 100 : asleep && !busy ? 80 : 32;
       if (document.hidden || frameNow - lastFrame < minInterval) return;
       lastFrame = frameNow;
@@ -1211,16 +1232,8 @@ export const DogAvatar3D: React.FC<DogAvatar3DProps> = ({
     };
     animate();
 
-    const handleResize = () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      if (!w || !h) return;
-      fitCamera(w, h);
-      renderer.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
-    const observer = new ResizeObserver(handleResize);
-    observer.observe(container);
+    window.removeEventListener('resize', handleResize);
+    observer.disconnect();
 
     return () => {
       if (animFrameId.current) cancelAnimationFrame(animFrameId.current);

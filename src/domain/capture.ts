@@ -36,6 +36,14 @@ export function isUnlocked(s:PetState,n:BehaviourName){
 }
 /** The behaviour he must learn before `n`, or null when `n` is open. */
 export const lockedBehind=(s:PetState,n:BehaviourName)=>isUnlocked(s,n)?null:LEARN_ORDER[LEARN_ORDER.indexOf(n)-1];
+/**
+ * THE WORD TO TEACH NEXT.
+ *
+ * The behaviours unlock in order, so a reader who wants fetch and has only
+ * taught sit cannot open fetch yet. This is the first word the reader has
+ * NOT taught — the one that actually opens the next door.
+ */
+export const nextTeachable=(s:PetState):BehaviourName=>LEARN_ORDER.find(b=>!isLearned(s,b))??'sit';
 
 /** Chance that his next spontaneous offer is the cued behaviour. */
 export const offerChance=(association:number)=>.12+.83*clamp01(association);

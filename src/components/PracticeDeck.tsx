@@ -245,9 +245,15 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           panel's own width decides how many, because the panel is what the
           words have to fit inside — four columns of two rows in a narrow
           coach panel, one row of eight when the panel is wide enough to
-          hold them. */}
-      <div className="shrink-0 px-2 py-1.5">
-        <div className="grid grid-cols-4 gap-1">
+          hold them.
+
+          And every chip HUGS its word. The columns are max-content, not
+          1fr: the old quarter-panel cell put "Sit" — twenty pixels of ink —
+          inside a hundred-and-eight pixel box, five times the width of the
+          thing it was labelled with. The box is now the word plus its
+          padding, and nothing else. */}
+      <div className="dog-vocab shrink-0 px-2 py-1.5">
+        <div className="dog-vocab-row">
         {BEHAVIOURS.map((b) => {
           const behind=lockedBehind(petState,b.name);
           return (

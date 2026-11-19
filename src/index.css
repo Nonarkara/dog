@@ -1108,7 +1108,11 @@ html {font-synthesis:none;}
  .care-console:not(.care-detail-view) .care-meter {grid-template-columns:16px minmax(0,1fr);gap:3px 3px;}
 }
 .care-console:not(.care-detail-view) .care-meter-value>.label {font-size:12px;line-height:1.2;letter-spacing:.04em;}
-.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.35;}
+/* The compact strip's advice: 13px, and a leading that lets TWO lines of it
+   fit the console's 102px budget. At 1.35 two lines were 35.1px and a long
+   dog name pushed the console half a pixel over the budget it has always
+   had. The sentence keeps both lines and the whole instruction. */
+.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.25;}
 /* Coach: one row of commands, label-sized actions, no stretched slabs. */
 .region-coach>.panel-head {padding:1px 6px;}
 .region-coach>.panel-head button {min-height:24px;padding:0 6px;font-size:11px;}
@@ -1119,6 +1123,21 @@ html {font-synthesis:none;}
 [data-practice-behaviour] .btn.flex-1 {flex:none;min-height:32px;padding:0 12px;font-size:13px;}
 [data-practice-behaviour] .btn {min-height:32px;padding:0 10px;font-size:13px;}
 .region-coach .btn.training-word {height:auto;min-height:32px;padding:3px 4px;font-size:13px;line-height:1.15;white-space:normal;text-align:center;}
+/* ---- THE DOG'S EIGHT WORDS ---------------------------------------------
+   A chip hugs its word. The old row handed every word a quarter of the
+   panel as a cell: "Sit" sat in a 108px box holding 20px of ink — five
+   times the width of the thing it was labelled with. The columns are
+   max-content, so the box is the word plus its padding and nothing else.
+
+   The columns come from the COUNT, never from the width: eight divides by
+   four and by eight, so the vocabulary is either four words over two rows
+   or eight words over one, and never seven with a lone chip on the last
+   line. The panel's own width decides which — the words are laid out in
+   the panel they have to fit inside, and 25rem is where all eight fit in
+   a single row with room to spare. */
+.dog-vocab {container-type:inline-size;container-name:dog-vocab;}
+.dog-vocab-row {display:grid;gap:4px;grid-template-columns:repeat(4,max-content);justify-content:start;}
+@container dog-vocab (min-width:25rem){.dog-vocab-row{grid-template-columns:repeat(8,max-content);}}
 .practice-real-notes {padding:2px 6px;}
 .practice-real-notes summary {min-height:24px;font-size:11px;}
 .training-tip {padding:1px 6px;font-size:13px;}
@@ -1159,8 +1178,8 @@ html {font-synthesis:none;}
 /* Capturing: the first word. */
 .capture-game {display:flex;flex-direction:column;gap:4px;padding:4px 6px;border-top:1px solid var(--border);}
 .capture-progress {display:flex;align-items:baseline;gap:8px;}
-.capture-progress .data {margin-left:auto;font-size:12px;}
-.capture-meter {margin-left:auto;display:inline-flex;gap:1px;line-height:1;}
+.capture-progress .data {font-size:12px;}
+.capture-meter {display:inline-flex;gap:1px;line-height:1;}
 .capture-stars i {font-style:normal;color:var(--border-strong);}
 .capture-stars i[data-on=true] {color:var(--accent);}
 .capture-status {font-size:13px;line-height:1.35;min-height:2.7em;}

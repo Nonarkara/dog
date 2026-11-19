@@ -2,6 +2,8 @@ import {PARK_VERTEX,PARK_FRAGMENT,poseSpring,poseSettling,smooth01,MOTION_LAYOUT
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
+import {nextTeachable} from '../domain/capture';
+import {BEHAVIOURS,type BehaviourName} from '../domain/types';
 import React, { useEffect, useRef, useState } from 'react';
 import {createPortal} from 'react-dom';
 import * as THREE from 'three';
@@ -25,7 +27,7 @@ interface Props extends PerformanceProps {
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
   onCare?: (action: Interaction) => void;
   onBed?: () => void;
-  onTeachFetch?:()=>void;
+  onTeachFetch?:(behaviour:BehaviourName)=>void;
   onPet?: (part?:TouchPart) => void; onClean?: () => void; onMiniGameComplete?: (won: boolean,kind?:'catch'|'find-treat') => void;
   fallback: React.ReactNode;
 }
@@ -89,6 +91,12 @@ function IllustratedStage(props: Props & {url:string}) {
   const cheerTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [cheer,setCheer]=useState<{id:number;text:string}|null>(null);
   const [fetchConfused,setFetchConfused]=useState(false);
+  /** THE PROMISE THE BUTTON MAKES. Fetch opens only after sit, down, paw and
+      come are taught, so the gate names the word the reader can teach NEXT
+      and opens exactly that — a "Teach fetch" button that quietly landed on
+      sit was a promise the product could not keep. */
+  const teachNext=nextTeachable(props.petState);
+  const teachLabel=BEHAVIOURS.find(b=>b.name===teachNext)?.label??teachNext;
   const [touchMessage,setTouchMessage]=useState('');
   const touchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const touchRef=useRef('');
@@ -272,7 +280,12 @@ function IllustratedStage(props: Props & {url:string}) {
     let pendingResize=false,lastWidth=0,lastHeight=0,barSpace=.23,lastChromeRead=-Infinity;
     const measureChrome=()=>{const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();barSpace=toysBox?(canvasBox.right-toysBox.left+6)/Math.max(1,canvasBox.width)*(camera.right-camera.left):.23;};
     const resize=()=>{pendingResize=false;const w=container.clientWidth,h=container.clientHeight;if(!w||!h||w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
-    const observer=new ResizeObserver(()=>{resize();});observer.observe(container);resize();
+    // THE RESIZE BELONGS TO A FRAME. Setting canvas.width clears the buffer,
+    // and a ResizeObserver callback is delivered outside the animation frame,
+    // so the dog blinked out for a paint whenever the panel changed size.
+    // The observer only asks; the frame below does the work, resizing and
+    // drawing in the same frame so a cleared buffer is never shown.
+    const observer=new ResizeObserver(()=>{pendingResize=true;});observer.observe(container);resize();
     const point=(event:PointerEvent)=>{const r=canvas.getBoundingClientRect();return{x:(event.clientX-r.left)/r.width,y:(event.clientY-r.top)/r.height};};
     const hit=(event:PointerEvent)=>{
       const q=point(event),[x,y]=unwarpMotionPoint([(((q.x-.5)*(camera.right-camera.left)-skin.position.x)/skin.scale.x+1)/2,(((q.y-.5)*(camera.top-camera.bottom)+skin.position.y)/skin.scale.y+1)/2],hitAtlasFrame);
@@ -597,6 +610,12 @@ function IllustratedStage(props: Props & {url:string}) {
   const status=calling??(mood==='content'?null:needs);
   const StatusIcon=status?.Icon as React.ElementType;
   const ambientText:Record<string,string>={looking:'What was that?',yawning:'A little yawn…','ear-twitch':'Did I hear you?','head-tilt':'Hmm?','tail-wag':'Happy you’re here',shake:'Shake it off!',scratch:'An itchy spot…','paw-screen':'Are you there?','nose-nudge':'Hello, you.','play-bow':'Come play!',watching:'Keeping you company',sniffing:'So many interesting smells…',wandering:'A little wander',sitting:'Watching the world',trotting:'A quick dash!',stretching:'Biiig stretch',resting:'Just resting my paws',sighing:'Sigh…',bored:'Got anything fun?',toilet:'Sniff… need to go!',toileting:'Oops…',tired:'Time for a nap',sick:'Taking it easy',sleeping:'Dreaming…'};
+  /** ONE THING, ONE PLACE. While the dog sleeps the daily status already
+      says "Dreaming…" at the top of the stage; the ambient caption at the
+      bottom said the same words again, in the same moment, at the other
+      corner of the picture. The caption keeps its job — narrating a moment
+      — and stays out of the way when the status is already telling it. */
+  const ambientCaption=touchMessage||(toileting?'Oops…':(mood==='sleeping'&&!calling?'':ambientText[ambient]));
   return <div className="relative w-full h-full overflow-hidden select-none illustrated-stage" data-mood={mood}>
     {(()=>{const s=homeScene(isHome(props.petState.home)?props.petState.home:'house');return <div className="home-scene" aria-hidden="true"><div className="home-wall" dangerouslySetInnerHTML={{__html:s.wall}}/><div className="home-floor" dangerouslySetInnerHTML={{__html:s.floor}}/></div>;})()}
     <div ref={mount} className="dog-art-layer w-full h-full cursor-pointer" role="img" aria-label={`${dog.name}, illustrated dog. Enter or space to pet.`} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pet();}}}/>
@@ -605,7 +624,7 @@ function IllustratedStage(props: Props & {url:string}) {
       <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
       <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
     </div>)}
-    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop…</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.();}}>Teach fetch ↗</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
+    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} watches the ball drop…</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.(teachNext);}}>{teachNext==='fetch'?'Teach fetch ↗':`Teach ${teachLabel} first ↗`}</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
     {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
     {finding&&<TreatGame key={dog.id} name={dog.name} nose={props.petState.noseSkill??0} host={props.controlsHost}
       onTurn={away=>runTrick(away?'away':'back',true)}
@@ -617,7 +636,7 @@ function IllustratedStage(props: Props & {url:string}) {
     {!game&&!finding&&cheer&&<div key={cheer.id} className="dog-cheer" role="status" aria-live="polite"><span>{cheer.text}</span><div aria-hidden="true">{[0,1,2].map(i=><Heart key={i} className="dog-love" style={{animationDelay:`${i*.12}s`,left:`${42+i*7}%`}} size={17} fill="currentColor"/>)}</div></div>}
     {!game&&!finding&&trick?.kind==='highfive'&&highFiveReady&&<button ref={pawTarget} className="paw-target" type="button" aria-label={`Give ${dog.name} a high five`} onClick={highFive}><Hand size={25} aria-hidden="true"/></button>}
     {!game&&!finding&&!cheer&&status&&<div className={`dog-daily-status dog-daily-status--${calling?'call':mood}`} role="status">{status.action?<button type="button" disabled={!!props.interactionTrigger} aria-label={`${status.action} ${dog.name}: ${status.text}`} onClick={()=>latest.current.onCare?.(status.action!)}><StatusIcon size={16} aria-hidden="true"/>{status.text}</button>:mood==='tired'?<button type="button" onClick={()=>latest.current.onBed?.()}><StatusIcon size={16} aria-hidden="true"/>{status.text}</button>:<span><StatusIcon size={16} aria-hidden="true"/>{status.text}</span>}</div>}
-    {!game&&!finding&&!cheer&&!trick&&<span className="dog-ambient-caption" aria-live="off">{touchMessage|| (toileting?'Oops…':ambientText[ambient])}</span>}
+    {!game&&!finding&&!cheer&&!trick&&ambientCaption&&<span className="dog-ambient-caption" aria-live="off">{ambientCaption}</span>}
     {toileting&&!asleep&&!props.petState.sick&&<span className="dog-pee-drops" aria-label="Having a wee"><Droplets size={20}/></span>}
     {asleep&&<svg className="dog-blanket" viewBox="0 0 300 90" aria-label="Tucked into a blanket"><path d="M12 25 Q80 8 142 24 Q216 5 286 30 L280 82 L18 82 Z" fill="var(--bg-elevated)" stroke="var(--border-strong)" strokeWidth="2"/><path d="M14 33 Q90 17 147 34 Q218 16 284 38 M58 39 L64 76 M234 39 L230 76" fill="none" stroke="var(--border-dim)" strokeWidth="2"/></svg>}
     {asleep&&<span className="absolute top-[22%] left-[30%] data text-zinc-400" aria-label="Sleeping">z z</span>}

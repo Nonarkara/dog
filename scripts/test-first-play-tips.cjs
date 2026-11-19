@@ -13,7 +13,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
 await openToys(p);await tip('tricks');/* opening the toys is the first trick press, so its guide appears there */
  await p.getByRole('button',{name:'High five',exact:true}).click();await p.getByRole('tab',{name:'Coach',exact:true}).click();assert.equal(await p.locator('.first-play-tip').count(),0); // Coach tab shows no tip by design; it teaches in pictures beside the button
  // The coach tip now comes with the coach's first action, reached from the untaught-fetch introduction (Teach fetch), not from the Coach tab itself.
- await p.getByRole('tab',{name:'Care',exact:true}).click();await p.getByRole('button',{name:'Play Expo',exact:true}).click();await p.getByRole('button',{name:'Teach fetch ↗'}).click();await tip('coach');
+ await p.getByRole('tab',{name:'Care',exact:true}).click();await p.getByRole('button',{name:'Play Expo',exact:true}).click();await p.getByRole('button',{name:/^Teach .+ ↗$/}).click();await tip('coach');
  // A reload remembers seen action types, independent of canonical dog progress.
  await p.reload();await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>5);await p.getByRole('button',{name:'Pet Expo',exact:true}).click();assert.equal(await p.locator('.first-play-tip').count(),0);
  await p.getByRole('button',{name:'Open Commons park'}).click();await p.locator('[data-first-tip="park"]').waitFor();assert(await p.locator('.park-world').evaluate(e=>e.clientHeight>innerHeight*.5));const c=await p.context().newCDPSession(p),{data}=await c.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(out+'/park-tip.png',Buffer.from(data,'base64'));

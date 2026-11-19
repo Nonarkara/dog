@@ -18,7 +18,7 @@ import {TOUCH_PREFERENCES,gameState,buyFood,discoverTouch,socialize,completePark
 import {recordSources} from './utils/recordProvenance';
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { DogProfile } from './types/dog';
-import type { PetState } from './domain/types';
+import type { PetState, BehaviourName } from './domain/types';
 import { dailyLife } from './domain/dailyLife';
 import type { AvatarInteractionTrigger } from './components/DogAvatar3D';
 import type {PoseRequest,AvatarPose,PerformPose} from './components/trainingMotion';
@@ -151,7 +151,7 @@ export const App: React.FC = () => {
   const [dogs, setDogsView] = useState<DogProfile[]>(() => loadStoredDogs(householdDefaults()));
   const [activeDogId, setActiveDogId] = useState<string>(() => {const id=loadActiveDogId(householdDefaults()[0].id);return dogs.some(dog=>dog.id===id)?id:dogs[0].id;});
   const [careExtra,setCareExtra]=useState<'food'|'bed'|null>(null);
-  const [coachRequest,setCoachRequest]=useState<'fetch'|undefined>();
+  const [coachRequest,setCoachRequest]=useState<BehaviourName|undefined>();
   const [petPulse,setPetPulse]=useState(0);
   // A live park invite (?park=<room>) opens straight into the park.
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
@@ -825,7 +825,7 @@ export const App: React.FC = () => {
                     poseRequest={poseRequest}
                     onPoseComplete={completePose}
                     onPet={(part) => handleInteract('pet',part)}
-                    onTeachFetch={()=>{setCareExtra(null);setCoachRequest('fetch');setActiveRegion('coach');}}
+                    onTeachFetch={behaviour=>{setCareExtra(null);setCoachRequest(behaviour);setActiveRegion('coach');}}
                     onClean={() => handleInteract('clean')}
                     controlsHost={gameControlsHost}
                     onCare={handleInteract}

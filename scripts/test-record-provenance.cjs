@@ -3,17 +3,20 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),report=[];try{
 for(const[w,h]of[[390,844],[1024,768],[1440,900],[1280,720]]){
  const p=await b.newPage({viewport:{width:w,height:h}});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded'});await p.bringToFront();// Ensure a saved dog exists so the park canvas renders; the live site starts with none.
+// The app writes its own household — five dogs with their starter clinical
+// examples — as soon as it loads. This fixture used to hand-roll a copy of
+// Expo's record, and the copy was stale: it carried ONE vaccination where
+// the product carries four, so the record panel and the saved save
+// disagreed. Waiting for the app's own save and only filling a missing PET
+// keeps the test measuring the product's record, not a fixture's.
+await p.waitForFunction(()=>{const raw=localStorage.getItem('canine_os_save_v3');if(!raw)return false;const s=JSON.parse(raw);return Array.isArray(s.dogs)&&s.dogs.length>0;});
 await p.evaluate(()=>{
-  const save=JSON.parse(localStorage.getItem('canine_os_save_v3')||'{}');
-  if(!save.pets||!save.pets['expo-2021']){
-    save.pets=save.pets||{};save.dogs=save.dogs||{};
-    const base={id:'',name:'',breed:'',birthDate:'',sex:'male',isNeutered:true,microchipId:'',weightKg:0,coatColor:'',distinctiveMarks:[],personalityTraits:[],favoriteFood:'',favoriteToy:'',quirks:[],primaryVetClinic:'',emergencyPhone:'',photos:[],primaryPhotoUrl:'',vaccinations:[],parasiteControl:[],medicalHistory:[],tamagotchi:{},metaverseTribe:'',metaverseBio:'',avatarConfig:{baseColor:'#ffffff',secondaryColor:'#000000',maskColor:'#000000',furFluff:0.5,earShape:'pricked',tailShape:'curl'}};
-    save.dogs['expo-2021']={...base,id:'expo-2021',name:'Expo',breed:'Thai Bangkaew Dog',birthDate:'2021-11-17',weightKg:24.8,microchipId:'TH-985141002849102',primaryVetClinic:'Thonglor Pet Hospital',emergencyPhone:'+66 2 712 6301',vaccinations:[{id:'vac-1',name:'Rabies',type:'core',dateAdministered:'2026-04-12',nextDueDate:'2027-04-12',batchNumber:'RB-88914-A',clinic:'Thonglor Pet Hospital',veterinarian:'Dr. Chayanin DVM',notes:'Annual mandatory rabies booster.'}],avatarConfig:{...base.avatarConfig,baseColor:'#ffffff',maskColor:'#294434'}};
-    save.pets['expo-2021']={sleep:{asleep:false},sick:false,needs:{hunger:80,energy:80,hygiene:80},trust:60,discipline:60,arousal:30,poopCount:0,life:{bladder:0,boredom:0,digestionMinutes:0,lowFullnessMinutes:0,peeCount:0},updatedAt:Date.now()};
-    save.dogs['paolo-pug']={...base,id:'paolo-pug',name:'Paolo',breed:'Pug',birthDate:'2022-03-02',weightKg:8.5,microchipId:'',primaryVetClinic:'',emergencyPhone:'',vaccinations:[],avatarConfig:{...base.avatarConfig,baseColor:'#e8c39e',maskColor:'#2b1b17',furFluff:0.3,earShape:'floppy',tailShape:'curl'}};
-    save.pets['paolo-pug']={sleep:{asleep:false},sick:false,needs:{hunger:80,energy:80,hygiene:80},trust:60,discipline:60,arousal:30,poopCount:0,life:{bladder:0,boredom:0,digestionMinutes:0,lowFullnessMinutes:0,peeCount:0},updatedAt:Date.now()};
-    localStorage.setItem('canine_os_save_v3',JSON.stringify(save));
-  }
+ const k='canine_os_save_v3',save=JSON.parse(localStorage.getItem(k));
+ if(!save.pets||!save.pets['expo-2021']){
+  save.pets=save.pets||{};
+  save.pets['expo-2021']={sleep:{asleep:false},sick:false,needs:{hunger:80,energy:80,hygiene:80},trust:60,discipline:60,arousal:30,poopCount:0,life:{bladder:0,boredom:0,digestionMinutes:0,lowFullnessMinutes:0,peeCount:0},updatedAt:Date.now()};
+  localStorage.setItem(k,JSON.stringify(save));
+ }
 });await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>+document.querySelector('.region-stage canvas')?.dataset.frames>8);// The frame is wide when it has the room for it, which is what the app
  // decides: 1024 across AND 600 down. The 820 this used to say was the
  // old threshold, and the test switched regions the app had already

@@ -46,7 +46,7 @@ export function useFirstPlayTips(){
   if(/Zoom in|Zoom out|Find my dog/.test(label)){show('zoom');return;}
   if(/Yes!.*mark/.test(label)){show('marker');return;}
   if(label==='Treat'){show('treat');return;}
-  if(/Teach fetch|^Lure$/.test(label)){show('coach');return;}
+  if(/^Teach .+ ↗|^Lure$/.test(label)){show('coach');return;}
   if(/3 meals/.test(label)){show('coins');return;}
   if(/Serve a meal|^Feed /.test(label)){show('feed');return;}
   if(/Tuck .+ in|^Put .+ to bed|^Bedtime and wake options/.test(label)){show('bed');return;}

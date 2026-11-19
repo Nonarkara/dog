@@ -27,6 +27,12 @@ const hold=async page=>page.evaluate(async()=>{
 });
 const release=async page=>{await page.evaluate(()=>window.reviewHold=false);};
 let page=await fresh();
+// The catch game comes FIRST, and the cue card opens only once the dog has
+// learned the word — so a fresh dog has no "Lure" button to press. The
+// lesson is set up as learned, which is the state the cue card is for.
+await page.evaluate(()=>{const k='canine_os_save_v3',s=JSON.parse(localStorage.getItem(k));const p=s.pets['expo-2021'];p.capture={...(p.capture||{}),sit:{association:.9,pairings:3}};localStorage.setItem(k,JSON.stringify(s));});
+await page.reload();await page.waitForFunction(()=>!!localStorage.getItem('canine_os_save_v3'));
+await page.getByRole('button',{name:/Proof it/}).click();
 await hold(page);
 await page.getByRole('button',{name:'Lure',exact:true}).click();
 await page.getByRole('button',{name:'Treat',exact:true}).click();
@@ -42,9 +48,14 @@ await page.locator('[data-practice-phase]').getByRole('button',{name:'Down',exac
 await release(page);
 await page.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021'].lessons.sit.sessionTrials===0);
 await page.waitForFunction(()=>!document.querySelector('[data-practice-phase] button[title="Give the cue once"]')?.disabled);
-assert(await page.getByRole('button',{name:'Lure',exact:true}).isEnabled(),'Changing behavior during queued break must not leave training disabled');
+// Changing the behaviour leaves the cue card — the product returns to the
+// catch game — so the live control to check is the catch game's own button.
+// The claim is the same: a queued break must not leave training disabled.
+assert(await page.locator('[data-practice-phase] .capture-primary').isEnabled(),'Changing behavior during queued break must not leave training disabled');
 console.log('PASS queued break releases controls after behavior change');await page.context().close();
 page=await fresh();
+// On the desktop column the record is a FOLD, not a tab row: open it first.
+await page.getByRole('button',{name:'Record',exact:true}).click();
 await page.getByRole('tab',{name:/^Vaccines,/}).click();
 await page.getByRole('button',{name:'Record a dose',exact:true}).click();
 await page.getByLabel('Vaccine name',{exact:true}).fill('Review dose');
