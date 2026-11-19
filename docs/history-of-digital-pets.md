@@ -206,12 +206,11 @@ and it changed the genre in three specific ways:
    sad, dirty and neglected, but it would not perish. Nintendo removed the
    cruelty and kept the attachment.
 
-Nintendogs sold enormously — by 2015 it was the **second-best-selling game on
-the Nintendo DS**, behind only New Super Mario Bros — and it built an
-audience no one had aimed at: young women and girls who had largely been
-outside the "games are for boys" marketing that dominated the era. It is
-still the best argument that the right virtual pet is a *specific* animal with
-a *specific* breed, living with a specific person.
+Nintendogs sold enormously — by 2015 it was the Nintendo DS's **second-best-
+selling game** — and it built an audience no one had aimed at: young women and
+girls who had largely been outside the "games are for boys" marketing that
+dominated the era. It is still the best argument that the right virtual pet is
+a *specific* animal with a *specific* breed, living with a specific person.
 
 The other half of the lineage is the **Petz** franchise: *Dogz* (1995) and
 *Catz* (1996) from PF Magic, acquired by Mindscape in 1998 and by Ubisoft in
