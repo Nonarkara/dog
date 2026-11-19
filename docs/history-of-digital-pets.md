@@ -190,8 +190,9 @@ artefact and started being a lens onto your own life.
 The single most important game in the lineage for this app is not a Tamagotchi
 at all.
 
-**Nintendogs** shipped on the Nintendo DS on **21 April 2005**. It is a
-puppy simulator, and it changed the genre in three specific ways:
+**Nintendogs** shipped on the Nintendo DS on **21 April 2005** in Japan
+(North America on 22 August, Europe on 7 October). It is a puppy simulator,
+and it changed the genre in three specific ways:
 
 1. **It was about a dog.** Not a blob, not a cat, not an alien. You chose a
    breed from a kennel, took the puppy home, and named it — **by speaking
@@ -327,16 +328,13 @@ between a generic blob and your dog is the entire emotional payload.
 ## Sources
 
 - Bandai, [Tamagotchi official history](https://tamagotchi-official.com/us/history/) — release dates
+- Wikipedia, [Tamagotchi](https://en.wikipedia.org/wiki/Tamagotchi) — the full model lineage
 - Wellcome Collection, [The life and death of Tamagotchi and the virtual pet](https://wellcomecollection.org/stories/digital-pets)
-- Smithsonian Magazine, [Keeping Tamagotchi Alive](https://www.smithsonianmag.com/innovation/keeping-tamagotchi-alive-180979264/)
 - Mental Floss, [A Brief History of the Tamagotchi](https://www.mentalfloss.com/fun/toys/tamagotchi-history)
 - *The New York Times*, 1997 — Yokoi on pets being "a lot of trouble"
 - MAIZE, [Not your usual toy story](https://www.maize.io/cultural-factory/tamagotchi-story/)
-- Tamagotchi Fandom, [Tamagotchi (1996 Pet)](https://tamagotchi.fandom.com/wiki/Tamagotchi_(1996_Pet)) and [franchise index](https://tamagotchi.fandom.com/wiki/Tamagotchi_(franchise))
-- Wikipedia, [Virtual pet](https://en.wikipedia.org/wiki/Virtual_pet), [Dogz and Catz](https://en.wikipedia.org/wiki/Dogz_and_Catz), [Nintendogs](https://en.wikipedia.org/wiki/Nintendogs)
 - Inverse, [20 Years Ago, One Unexpected Nintendo Game](https://www.inverse.com/gaming/nintendogs-nintendo-ds-virtual-pet-anniversary)
 - Gamasutra, [Q&A: Ubisoft's Petz Executive Producer Tony Van](https://www.gamedeveloper.com/game-platforms/q-a-ubisoft-s-i-petz-i-executive-producer-tony-van)
-- PCMag, [The Golden Age of Virtual Pets](https://www.pcmag.com/news/the-golden-age-of-virtual-pets)
 - Gamer's With Glasses, [The Rise and Fall of the Virtual Pet](https://www.gamerswithglasses.com/features/virtual-pets-rise-and-fall)
 - M. Takahashi, *Aritgerd yobi* thesis (Skemman) — the *heta-uma* character-design movement and Yokoi's "weird creatures"
 - Microsoft, [TRELLIS.2](https://github.com/microsoft/TRELLIS.2) · Tencent ARC, [Pixal3D](https://github.com/tencentarc/Pixal3D) · Tencent, [Hunyuan3D-2](https://github.com/Tencent-Hunyuan/Hunyuan3D-2)
