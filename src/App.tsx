@@ -908,7 +908,7 @@ export const App: React.FC = () => {
                     aria-selected={active}
                     aria-current={active ? 'page' : undefined}
                     onClick={() => {setIsDogMenuOpen(false);setLabelsVisible(false);setCareExtra(null);setActiveRegion(r.key);}}
-                    className={`px-2 py-[2px] text-[11px] border-hairline-r last:border-hairline-r-0 ${
+                    className={`flex-1 flex items-center justify-center px-2 py-[2px] text-[11px] border-hairline-r last:border-hairline-r-0 ${
                       active ? 'bg-zinc-900 text-accent font-semibold' : 'text-zinc-400'
                     }`}
                   >

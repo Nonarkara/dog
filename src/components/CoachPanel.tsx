@@ -332,7 +332,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
     <div className="panel region-coach flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       {/* ---- head: the region, the mode, the number that matters ------------ */}
       <div className="panel-head">
-        <div className="flex min-w-0 items-baseline gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <h2 className="font-display text-[12px] leading-none text-zinc-100">Coach</h2>
           <span className="label truncate">{behaviourMeta?.label ?? behaviourName}</span>
           <Help label="How training works" text="Press Say, then watch. The moment your dog does it, press the word again and give a stroke. Sit comes first; each word you teach opens the next. Practice is the dog on screen; Real log counts reps with your real dog."/>

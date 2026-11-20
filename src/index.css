@@ -1112,7 +1112,7 @@ html {font-synthesis:none;}
    fit the console's 102px budget. At 1.35 two lines were 35.1px and a long
    dog name pushed the console half a pixel over the budget it has always
    had. The sentence keeps both lines and the whole instruction. */
-.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.25;}
+.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.28;padding-bottom:2px;}
 /* Coach: one row of commands, label-sized actions, no stretched slabs. */
 .region-coach>.panel-head {padding:1px 6px;}
 .region-coach>.panel-head button {min-height:24px;padding:0 6px;font-size:11px;}
@@ -1237,7 +1237,8 @@ html {font-synthesis:none;}
 .dog-cheer>span {background:var(--bg-surface);padding:0 4px;}
 
 /* The small "?": one sentence on hover, focus or tap. Fixed so no panel clips it. */
-.help-dot {display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;min-height:24px;padding:0;border:1px solid var(--line,currentColor);border-radius:50%!important;font-size:11px;line-height:1;color:var(--text-muted,inherit);background:transparent;flex:none;cursor:help;}
+@layer base {.help-dot,.think-bubble {border-radius:50%!important;}}
+.help-dot {display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-height:20px;padding:0;border:1px solid var(--border-strong);border-radius:50%!important;font-size:11px;line-height:1;color:var(--text-muted,inherit);background:transparent;flex:none;cursor:help;}
 .help-dot:hover,.help-dot:focus-visible {color:var(--accent);border-color:var(--accent);}
 .help-tip {position:fixed;z-index:60;width:240px;padding:8px 10px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--accent);font-size:12px;line-height:1.45;pointer-events:none;}
 /* Record folds to one row on wide screens: the papers are there when you want them. */
@@ -1373,6 +1374,8 @@ html {font-synthesis:none;}
 .push-offer-controls .btn-quiet{display:inline-flex;align-items:center;gap:5px;min-height:34px;}
 .push-offer-controls label{display:inline-flex;align-items:center;gap:5px;min-height:34px;cursor:pointer;}
 .push-offer>p{margin-top:3px;line-height:1.35;}
+.care-console:not(.care-detail-view) .push-offer {margin-top:3px;padding-top:3px;border-top:1px solid var(--border-dim);}
+.care-console:not(.care-detail-view) .push-offer-controls .btn-quiet {min-height:26px;padding:2px 6px;border-color:transparent;}
 .care-console--extras .push-offer{display:none;}
 
 /* Each care action rings the meter it moved and puts the change where the number was. */

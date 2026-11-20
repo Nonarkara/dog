@@ -121,15 +121,20 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
   return (
     <section className={`panel ${detailView?'':'region-care'} care-console h-full ${detailView?'care-detail-view':''} ${extras?'care-console--extras':''}`} aria-label="Care">
       <header className="panel-head">
-        <h2 className="label text-zinc-300">Care</h2>{!detailView&&playMode()==='own'&&<CloudSaveStatus/>}
-        <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, excitement. A red bar needs you. The line under Now says the one thing to do next."/>
-        <span className="care-identity truncate text-[11px] text-zinc-500">
-          {dog.name} / {dog.breed}
-        </span>
-        {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
-        {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} game vitals`} title="Game vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
-        {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>{setDetailsOpen(true);details.current?.showModal();}}>History & details ↗</button>}
-        {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h2 className="label text-zinc-300">Care</h2>
+          {!detailView&&playMode()==='own'&&<CloudSaveStatus/>}
+          <Help label="How care works" text="Six bars: food, energy, clean, happiness, trust, excitement. A red bar needs you. The line under Now says the one thing to do next."/>
+          <span className="care-identity truncate text-[11px] text-zinc-500">
+            {dog.name} / {dog.breed}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {!detailView&&onPantry&&<button type="button" className="btn-quiet care-pantry-toggle" aria-label="Open food pantry" title="Pantry" onClick={onPantry}><ShoppingBag size={16} aria-hidden="true"/></button>}
+          {detailView&&<button type="button" className="care-vitals-toggle btn-quiet text-[11px] px-1.5" aria-label={`Inspect ${dog.name} game vitals`} title="Game vitals" onClick={()=>setVitalsOpen(true)}><Stethoscope size={14} className="text-accent inline mr-1" aria-hidden="true"/>Vitals</button>}
+          {!detailView&&<button type="button" className="care-details-toggle btn-quiet" aria-label="History and care details" onClick={()=>{setDetailsOpen(true);details.current?.showModal();}}>History & details ↗</button>}
+          {!detailView&&<button type="button" className="btn-quiet care-photo-toggle" aria-label={`Take a photo with ${dog.name}`} title={`Photo with ${dog.name}`} onClick={()=>setBooth(true)}><Camera size={16} aria-hidden="true"/></button>}
+        </div>
       </header>
 
       <div className="panel-body care-body @container">
@@ -153,11 +158,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
                 <div className="care-meter-value flex items-baseline gap-1">
                   {deltas[m.key] ? (
                     <span className="data care-meter-delta" aria-live="polite">{deltas[m.key]>0?'+':'−'}{Math.abs(deltas[m.key])}<span className="sr-only"> {m.label}</span></span>
-                  ) : isLow ? (
+                  ) : isLow && detailView ? (
                     <span className="label text-rose-400 truncate" title={warningLabel}>{warningLabel}</span>
                   ) : (
                     <>
-                      <span className="data text-[17px] leading-none text-zinc-100">{value}</span>
+                      <span className={`data text-[17px] leading-none ${isLow ? 'text-rose-400' : 'text-zinc-100'}`} title={isLow ? warningLabel : undefined}>{value}</span>
                       <span className="data text-[10px] leading-none text-faint">%</span>
                     </>
                   )}
