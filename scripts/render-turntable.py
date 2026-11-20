@@ -33,6 +33,11 @@ if not meshes:
     raise SystemExit("no mesh in the file")
 
 # Join everything into one object so the bounds are the whole animal.
+# A GLB can carry a stray backdrop quad. A judge should not photograph it.
+if len(meshes) > 1:
+    biggest = max(meshes, key=lambda o: len(o.data.polygons))
+    meshes = [o for o in meshes if o is biggest or len(o.data.polygons) > 20000]
+
 bpy.ops.object.select_all(action="DESELECT")
 for o in meshes:
     o.select_set(True)
@@ -68,18 +73,23 @@ print(
 )
 
 # A plain grey material, so the geometry is what is being judged.
-mat = bpy.data.materials.new("judge")
-mat.use_nodes = True
-bsdf = mat.node_tree.nodes["Principled BSDF"]
-bsdf.inputs["Base Color"].default_value = (0.62, 0.60, 0.58, 1)
-bsdf.inputs["Roughness"].default_value = 0.72
-obj.data.materials.clear()
-obj.data.materials.append(mat)
+# A GLB already carries its own PBR material, and the POINT of judging a
+# textured model is to look at the texture. So the model's own material is
+# kept; a plain grey one is substituted only for a bare mesh, where the
+# geometry is the only thing there is to judge.
+if not (mesh_path.endswith(".glb") or mesh_path.endswith(".gltf")):
+    mat = bpy.data.materials.new("judge")
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (0.62, 0.60, 0.58, 1)
+    bsdf.inputs["Roughness"].default_value = 0.72
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
 
 world = bpy.data.worlds.new("judge-world")
 bpy.context.scene.world = world
 world.use_nodes = True
-world.node_tree.nodes["Background"].inputs[0].default_value = (0.11, 0.11, 0.13, 1)
+world.node_tree.nodes["Background"].inputs[0].default_value = (0.05, 0.05, 0.06, 1)
 
 # Camera, framed on the real bounds.
 scene = bpy.context.scene
@@ -118,7 +128,7 @@ focus.location = target
 # around the turntable, with a soft fill opposite and a low rim to lift the
 # dark coat off the dark ground.
 sun_data = bpy.data.lights.new("sun", type="SUN")
-sun_data.energy = 4.0
+sun_data.energy = 2.2
 sun = bpy.data.objects.new("sun", sun_data)
 scene.collection.objects.link(sun)
 sun.parent = cam
@@ -126,7 +136,7 @@ sun.location = (2.5, -3.5, 4.0)
 sun.rotation_euler = (math.radians(45), 0, math.radians(35))
 
 fill_data = bpy.data.lights.new("fill", type="AREA")
-fill_data.energy = 900
+fill_data.energy = 260
 fill_data.size = 8
 fill = bpy.data.objects.new("fill", fill_data)
 scene.collection.objects.link(fill)
@@ -135,7 +145,7 @@ fill.location = (-3.5, 2.5, 2.5)
 fill.rotation_euler = (math.radians(65), 0, math.radians(-125))
 
 rim_data = bpy.data.lights.new("rim", type="AREA")
-rim_data.energy = 500
+rim_data.energy = 180
 rim_data.size = 5
 rim = bpy.data.objects.new("rim", rim_data)
 scene.collection.objects.link(rim)
