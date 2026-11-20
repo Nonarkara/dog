@@ -145,13 +145,20 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
             </span>}
       </div>
       <TrainingSteps name={name} word={word} step={phase==='marked'?2:doing?1:0}/>
-      <p className="capture-status" aria-live="polite">{unavailable??(status||`Watch for ${word.toLowerCase()}.`)}</p>
-      <div className="capture-actions">
-        <button type="button" className="btn btn-accent capture-primary" onClick={phase==='ready'?cue:phase==='marked'?()=>reward():mark} disabled={!!unavailable||!!busy||saving.current||(phase==='offering'&&!doing)}>
-          {phase==='ready'?<Eye size={19}/>:phase==='marked'?<Cookie size={19}/>:<MessageCircle size={19}/>}
-          {phase==='ready'?'Watch':phase==='marked'?'Tiny treat':doing?`Say “${word}”`:'Watch…'}
-        </button>
-        {phase!=='ready'&&<button type="button" className="btn btn-quiet border-hairline" aria-label="Stop training" onClick={()=>{stop();setStatus('Paused. Watch again when ready.');}}><Square size={16}/></button>}
+      {/* THE ADVICE AND THE ACTION SHARE A LINE. The button was a full-width
+          slab — a 455px box around 63px of ink, seven times the width of the
+          word it carried. The care console already says it this way: the
+          sentence on the left, the action at the edge. The panel also loses
+          a line of height, which the phone wants. */}
+      <div className="capture-row">
+        <p className="capture-status" aria-live="polite">{unavailable??(status||`Watch for ${word.toLowerCase()}.`)}</p>
+        <div className="capture-actions">
+          <button type="button" className="btn btn-accent capture-primary" onClick={phase==='ready'?cue:phase==='marked'?()=>reward():mark} disabled={!!unavailable||!!busy||saving.current||(phase==='offering'&&!doing)}>
+            {phase==='ready'?<Eye size={19}/>:phase==='marked'?<Cookie size={19}/>:<MessageCircle size={19}/>}
+            {phase==='ready'?'Watch':phase==='marked'?'Tiny treat':doing?`Say “${word}”`:'Watch…'}
+          </button>
+          {phase!=='ready'&&<button type="button" className="btn btn-quiet border-hairline" aria-label="Stop training" onClick={()=>{stop();setStatus('Paused. Watch again when ready.');}}><Square size={16}/></button>}
+        </div>
       </div>
       {stage&&bubble&&createPortal(<div className="think-bubble" aria-hidden="true">{bubble}</div>,stage)}
     </div>

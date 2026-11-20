@@ -1270,7 +1270,12 @@ html {font-synthesis:none;}
 .training-pictures svg{width:100%;height:60px;max-width:112px;}
 .training-pictures span{font-size:13px;white-space:normal;overflow-wrap:anywhere;}
 .capture-status{min-height:1.35em;margin:2px 0;font-size:13px;}
-.capture-actions .capture-primary{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;}
+/* THE ADVICE AND THE ACTION SHARE A LINE: the sentence takes the space,
+   the action hugs its word at the edge — the care console's own pattern. */
+.capture-row{display:flex;align-items:center;gap:8px;}
+.capture-row>.capture-status{flex:1 1 auto;min-width:0;}
+.capture-actions{flex:none;}
+.capture-actions .capture-primary{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
 .practice-attempts--fold{display:block;flex:none;min-height:0;overflow:auto;}
 .practice-attempts--fold summary{cursor:pointer;min-height:28px;display:list-item;}
 .practice-attempts--fold[open]{max-height:160px;}

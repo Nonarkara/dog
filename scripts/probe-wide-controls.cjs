@@ -43,8 +43,24 @@ const MEASURE = () => {
     }
     const ink = text + icons;
     if (ink < 4) continue; // no measurable content: not this probe's business
+    // DOES IT PAINT A BOX? The law is about boxes: a control that paints
+    // nothing is a hit area, not a frame around a word. A transparent
+    // full-width disclosure row with its label at the left is not a slab;
+    // a filled rectangle around two letters is.
+    const bg = cs.backgroundColor;
+    const transparent = bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)';
+    const bordered = ['Top', 'Right', 'Bottom', 'Left'].some((s) => parseFloat(cs[`border${s}Width`]) > 0);
+    const shadowed = cs.boxShadow && cs.boxShadow !== 'none';
+    const painted = (!transparent && bg !== '') || bordered || shadowed;
+    // A control with no WORDS is a TARGET, not a label: the box is the hit
+    // area and its size is the house's icon-button size, not a text ratio.
+    // A single glyph ("?", a chevron) is a target too — it names an action
+    // with a mark, and the mark is sized to the target, not the other way
+    // round.
+    const words = (el.textContent || '').trim();
+    const isTarget = text < 4 || words.length <= 2;
     const ratio = r.width / ink;
-    if (ratio > 2.0) {
+    if (ratio > 2.0 && painted && !isTarget) {
       out.push({
         label: (el.textContent || '').trim().slice(0, 28),
         cls: el.className.toString().slice(0, 48),
@@ -103,7 +119,7 @@ const MEASURE = () => {
     await b.close();
   }
   hits.sort((a, b2) => b2.ratio - a.ratio);
-  console.log(`\n${hits.length} control(s) wider than 2x their content:\n`);
+  console.log(`\n${hits.length} PAINTED control(s) wider than 2x their own words:\n`);
   for (const h of hits.slice(0, LIMIT)) {
     console.log(
       `${String(h.ratio).padStart(5)}x  ${String(h.w).padStart(4)}px  ${h.route.padEnd(11)}  ` +
