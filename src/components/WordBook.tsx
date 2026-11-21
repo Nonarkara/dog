@@ -1,5 +1,6 @@
 import React,{useState} from 'react';
 import type {PetState} from '../domain/types';
+import {taughtWords} from '../domain/capture';
 /** Spoken cues strengthen through care pairings; an unanswered cue can weaken. */
 export function WordBook({petState,onSay,name}:{petState:PetState;onSay?:(word:string)=>void;name:string}){
  const [word,setWord]=useState('');
@@ -20,12 +21,13 @@ export function WordBook({petState,onSay,name}:{petState:PetState;onSay?:(word:s
           />
           <button type="submit" className="btn btn-quiet border-hairline px-2 text-[11px]" disabled={!word.trim()}>Say</button>
         </form>}
+        {taughtWords(petState).length>0&&<p className="mt-1 text-[11px] leading-snug" data-taught-words><span className="label">Taught</span> {taughtWords(petState).map(b=>b.label).join(' · ')}</p>}
         {(() => {
           const entries = Object.entries(petState.associations ?? {}).filter(([, v]) => v > 0.04).sort((a, b) => b[1] - a[1]);
           const words = entries.slice(0, 5);
           if (!words.length) return (
             <p className="mt-1 text-[11px] leading-snug text-faint">
-              None yet. Say a word, then care for {name} within 30 seconds — the word starts to mean what followed it.
+              {taughtWords(petState).length?'No everyday words yet.':'None yet.'} Say a word, then care for {name} within 30 seconds — the word starts to mean what followed it.
             </p>
           );
           return (

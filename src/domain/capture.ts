@@ -10,7 +10,7 @@
  * The rule the whole game rests on: association only rises when the mark
  * lands while he is actually doing the thing. You have to be watching.
  */
-import type {BehaviourName, PetState} from './types';
+import {BEHAVIOURS, type BehaviourName, type PetState} from './types';
 
 export interface Capture {association:number; pairings:number}
 
@@ -59,3 +59,9 @@ export const wrongMark=(c:Capture):Capture=>({...c,association:clamp01(c.associa
 export function withCapture(s:PetState,n:BehaviourName,c:Capture):PetState{
   return {...s,capture:{...s.capture,[n]:c}};
 }
+
+/** The words taught in Coach, as the player says them ("sit", "leave it"). One
+ * meaning of "knows a word" across the game: the word list and the dog's answer
+ * to a spoken word both read this as well as the care-paired words. */
+export const taughtWords=(s:PetState):{name:BehaviourName;label:string;cue:string}[]=>BEHAVIOURS.filter(b=>isLearned(s,b.name));
+export const taughtWord=(s:PetState,spoken:string)=>{const w=spoken.toLowerCase().replace(/[^\p{L}\s]/gu,'').trim();return taughtWords(s).find(b=>b.cue.toLowerCase()===w||b.label.toLowerCase()===w);};

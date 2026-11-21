@@ -9,6 +9,9 @@ import {TREES,CROWN,canopyAt,TREE_MAX} from './parkCanopy';
 import {parkScenery} from '../components/parkScenery';
 import {DOG_THEMES} from '../data/dogThemes';
 import {depthScale,REFERENCE,touchFallback} from './parkDepth';
+import {taughtWords} from './capture';
+import {finishParkOuting} from './parkOuting';
+import {WEIGHT_CEILING_KG} from './pet';
 /**
  * THE ENGINE'S OWN PROOF.
  *
@@ -487,11 +490,24 @@ console.log('\nA DAY OF ITS OWN');
 const minute=60_000;
 const lifeStart=createPetState(noon);
 const stepLife=(base:PetState,n:number)=>{let s=base;for(let i=1;i<=n;i++)s=decay(s,base.updatedAt+i*minute);return s;};
-const liveDay=stepLife(lifeStart,90),offlineDay=decay(lifeStart,noon+90*minute);
+const liveDay=stepLife(lifeStart,90),offlineDay=decay(lifeStart,noon+90*minute,true);
+const aloneTicks=(base:PetState,n:number)=>{let s=base;for(let i=1;i<=n;i++)s=decay(s,base.updatedAt+i*minute,false);return s;};
 ok('small ticks produce droppings while the app stays open',liveDay.poopCount===1);
 ok('small ticks produce two puddles in 90 awake minutes',dailyLife(liveDay).peeCount===2);
-ok('offline and minute ticks agree on bladder',near(dailyLife(liveDay).bladder,dailyLife(offlineDay).bladder,1e-5));
-ok('offline and minute ticks agree on digestion',near(dailyLife(liveDay).digestionMinutes,dailyLife(offlineDay).digestionMinutes,1e-5));
+ok('one jump and minute ticks agree on bladder at the same pace',near(dailyLife(liveDay).bladder,dailyLife(offlineDay).bladder,1e-5));
+{const jump=decay(lifeStart,noon+600*minute,false),ticks=aloneTicks(lifeStart,600);
+ ok('time alone is path-independent too: one jump equals hidden-tab ticks',near(dailyLife(jump).bladder,dailyLife(ticks).bladder,1e-4)&&near(dailyLife(jump).digestionMinutes,dailyLife(ticks).digestionMinutes,1e-4)&&jump.poopCount===ticks.poopCount&&dailyLife(jump).peeCount===dailyLife(ticks).peeCount);
+ ok('a dog left alone holds on: ninety minutes away makes no mess, ninety together makes three',decay(lifeStart,noon+90*minute).poopCount===0&&dailyLife(decay(lifeStart,noon+90*minute)).peeCount===0&&liveDay.poopCount+dailyLife(liveDay).peeCount===3);
+ ok('fullness and energy fall at the same rate alone or together',near(decay(lifeStart,noon+90*minute).needs.hunger,liveDay.needs.hunger,1e-6)&&near(decay(lifeStart,noon+90*minute).needs.energy,liveDay.needs.energy,1e-6));
+ // No cliff: an unlabelled gap spends its first five minutes together and the rest alone.
+ const g1=dailyLife(decay(lifeStart,noon+299_000)).bladder,g2=dailyLife(decay(lifeStart,noon+301_000)).bladder;
+ ok('a 4:59 gap and a 5:01 gap leave nearly the same bladder (no cliff at five minutes)',Math.abs(g1-g2)<.2&&g1>13,`${g1} vs ${g2}`);
+ ok('an unlabelled long gap is five fast minutes then the alone clock',near(dailyLife(decay(lifeStart,noon+600*minute)).bladder,dailyLife(decay(decay(lifeStart,noon+5*minute,true),noon+600*minute,false)).bladder,1e-4));
+ // A state stamped by a fast clock must not freeze the dog.
+ const ahead={...lifeStart,updatedAt:noon+30*24*3_600_000},healed=decay(ahead,noon),later=decay(healed,noon+3*3_600_000);
+ ok('a save stamped a month ahead resumes from now instead of freezing the dog',healed.updatedAt===noon&&later.needs.hunger<lifeStart.needs.hunger-4);
+ ok('a clock a few minutes ahead is left alone',decay({...lifeStart,updatedAt:noon+5*minute},noon).updatedAt===noon+5*minute);}
+ok('one jump and minute ticks agree on digestion at the same pace',near(dailyLife(liveDay).digestionMinutes,dailyLife(offlineDay).digestionMinutes,1e-5));
 ok('repeating a tick cannot create another mess',decay(liveDay,liveDay.updatedAt).poopCount===liveDay.poopCount&&dailyLife(decay(liveDay,liveDay.updatedAt)).peeCount===2);
 const needsToilet={...lifeStart,life:{...dailyLife(lifeStart),bladder:85}};
 ok('toilet pressure is visible before an accident',dailyMood(needsToilet)==='toilet'&&tickCall(needsToilet,noon).call?.reason==='toilet');
@@ -519,14 +535,14 @@ ok('care never mutates a different dog state',dailyLife(needsToilet).bladder===8
 ok('a new urgent sickness replaces an old boredom call',tickCall({...dull,sick:true,call:{reason:'bored',since:noon}},noon).call?.reason==='sick');
 
 const filthyStart={...lifeStart,needs:{...lifeStart.needs,hygiene:35}};
-const filthyOffline=decay(filthyStart,noon+180*minute),filthyTicks=stepLife(filthyStart,180);
+const filthyOffline=decay(filthyStart,noon+180*minute,true),filthyTicks=stepLife(filthyStart,180);
 ok('mess created during offline time affects hygiene at the right time',near(filthyOffline.needs.hygiene,filthyTicks.needs.hygiene,.001));
 let frequentPets=lifeStart;for(let i=1;i<=20;i++)frequentPets=interact(frequentPets,'pet',noon+i*9000).state;
 ok('frequent care cannot stop the bladder clock',near(dailyLife(frequentPets).bladder,dailyLife(decay(lifeStart,noon+3*minute)).bladder,.001));
 ok('frequent care cannot erase energy decay',near(frequentPets.needs.energy,decay(lifeStart,noon+3*minute).needs.energy,.001));
 const nightStart=new Date(2026,9,29,22).getTime();
 const overnight={...createPetState(nightStart),needs:{...lifeStart.needs,energy:30},sleep:{...lifeStart.sleep,asleep:true,fellAsleepAt:nightStart}};
-const overnightOffline=decay(overnight,nightStart+12*60*minute),overnightTicks=stepLife(overnight,12*60);
+const overnightOffline=decay(overnight,nightStart+12*60*minute,true),overnightTicks=stepLife(overnight,12*60);
 ok('offline night sleep and morning waking agree with live ticks',overnightOffline.sleep.asleep===overnightTicks.sleep.asleep&&near(overnightOffline.needs.energy,overnightTicks.needs.energy,.001));
 ok('the morning has awake boredom and bladder progression offline',near(dailyLife(overnightOffline).boredom,dailyLife(overnightTicks).boredom,.001)&&near(dailyLife(overnightOffline).bladder,dailyLife(overnightTicks).bladder,.001));
 
@@ -573,7 +589,7 @@ const found=discoverTouch(pantry,'oreo-frenchie','back');
 ok('touch discoveries persist per dog without duplicate entries',discoverTouch(found,'oreo-frenchie','back').game?.touchDiscoveries.length===1&&TOUCH_PREFERENCES['oreo-frenchie']!==TOUCH_PREFERENCES['paolo-pug']);
 const beforeOuting={...pantry,trust:45,arousal:55,life:{...dailyLife(pantry),boredom:65,bladder:60}};
 const afterOuting=completeParkWalk(beforeOuting,noon,12,180);
-ok('a real outing returns a calmer, closer, relieved dog and food money',afterOuting.trust===48&&afterOuting.arousal===47&&afterOuting.life?.boredom===40&&afterOuting.life?.bladder===30&&gameState(afterOuting).coins===gameState(beforeOuting).coins+3);
+ok('a real outing returns a calmer, closer, relieved dog and food money',afterOuting.trust===48&&afterOuting.arousal===47&&afterOuting.life?.boredom===40&&afterOuting.life?.bladder===0&&gameState(afterOuting).coins===gameState(beforeOuting).coins+3);
 ok('opening the park or standing still earns no outing reward',completeParkWalk(beforeOuting,noon,0,0)===beforeOuting&&completeParkWalk(beforeOuting,noon,12,0)===beforeOuting);
 ok('outing rewards cannot be farmed by repeated return visits',completeParkWalk(afterOuting,noon+60000,12,180)===afterOuting);
 ok('sleeping or sick dogs cannot earn exercise rewards',completeParkWalk({...beforeOuting,sick:true},noon,12,180).trust===45&&completeParkWalk({...beforeOuting,sleep:{...beforeOuting.sleep,asleep:true}},noon,12,180).trust===45);
@@ -915,6 +931,51 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
   ok('a dog who ran away does not greet you',welcomeBack(then,{...at(8),away:true as never},n)===null);
 }
 
+console.log('\nA PLAYER WHO COMES ONCE A DAY');
+{
+  // The conservation law of the care loop: full care once a day, at whatever hour, never returns a sick dog.
+  const H=3_600_000,first=new Date(2026,10,1,8).getTime();
+  const care=(s0:PetState,t0:number)=>{let s=s0,t=t0;
+    for(const a of ['clean','clean','clean','clean','medicine','groom','feed','feed','pet'] as const){
+      if(a==='medicine'&&!s.sick)continue;
+      if(a==='clean'&&(s.poopCount??0)+dailyLife(s).peeCount===0)continue;
+      if(a==='feed'){if(s.needs.hunger>=75)continue;if(gameState(s).portions<1)s=buyFood({...s,together:{day:'',todaySec:0,streak:0,...s.together,totalSec:(s.together?.totalSec??0)+60}}).state;}
+      t+=3000;s=interact(s,a,t).state;}
+    return s;};
+  const week=(hours:number[])=>{let s=createPetState(first),sick=0,mess=0;hours.forEach((h,d)=>{const t=first+d*24*H+(h-8)*H;s=decay(s,t);if(s.sick)sick++;if((s.poopCount??0)+dailyLife(s).peeCount>0)mess++;s=care(s,t);});return {sick,mess,s};};
+  const steady=week([19,19,19,19,19,19,19]),jitter=week([22,18,23,17,22,18,23]);
+  ok('seven days of one evening visit: never found sick',steady.sick===0,`sick ${steady.sick}/7`);
+  ok('seven days of visits at uneven hours (up to 29 h apart): never found sick',jitter.sick===0,`sick ${jitter.sick}/7`);
+  ok('a daily player still finds something to do: most days there is a mess to clean',steady.mess>=4&&steady.mess<=7);
+  const cared=care(createPetState(first),first);
+  ok('one day away leaves a dog who needs care, not a sick one',!decay(cared,first+26*H).sick);
+  ok('two days away does make the dog ill (neglect still counts)',!!decay(cared,first+50*H).sick);
+  ok('however long the absence, the dog comes back with every meter still on its scale',[80,200,2000].every(h=>{const x=decay(cared,first+h*H);return [x.needs.hunger,x.needs.energy,x.needs.hygiene,x.trust,x.arousal].every(v=>v>=0&&v<=100);}));
+  ok('a hidden tab ticking every minute for fourteen hours is the alone clock, not the fast one',(()=>{let s=cared;for(let i=1;i<=14*60;i++)s=decay(s,first+i*60_000,false);return !s.sick&&(s.poopCount??0)+dailyLife(s).peeCount<=1;})());
+  // A walk always lets the dog go, even while the outing reward rests.
+  const full={...cared,life:{...dailyLife(cared),bladder:90}},t=first+H;
+  const walk1=completeParkWalk(full,t,12,180),again={...walk1,life:{...dailyLife(walk1),bladder:80}},walk2=completeParkWalk(again,t+5*60_000,12,180);
+  ok('a credited outing empties the bladder',dailyLife(walk1).bladder===0);
+  ok('a second walk inside the cooldown still empties the bladder, and pays nothing else',dailyLife(walk2).bladder===0&&walk2.trust===again.trust&&gameState(walk2).coins===gameState(again).coins);
+  ok('standing still at the park gate is not a toilet break',completeParkWalk(again,t+5*60_000,2,10)===again);
+  {const out1=finishParkOuting(full,t,12,180),needy={...out1.state,life:{...dailyLife(out1.state),bladder:80},call:{reason:'toilet' as const,since:t}},out2=finishParkOuting(needy,t+5*60_000,12,180);
+   ok('a stroll inside the cooldown relieves the dog and answers a toilet call, and that is all',dailyLife(out2.state).bladder===0&&out2.state.call===undefined&&!out2.credited&&!out2.wished&&out2.state.lastCareAt===needy.lastCareAt&&(out2.state.careLog?.walk??0)===(needy.careLog?.walk??0)&&out2.state.trust===needy.trust);
+   ok('the first outing of the twenty minutes is still a credited walk',out1.credited&&(out1.state.careLog?.walk??0)===(full.careLog?.walk??0)+1);}
+  {let s={...cared,needs:{...cared.needs,hunger:40},weightKg:24.8,game:{...gameState(cared),portions:3}} as PetState;const fed=interact(s,'feed',s.updatedAt+1000).state;
+   ok('a real meal puts a little weight back, up to the ceiling',near(fed.weightKg??0,24.9)&&interact({...s,weightKg:WEIGHT_CEILING_KG},'feed',s.updatedAt+1000).state.weightKg===WEIGHT_CEILING_KG);}
+  // A meal is never spent on a dog who cannot use it.
+  const nearlyFull={...cared,needs:{...cared.needs,hunger:80},game:{...gameState(cared),portions:2}};
+  ok('a nearly full dog (75 and up) refuses the meal and the portion stays in the pantry',(()=>{const m=takeMeal(nearlyFull);return !m.allowed&&gameState(m.state).portions===2;})()&&gameState(interact(nearlyFull,'feed',nearlyFull.updatedAt+1000).state).portions===2);
+  ok('a hungry dog still eats and the portion is spent',(()=>{const hungry={...nearlyFull,needs:{...nearlyFull.needs,hunger:50}};const r=interact(hungry,'feed',hungry.updatedAt+1000).state;return r.needs.hunger>75&&gameState(r).portions===1;})());
+}
+console.log('\nONE MEANING OF "KNOWS"');
+{
+  const base=createPetState(noon),best={...base,needs:{hunger:80,energy:100,hygiene:100},trust:100,arousal:55};
+  ok('readiness is a share of one, even for a perfect dog',readiness(best)<=1&&readiness(best)>.9);
+  const taught={...base,capture:{sit:{association:1,pairings:5}}} as PetState;
+  ok('a word taught in Coach is a word the dog knows',taughtWords(taught).map(b=>b.name).join()==='sit'&&taughtWords(base).length===0);
+  ok('saying a taught word is answered as known, not as unknown',/knows "sit"/.test(communicate(taught,'sit',noon+1000).note)&&/doesn't know "sit"/.test(communicate(base,'sit',noon+1000).note));
+}
 console.log('\nPARK PERSPECTIVE');
 {
   ok('the middle of the lawn is true size',near(depthScale(REFERENCE),1));

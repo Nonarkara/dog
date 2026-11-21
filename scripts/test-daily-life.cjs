@@ -29,7 +29,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
  await tap(p.locator('.dog-daily-status button',{hasText:/Bored(… | — )play with me/})) /* the bubble text turns into the call wording "Bored — play with me" once he calls; its accessible name is "play Expo: <text>" */;await p.locator('.catch-hud').waitFor();assert((await state()).life.boredom<55);await p.getByTitle('Close mini-game').click();
  // An outdoor break prevents an indoor accident, without deleting existing mess.
  await seed({life:{...life,bladder:85,peeCount:1},poopCount:1});await p.locator('.dog-daily-status button',{hasText:'Need to go! · walk'}).waitFor();await shot('toilet-warning');await tap(p.locator('.dog-daily-status button',{hasText:'Need to go! · walk'}));
- // Walk is now a real park outing (move for 10s+, then go home) and relieves 30 of bladder, not all of it: the toilet call (<70) is answered.
+ // Walk is now a real park outing (move for 10s+, then go home) and empties the bladder: the toilet call is answered.
  await p.waitForFunction(()=>document.querySelector('.park-world canvas')?.dataset.motionReady==='true');
  for(const key of ['d','s','a','w','d','s']){await p.keyboard.down(key);await p.waitForTimeout(3500);await p.keyboard.up(key);}
  await p.getByRole('button',{name:'Back to dog'}).click();await p.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021'].life.bladder<70);assert((await state()).life.bladder<70);assert.equal((await state()).life.peeCount,1);assert.equal((await state()).poopCount,1);

@@ -46,7 +46,8 @@ import type {
 
 export type { Observation, ObservationTag };
 import {gameState,takeMeal} from './companionGame';
-import { dailyLife, advanceDailyLife } from './dailyLife';
+import { dailyLife, advanceDailyLife, ALONE_PACE } from './dailyLife';
+import { taughtWord } from './capture';
 import {calmInteraction,calmNeed} from './calm';
 import {
   BETA_BY_ACTION,
@@ -255,7 +256,7 @@ export function wake(
   const note =
     wakeCount === 1
       ? `${name} was asleep. ${p.subjCap} opens one eye, puts ${p.poss} head back down, and does not get up.`
-      : `${name} was asleep — and ${p.subj} has been woken ${wakeCount} times now. ${p.subj} will not settle easily again tonight.`;
+      : `${name} was asleep — and ${p.subj} has been woken ${wakeCount} times now. ${p.subjCap} will not settle easily again tonight.`;
 
   return { state: next, note };
 }
@@ -309,20 +310,32 @@ export function sickCause(state: PetState): 'mess' | 'hunger' | 'other' | null {
   return life.lowFullnessMinutes >= 180 || state.needs.hunger < 30 ? 'hunger' : 'other';
 }
 
+/** Game weight moves between a 15 kg floor and this ceiling; it is never a clinical figure. */
+export const WEIGHT_CEILING_KG=32;
+
 /** The pet drifts whether anyone is watching. */
-export function decay(state: PetState, now: number = Date.now()): PetState {
+/** `together` says whether the player is actually there for this stretch of
+ * time. The app passes page visibility; left out, a gap of more than five
+ * minutes since the last tick means nobody was (dailyLife.ALONE_PACE). */
+export function decay(state: PetState, now: number = Date.now(), together?: boolean): PetState {
   // Repair saves from the old 0–100 clamp before applying any elapsed time.
   const sleep=state.sleep??createSleepState();
   state={...state,sleep:{...sleep,restlessness:Number.isFinite(sleep.restlessness)?clamp(sleep.restlessness,0,1):0}};
+  // A state stamped by a clock that ran ahead would freeze the dog until real time caught up. Resume from now.
+  if(state.updatedAt>now+3_600_000)state={...state,updatedAt:now};
   if(now<=state.updatedAt)return {...state,life:dailyLife(state),behaviours:Object.fromEntries(Object.entries(state.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]))};
   // The same bounded steps run on load and while open. Sleep, digestion and
   // filth must change rates during a long absence, not only at its end.
   let cursor=now-Math.min(now-state.updatedAt,72*3_600_000);
+  // Unless the app says otherwise, the first five minutes of a gap were spent together
+  // (a look away, a slow tick) and the rest alone. No cliff between a 4:59 and a 5:01 gap.
+  const together0=cursor+5*60_000;
+  const paceAt=(t:number)=>together===true?1:together===false?ALONE_PACE:t<=together0?1:ALONE_PACE;
   let next={...state,updatedAt:cursor,sleep:{...(state.sleep??createSleepState())}};
   if(next.sleep.asleep&&next.sleep.fellAsleepAt===null)next.sleep.fellAsleepAt=cursor;
   while(cursor<now){
     cursor=Math.min(now,cursor+10_000);
-    next=decayStep(next,cursor);
+    next=decayStep(next,cursor,paceAt(cursor));
     if(willSettle(next,cursor))next=settleBody(next,cursor).state;
   }
   next.behaviours=Object.fromEntries(Object.entries(next.behaviours).map(([name,b])=>[name,decayBehaviour(b,now)]));
@@ -330,7 +343,7 @@ export function decay(state: PetState, now: number = Date.now()): PetState {
   return maybeRunAway(next,now);
 }
 
-function decayStep(state:PetState,now:number):PetState {
+function decayStep(state:PetState,now:number,pace=1):PetState {
   const hours = Math.max(0, (now - state.updatedAt) / 3_600_000);
   const factor = Math.min(hours, 72); // nobody is away for a month
   const sleep = state.sleep ?? createSleepState();
@@ -338,7 +351,7 @@ function decayStep(state:PetState,now:number):PetState {
   // A dog asleep recovers faster than a dog awake, and settles more deeply.
   const asleep = sleep.asleep;
   const energyRate = asleep ? 4.5 : DECAY_PER_HOUR.energy;
-  const daily=advanceDailyLife(state,factor*60,now);
+  const daily=advanceDailyLife(state,factor*60,now,pace);
   const mess=(state.poopCount??0)+dailyLife(state).peeCount;
   const poopAcc=1+mess*1.5;
   const nextHygiene=Math.max(Math.min(state.needs.hygiene,12),clamp(state.needs.hygiene-DECAY_PER_HOUR.hygiene*poopAcc*factor));
@@ -433,7 +446,8 @@ export function readiness(state: PetState): number {
   const bond = 0.7 + 0.3 * (state.trust / 100);
   const arousalBand = 1 - Math.abs(state.arousal - 55) / 100; // too flat or too wired
   const appetite=state.needs.hunger>85?.9:1;
-  return clamp(body * bond * clamp(arousalBand) * 1.25*appetite);
+  // A share of one: the panel shows it as a percentage, and 118% of ready means nothing.
+  return Math.max(0, Math.min(1, body * bond * clamp(arousalBand) * 1.25*appetite));
 }
 
 /** The chance the pet performs a behaviour when cued, right now. */
@@ -540,22 +554,16 @@ export function interact(
       const meal=takeMeal(base);if(!meal.allowed)return {state:meal.state,note:meal.note};
       next.game=meal.state.game;
       // `hunger` here is FULLNESS: 100 is a full belly, 30 an empty one.
-      if (base.needs.hunger < 75) {
-        // Fed when he asked. The food is worth something, and worth more.
-        next.needs.hunger = clamp(base.needs.hunger + 26);
-        next.personality.foodDrive = clampTrait(base.personality.foodDrive + 0.04);
-        next.arousal = clamp(base.arousal + 10);
-        note =
-          base.personality.foodDrive > 0.45
-            ? 'Fed while hungry, and gone at once. Regular meals keep the body well. Tiny training treats reward a specific action.'
-            : 'Fed while hungry. Good. Regular meals keep the body well. Tiny training treats reward a specific action.';
-      } else {
-        // Fed when he did not ask. The food loses its value as a reward.
-        next.personality.foodDrive = clampTrait(base.personality.foodDrive - 0.08);
-        next.arousal = clamp(base.arousal + 8);
-        next.weightKg = (base.weightKg ?? 24.8) + 0.15;
-        note = 'Nearly full. Save extra food for later; tiny training portions come from the daily allowance.';
-      }
+      // takeMeal has already refused a dog at 75 or more, so a meal here is always a real one.
+      next.needs.hunger = clamp(base.needs.hunger + 26);
+      next.personality.foodDrive = clampTrait(base.personality.foodDrive + 0.04);
+      next.arousal = clamp(base.arousal + 10);
+      // Meals put back what play and walks take off (0.05 to 0.1 kg each), up to a healthy ceiling.
+      next.weightKg = Math.min(WEIGHT_CEILING_KG, (base.weightKg ?? 24.8) + 0.1);
+      note =
+        base.personality.foodDrive > 0.45
+          ? 'Fed while hungry, and gone at once. Regular meals keep the body well. Tiny training treats reward a specific action.'
+          : 'Fed while hungry. Good. Regular meals keep the body well. Tiny training treats reward a specific action.';
       break;
     }
     case 'play': {
@@ -581,7 +589,7 @@ export function interact(
       }
       note =
         base.needs.energy < 35
-          ? `Played on an empty tank. ${p.subj} was excited, and then ${p.subj} was done.`
+          ? `Played on an empty tank. ${p.subjCap} was excited, and then ${p.subj} was done.`
           : base.personality.playDrive > 0.45
             ? 'Played, and it is the best part of the day. The ball comes back every time.'
             : 'Played with energy in hand.';
@@ -715,6 +723,8 @@ export function communicate(
   } else if (strength >= 0.5) {
     next.trust = clamp(state.trust + 1);
     note = `${name} knows "${clean}". Ears prick, and ${name} looks at you, waiting.`;
+  } else if (taughtWord(state, clean)) {
+    note = `${name} knows "${clean}" from training, and looks ready. Practise it in Coach.`;
   } else if (strength > 0) {
     note = `${name} recognizes "${clean}" a little. A head tilt — not quite sure what it means yet.`;
   } else {

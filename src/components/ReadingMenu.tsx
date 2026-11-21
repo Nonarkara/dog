@@ -34,7 +34,7 @@ const READINGS:Reading[]=[
     body:<>
       <p>Tama-Dog-Chi was built in about two weeks by several AI agents working in one repository. None of them wrote the rules. The rules came first: a written law for how a screen should be built, a production doctrine for how work gets verified, and one standing order that the agent which builds never audits its own work.</p>
       <p>Every change ships with the test that would catch it breaking. The layout is measured too: the receipt in <code>design/spatial-baseline.json</code> holds 156 measurements across the three surfaces this app has, taken at every width the CSS changes at. A hole with no reason written down fails the gate.</p>
-      <p>The dog is drawn, not modelled. Every pose is a drawing and movement is a sequence of drawings. That is why his feet stay on the floor and his face does not swim when he turns.</p>
+      <p>The dog is drawn, not modelled. Every pose is a drawing and movement is a sequence of drawings. That is why the feet stay on the floor and the face does not swim when the dog turns.</p>
     </>,
   },
   {
@@ -52,7 +52,7 @@ const READINGS:Reading[]=[
     body:<>
       <p>Dr Non Arkaraprasertkul (<span lang="th">ดร.นน อัครประเสริฐกุล</span>) builds civic systems in Thailand and Southeast Asia: smart-city dashboards for Phuket and Bangkok, Axiom and TKCPMO, the OTOP product registry, a tsunami evacuation system, a Kuching municipality dashboard, Thailand's Digital Valley, and FloodDash for the map work. Dozens of repositories, and the rules the agents obey sit at the root of them.</p>
       <p>He does not write the code. He writes the law the code obeys, and the law is short: one screen and no scroll, boxes that fit their contents, one accent colour, no gradients, no rounded corners, and the agent that builds never signs off its own work.</p>
-      <p>That law is why there is one dog in the middle of this screen and everything else under him.</p>
+      <p>That law is why there is one dog in the middle of this screen and everything else under the dog.</p>
     </>,
   },
 ];

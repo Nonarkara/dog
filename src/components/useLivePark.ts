@@ -156,9 +156,12 @@ export function useLivePark({ room, me, scene, packDog, hungry, onPetted, onNote
           o.onNote('That park is full: eight dogs is the most one park holds.');
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (wsRef.current === ws) wsRef.current = null;
         if (closedByUs) return;
+        // The same dog joined from another tab of this browser. Reconnecting would
+        // only take the seat back and start the two tabs replacing each other.
+        if (event.reason === 'Replaced') { setStatus('lost'); opts.current.onNote('This park is open in another tab. Your dog is there.'); return; }
         // A dropped connection (a train tunnel, a sleeping laptop) tries again a few times.
         if (retries < 5) {
           retries += 1;

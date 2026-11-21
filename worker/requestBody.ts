@@ -1,7 +1,5 @@
-/** Read JSON objects within the route's byte budget, including streamed bodies. */
-export async function readJsonObject(request: Request, limit: number): Promise<
-  { value: Record<string, unknown> } | { status: 400 | 413 }
-> {
+/** Read a body as text within the route's byte budget, including streamed bodies. */
+export async function readText(request: Request, limit: number): Promise<{ text: string } | { status: 400 | 413 }> {
   if (Number(request.headers.get('Content-Length')) > limit) return { status: 413 };
   if (!request.body) return { status: 400 };
   const reader = request.body.getReader();
@@ -19,13 +17,26 @@ export async function readJsonObject(request: Request, limit: number): Promise<
       }
       text += decoder.decode(value, { stream: true });
     }
-    const value: unknown = JSON.parse(text + decoder.decode());
+    return { text: text + decoder.decode() };
+  } catch {
+    return { status: 400 };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Read JSON objects within the route's byte budget, including streamed bodies. */
+export async function readJsonObject(request: Request, limit: number): Promise<
+  { value: Record<string, unknown> } | { status: 400 | 413 }
+> {
+  const body = await readText(request, limit);
+  if ('status' in body) return body;
+  try {
+    const value: unknown = JSON.parse(body.text);
     return value && typeof value === 'object' && !Array.isArray(value)
       ? { value: value as Record<string, unknown> }
       : { status: 400 };
   } catch {
     return { status: 400 };
-  } finally {
-    reader.releaseLock();
   }
 }

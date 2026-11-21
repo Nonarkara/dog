@@ -41,7 +41,7 @@ export function nextStep(s:PetState,name:string,now:number):Step{
   if(mood==='bored')return need(`${name} is bored. A game or a sniff walk helps.`,'play');
   if(s.calmSince!==undefined)return {text:`${name} is resting quietly: watch, then reward.`,act:'rewardCalm',why:'idle'};
   const w=wishFor(s,now);
-  if(!w.done)return {text:w.kind==='cups'?`Today ${name} wants three cups: tap them on the stage.`:`Today ${name} ${WISH_TEXT[w.kind]}.`,act:WISH_ACT[w.kind],why:'wish'};
+  if(!w.done)return {text:w.kind==='cups'?`Today ${name} wants the cups game, in Tricks and toys.`:`Today ${name} ${WISH_TEXT[w.kind]}.`,act:WISH_ACT[w.kind],why:'wish'};
   if(s.trust<35)return {text:`${name} needs gentle company. A stroke builds trust.`,act:'pet',why:'idle'};
   if(s.arousal>80)return {text:`${name} is wound up. A walk brings it down.`,act:'walk',why:'idle'};
   if(s.arousal<20)return {text:`${name} is flat. A game will help.`,act:'play',why:'idle'};

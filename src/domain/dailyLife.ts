@@ -20,14 +20,20 @@ export function dailyLife(state: Pick<PetState,'life'>): DailyLife {
     digestionMinutes:bound(number(l?.digestionMinutes),90),lowFullnessMinutes:bound(number(l?.lowFullnessMinutes),4320),
     peeCount:Math.floor(bound(number(l?.peeCount),3)),joy:bound(number(l?.joy)),lastPeedAt:typeof l?.lastPeedAt==='number'&&Number.isFinite(l.lastPeedAt)?l.lastPeedAt:undefined};
 }
-export function advanceDailyLife(state:PetState,minutes:number,now:number){
-  const life=dailyLife(state),elapsed=bound(minutes,4320),bodyMinutes=elapsed*(state.sleep?.asleep ? .25 : 1);
+/** While you are together the dog's day runs fast enough to give you something
+ * to do: a toilet trip within the half hour, boredom in a quarter. Left alone,
+ * a dog waits: the bladder holds for hours and boredom settles into a doze.
+ * `pace` is 1 while the game is open and ALONE_PACE across an absence, so a
+ * dog visited once a day is found needing care, never found ill. */
+export const ALONE_PACE=1/20;
+export function advanceDailyLife(state:PetState,minutes:number,now:number,pace=1){
+  const life=dailyLife(state),elapsed=bound(minutes,4320),bodyMinutes=elapsed*pace*(state.sleep?.asleep ? .25 : 1);
   const bladder=life.bladder+bodyMinutes*100/35,pees=Math.floor((bladder+1e-8)/100);
   // Use accumulated digestion rather than a single frame's elapsed time.
   const fedMinutes=state.needs.hunger>30?Math.min(elapsed,Math.max(0,(state.needs.hunger-30)/1.6*60)):0;
-  const digestion=life.digestionMinutes+fedMinutes*(state.sleep?.asleep ? .4 : 1),poops=Math.floor((digestion+1e-8)/90);
+  const digestion=life.digestionMinutes+fedMinutes*pace*(state.sleep?.asleep ? .4 : 1),poops=Math.floor((digestion+1e-8)/90);
   const lowMinutes=state.needs.hunger<10?elapsed:Math.max(0,elapsed-(state.needs.hunger-10)/1.6*60);
-  return {life:{...life,bladder:bound(bladder-pees*100),boredom:bound(life.boredom+elapsed*(state.sleep?.asleep?-.25:100/30)),
+  return {life:{...life,bladder:bound(bladder-pees*100),boredom:bound(life.boredom+elapsed*(state.sleep?.asleep?-.25:pace*100/30)),
     digestionMinutes:Math.max(0,digestion-poops*90),lowFullnessMinutes:lowMinutes>0?life.lowFullnessMinutes+lowMinutes:0,
     // Bound newly produced mess, but never erase a legacy pile before cleanup.
     peeCount:Math.max(life.peeCount,Math.min(NEW_MESS_LIMIT,life.peeCount+pees)),joy:bound(life.joy-elapsed*100/60),lastPeedAt:pees?now:life.lastPeedAt},

@@ -11,6 +11,7 @@
     "deploy": "vite build && wrangler deploy",
     "test:care": "esbuild scripts/test-care-domain.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/care-tests.mjs --log-level=error && node node_modules/.cache/care-tests.mjs",
     "test:auth": "esbuild scripts/test-email-auth.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/auth-tests.mjs --log-level=error && node node_modules/.cache/auth-tests.mjs",
+    "test:room": "esbuild scripts/test-park-room.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/room-tests.mjs --log-level=error && node node_modules/.cache/room-tests.mjs",
     "test:push": "node scripts/test-push.cjs",
     "test:sprite": "node scripts/test-sprite.mjs",
     "test:browser": "bash scripts/run-browser-tests.sh",

@@ -23,7 +23,8 @@ globalThis.fetch=async(input,options)=>{fetches++;const url=String(input instanc
  else throw new Error('Unexpected Clerk endpoint: '+url);
  return Response.json(data);
 };
-const {handleAccounts,currentUser,providersFor}=await import('../worker/accounts');
+const {handleAccounts,currentUser,providersFor,decodeJwtPayload}=await import('../worker/accounts');
+const {validOwnedBackup}=await import('../src/domain/ownedSaveValidation');
 const {handleCare}=await import('../worker/care');
 const {default:worker}=await import('../worker/index');
 const {emailConfig,emailIdentity,drainEmailDeletions}=await import('../worker/emailAuth');
@@ -101,6 +102,9 @@ try{
  const missingPersonality=backupFor(23);delete (missingPersonality.save.pets['expo-2021'] as Record<string,unknown>).personality;
  for(const invalid of [{format:'tama-dog-chi-owned-v1',adoption:{dogId:'expo-2021'}},mismatched,missingPet,mismatchedIdentity,invalidNeed,missingPersonality])assert.equal((await saveDog(23,invalid))?.status,400,'Unrestorable backup cannot replace a valid dog');
  assert.equal(db.sql.prepare('SELECT backup FROM dogs').get()!.backup,beforeInvalid,'Rejected malformed backups preserve saved dog bytes');
+ const hungrySave=backupFor(25);hungrySave.save.pets['expo-2021'].needs.hunger=1000;
+ assert.equal((await saveDog(25,hungrySave,undefined,24))?.status,400,'The save route refuses an out-of-range need');
+ assert.equal((await saveDog(25,backupFor(25),undefined,24))?.status,200,'The save route still accepts a normal dog');
  const care=(path:string,body?:string)=>handleCare(new Request(origin+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+token,'X-TDC':'1',Origin:origin},body}),env,new URL(origin+path));
  const snapshot=snapshotOf({needs:{hunger:72,energy:60,hygiene:80},trust:85,arousal:25,sleep:{asleep:false}} as PetState);
  assert.deepEqual(snapshot,{version:2,fullness:72,energy:60,hygiene:80,trust:85,arousal:25,sick:false,asleep:false},'Fullness agrees with the Care meter, and arousal keeps its own label');
@@ -205,5 +209,55 @@ try{
  const deletion=request('/api/account',token,'DELETE');db.failBatch=true;assert.equal((await handleAccounts(deletion,env,new URL(deletion.url)))?.status,503);assert.equal(removed,false,'D1 failure cannot orphan an already-deleted identity');assert.equal(db.users.length,1);db.failBatch=false;
  deletionFails=true;assert.equal((await handleAccounts(deletion,env,new URL(deletion.url)))?.status,202);assert.equal(db.users.length,0);assert(db.queue.has('user_fixture'),'Managed deletion remains durably retryable');assert.equal((await handleAccounts(post,env,new URL(post.url)))?.status,410,'Pending deletion cannot re-create its account');deletionFails=false;await drainEmailDeletions(env);assert(removed);assert(db.completed.has('user_fixture'),'Completed deletion marker survives in-flight registration');
 
- console.log('PASS email feature gate, RSA/claims/revocation, save concurrency, byte limits, consent/snapshot privacy, per-tab visit ordering and ownership, export and deletion');
+
+ // Saves are checked against the clock and the game's own 0..100 scale.
+ const at=Date.UTC(2026,10,21),ids=['expo-2021'];
+ const liveSave=()=>{const b=backupFor(7);b.adoption.at=at-86_400_000;const pet=b.save.pets['expo-2021'];pet.growth.adoptedAt=b.adoption.at;pet.updatedAt=at;return b;};
+ const altered=(change:(b:ReturnType<typeof liveSave>)=>void)=>{const b=liveSave();change(b);return b;};
+ const pet=(b:ReturnType<typeof liveSave>)=>b.save.pets['expo-2021'];
+ assert(validOwnedBackup(liveSave(),ids,true),'A normal save passes');
+ assert(validOwnedBackup(altered(b=>{Object.assign(pet(b).needs,{hunger:0,energy:100});pet(b).trust=100;pet(b).arousal=0;}),ids,true),'The ends of the scale are valid');
+ assert(validOwnedBackup(altered(b=>{pet(b).updatedAt=at+30*24*3_600_000;}),ids,true),'A save stamped by a fast clock is not refused: decay resumes it from now');
+ assert(validOwnedBackup(altered(b=>{pet(b).needs.hunger=101;}),ids),'Reading an old backup stays lenient about the scale');
+ assert(!validOwnedBackup(altered(b=>{pet(b).needs.hunger=101;}),ids,true),'A need above 100 is rejected');
+ assert(!validOwnedBackup(altered(b=>{pet(b).needs.hygiene=-1;}),ids,true),'A need below 0 is rejected');
+ assert(!validOwnedBackup(altered(b=>{pet(b).trust=250;}),ids,true),'Trust outside the scale is rejected');
+ assert(!validOwnedBackup(altered(b=>{pet(b).arousal=-5;}),ids,true),'Arousal outside the scale is rejected');
+ assert(validOwnedBackup(altered(b=>{b.save.revision=1e12;}),ids,true));
+ assert(!validOwnedBackup(altered(b=>{b.save.revision=1e12+1;}),ids,true),'An absurd revision is rejected');
+
+ // Sign-in with a provider: names are UTF-8, and a provider failure is a failed sign-in.
+ const thai='สมชาย ใจดี';
+ assert.equal(decodeJwtPayload('h.'+encode({name:thai})+'.s')?.name,thai,'A Thai name survives the ID token');
+ assert.equal(decodeJwtPayload('h.'+Buffer.from('null').toString('base64url')+'.s'),null);
+ const googleEnv:AccountEnv={DB:db,GOOGLE_CLIENT_ID:'google-fixture',GOOGLE_CLIENT_SECRET:'fixture'};
+ const beginGoogle=async()=>{const started=await handleAccounts(new Request(origin+'/api/auth/google/start'),googleEnv,new URL(origin+'/api/auth/google/start'));const target=new URL(started!.headers.get('Location')!);return{cookie:started!.headers.get('Set-Cookie')!.split(';',1)[0],state:target.searchParams.get('state')!,nonce:target.searchParams.get('nonce')!};};
+ const finishGoogle=async(flow:{cookie:string;state:string})=>{const back=origin+'/api/auth/google/callback?code=fixture&state='+flow.state;return (await handleAccounts(new Request(back,{headers:{Cookie:flow.cookie}}),googleEnv,new URL(back)))!;};
+ const signIn=async(sub:string,name:string,reply?:()=>Promise<Response>)=>{
+  const flow=await beginGoogle(),managedFetch=globalThis.fetch;
+  globalThis.fetch=reply??(async()=>Response.json({id_token:'h.'+encode({iss:'https://accounts.google.com',aud:'google-fixture',nonce:flow.nonce,exp:Math.floor(Date.now()/1000)+60,sub,name})+'.s'}));
+  try{return await finishGoogle(flow);}finally{globalThis.fetch=managedFetch;}
+ };
+ const nameOf=(sub:string)=>db.sql.prepare('SELECT display_name FROM users WHERE provider_sub=?').get(sub)?.display_name;
+ assert.equal((await signIn('thai-owner',thai)).headers.get('Location'),'/?mode=own');
+ assert.equal(nameOf('thai-owner'),thai,'A Thai display name is stored as written');
+ await signIn('long-owner','ก'.repeat(39)+'🐕🐕');
+ assert.equal(nameOf('long-owner'),'ก'.repeat(39)+'🐕','A long name is cut between characters, never through one');
+ const why=(response:Response)=>new URL(response.headers.get('Location')!,origin).searchParams.get('why');
+ assert.equal(why(await signIn('x','x',async()=>{throw new TypeError('fetch failed');})),'token','An unreachable provider is a failed sign-in, not a crash');
+ assert.equal(why(await signIn('x','x',async()=>new Response('<html>Bad gateway</html>'))),'token','A reply that is not JSON is a failed sign-in');
+ assert.equal(why(await signIn('x','x',async()=>Response.json(null))),'token');
+ assert.equal(why(await signIn('x','x',async()=>Response.json({id_token:7}))),'no-id-token');
+ const applePost=(body:string)=>new Request(origin+'/api/auth/apple/callback',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+ const unconfigured=applePost('code=fixture&state=fixture');
+ assert.equal(why((await handleAccounts(unconfigured,{DB:db},new URL(unconfigured.url)))!),'not-configured');
+ assert.equal(unconfigured.bodyUsed,false,'An unconfigured provider is refused before its body is read');
+ const appleEnv:AccountEnv={DB:db,APPLE_SERVICE_ID:'fixture',APPLE_TEAM_ID:'fixture',APPLE_KEY_ID:'fixture',APPLE_PRIVATE_KEY:'fixture'};
+ const flood=applePost('code=fixture&state=fixture&user='+'x'.repeat(20_000));
+ assert.equal(why((await handleAccounts(flood,appleEnv,new URL(flood.url)))!),'body','An oversized sign-in return is refused');
+ const small=applePost('code=fixture&state=fixture');
+ assert.equal(why((await handleAccounts(small,appleEnv,new URL(small.url)))!),'expired','A normal-sized return goes on to the flow check');
+ db.sql.exec('DELETE FROM sessions; DELETE FROM users');
+
+ console.log('PASS email feature gate, RSA/claims/revocation, save concurrency, byte limits, consent/snapshot privacy, per-tab visit ordering and ownership, export and deletion, save clock/range bounds, UTF-8 names, sign-in callback failures');
 }finally{globalThis.fetch=originalFetch;}

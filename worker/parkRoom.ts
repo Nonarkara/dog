@@ -34,6 +34,9 @@ type HibernatingSocket = WebSocket & {
 
 declare const WebSocketPair: { new (): { 0: WebSocket; 1: WebSocket } };
 
+/** Open connections one room will hold, seated or not: every dog, plus as many again still saying hello. */
+export const MAX_SOCKETS = MAX_DOGS * 2;
+
 const seatOf = (ws: WebSocket): Seat =>
   ((ws as HibernatingSocket).deserializeAttachment() as Seat | null) ?? { id: null, dog: null, intent: null, rate: { start: 0, count: 0 } };
 const keep = (ws: WebSocket, seat: Seat) => (ws as HibernatingSocket).serializeAttachment(seat);
@@ -51,6 +54,19 @@ export class ParkRoom {
   async fetch(request: Request): Promise<Response> {
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 });
     const pair = new WebSocketPair();
+    // Connections that never say hello hold a socket too. At the cap the room
+    // lets go of the oldest one that has no dog, so idle connections can never
+    // lock a real dog (or a dog reconnecting to its own seat) out of the park.
+    // Only a room with no idle connection to give up answers "full".
+    const open = this.state.getWebSockets();
+    const idle = open.length >= MAX_SOCKETS ? open.find((ws) => seatOf(ws).id === null) : undefined;
+    if (idle) idle.close(1000, 'Idle');
+    if (open.length >= MAX_SOCKETS && !idle) {
+      (pair[1] as WebSocket & { accept(): void }).accept();
+      send(pair[1], { t: 'full' });
+      pair[1].close(1000, 'Room full');
+      return new Response(null, { status: 101, webSocket: pair[0] } as ResponseInit);
+    }
     this.state.acceptWebSocket(pair[1]);
     keep(pair[1], { id: null, dog: null, intent: null, rate: { start: Date.now(), count: 0 } });
     return new Response(null, { status: 101, webSocket: pair[0] } as ResponseInit);
@@ -79,15 +95,27 @@ export class ParkRoom {
     }
 
     if (message.t === 'hello') {
-      if (seat.id) return;
+      if (seat.id) {
+        keep(ws, seat); // a repeated hello changes nothing, but it still spends the rate budget
+        return;
+      }
       const present = this.others(ws);
-      if (present.length >= MAX_DOGS) {
+      // The seat this browser is about to replace does not count against the room.
+      if (present.filter((other) => seatOf(other).id !== message.id).length >= MAX_DOGS) {
         send(ws, { t: 'full' });
         ws.close(1000, 'Room full');
         return;
       }
       // A browser that reconnects with the same id replaces its old seat.
-      for (const other of present) if (seatOf(other).id === message.id) other.close(1000, 'Replaced');
+      // The old seat gives up the id first: its close event must not announce
+      // that the dog now held by this connection has left.
+      for (const other of present) {
+        const old = seatOf(other);
+        if (old.id !== message.id) continue;
+        old.id = null;
+        keep(other, old);
+        other.close(1000, 'Replaced');
+      }
       seat.id = message.id;
       seat.dog = message.dog;
       keep(ws, seat);
@@ -133,7 +161,10 @@ export class ParkRoom {
 
   async webSocketClose(ws: WebSocket) {
     const seat = seatOf(ws);
-    if (seat.id) this.broadcast(ws, { t: 'leave', id: seat.id, hungry: false });
+    if (!seat.id) return;
+    // Another live connection holding this id means the dog is still here.
+    if (this.others(ws).some((other) => seatOf(other).id === seat.id)) return;
+    this.broadcast(ws, { t: 'leave', id: seat.id, hungry: false });
   }
 
   async webSocketError(ws: WebSocket) {

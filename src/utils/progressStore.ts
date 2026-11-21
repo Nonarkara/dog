@@ -64,13 +64,16 @@ function write(save:ReturnType<typeof current>){
   window.dispatchEvent(new Event('tdc-saved'));
 }
 
+/** True while the page exists and is not on screen. */
+export const hiddenPage=()=>typeof document!=='undefined'&&document.visibilityState==='hidden';
 export function mutatePet(id:string,update:PetMutation,care?:'feed'|'play'|'walk'|'groom'):Promise<PetState>{
   return exclusive(()=>{
     const save=current(),now=Date.now();
     if(!save.dogs.some(dog=>dog.id===id))throw new Error('This dog is no longer in the saved record.');
     let initial=save.pets[id];
     if(!initial){initial=createPetState(now);const adoption=playMode()==='own'?readAdoption():null;if(adoption)initial={...initial,growth:{adoptedAt:adoption.at,seed:adoption.seed,careDays:[],day:dayKey(now),daySeconds:0}};}
-    const before=decay(initial,now),next=update(before);
+    // A hidden tab still ticks, but nobody is there (dailyLife.ALONE_PACE). This is the one decay every commit runs.
+    const before=decay(initial,now,hiddenPage()?false:undefined),next=update(before);
     save.pets[id]=next;
     const lastKey=care&&next!==before&&!(care==='feed'&&next.needs.hunger<=before.needs.hunger)?({feed:'lastFed',play:'lastPlayed',walk:'lastWalked',groom:'lastGroomed'} as const)[care]:undefined;
     save.dogs=save.dogs.map(dog=>dog.id!==id?dog:{...dog,tamagotchi:{...dog.tamagotchi,

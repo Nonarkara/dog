@@ -1,5 +1,5 @@
 import {validOwnedBackup} from '../src/domain/ownedSaveValidation';
-import {readJsonObject} from './requestBody';
+import {readJsonObject,readText} from './requestBody';
 import {emailConfig,emailIdentity,emailProfile,finishEmailDeletion,revokeEmailSession,type EmailEnv} from './emailAuth';
 /**
  * ACCOUNTS AND CLOUD-SAVED DOGS.
@@ -55,6 +55,8 @@ const SESSION_COOKIE = 'tdc_session';
 const FLOW_COOKIE = 'tdc_signin';
 const EMAIL_COOKIE = 'tdc_email';
 const SESSION_DAYS = 60;
+/** Apple's form post back: a code, a state and at most a short name. */
+const MAX_CALLBACK_BYTES = 16_384;
 const MAX_BACKUP_BYTES = 1_000_000; // room for ~20 shrunk record photos; D1 rows cap at 2 MB
 const DOG_IDS = ['expo-2021', 'mali-2022', 'oreo-frenchie', 'paolo-pug', 'shiba-chai'];
 
@@ -142,14 +144,19 @@ function readCookie(request: Request, name: string): string | null {
   }
   return null;
 }
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const part = token.split('.')[1];
-  if (!part) return null;
+/** Base64url JSON is UTF-8 bytes: atob alone would turn a Thai name into mojibake. */
+function decodeJsonPart(part: string): Record<string, unknown> | null {
   try {
-    return JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    const bytes = Uint8Array.from(atob(part.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+    const value: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
   } catch {
     return null;
   }
+}
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const part = token.split('.')[1];
+  return part ? decodeJsonPart(part) : null;
 }
 /** LINE signs its ID token with the channel secret (HS256); check it. */
 async function lineSignatureOk(token: string, secret: string): Promise<boolean> {
@@ -173,8 +180,9 @@ async function appleClientSecret(env: AccountEnv): Promise<string> {
   const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(body)));
   return `${body}.${b64url(sig)}`;
 }
-const clean = (v: unknown, max: number) =>
-  typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, max) : '';
+/** `max` counts code points, so a cut never leaves half of a surrogate pair. */
+export const clean = (v: unknown, max: number) =>
+  typeof v === 'string' ? [...v.replace(/[\u0000-\u001f\u007f<>]/g, '').trim()].slice(0, max).join('').trim() : '';
 
 /* ---- sessions ------------------------------------------------------- */
 
@@ -289,18 +297,18 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
   const callback = path.match(/^\/api\/auth\/(apple|google|line)\/callback$/);
   if (callback && (request.method === 'GET' || (callback[1] === 'apple' && request.method === 'POST'))) {
     const provider = callback[1] as Provider;
-    const params = request.method === 'POST' ? new URLSearchParams(await request.text()) : url.searchParams;
     const config = providerConfig(provider, env);
     const fail = (why: string) =>
       new Response(null, { status: 302, headers: { Location: `/?signin=failed&why=${encodeURIComponent(why)}`, 'Set-Cookie': cookie(FLOW_COOKIE, '', url, 0) } });
     if (!config) return fail('not-configured');
-    let flow: { provider: string; state: string; verifier: string; nonce: string; back: string };
-    try {
-      const raw = readCookie(request, FLOW_COOKIE) ?? '';
-      flow = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/')));
-    } catch {
-      return fail('expired');
+    let params = url.searchParams;
+    if (request.method === 'POST') {
+      const form = await readText(request, MAX_CALLBACK_BYTES);
+      if ('status' in form) return fail('body');
+      params = new URLSearchParams(form.text);
     }
+    const flow = decodeJsonPart(readCookie(request, FLOW_COOKIE) ?? '') as { provider?: unknown; state?: unknown; verifier?: unknown; nonce?: unknown; back?: unknown } | null;
+    if (!flow || typeof flow.state !== 'string' || typeof flow.verifier !== 'string' || typeof flow.nonce !== 'string') return fail('expired');
     if (flow.provider !== provider || params.get('state') !== flow.state) return fail('state');
     const code = params.get('code');
     if (!code) return fail(params.get('error') ?? 'cancelled');
@@ -309,20 +317,28 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     if (provider === 'apple') {
       try { appleSecret = await appleClientSecret(env); } catch { return fail('apple-key'); } // a badly pasted .p8
     }
-    const tokenResponse = await fetch(config.token, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code', code, redirect_uri: `${url.origin}/api/auth/${provider}/callback`,
-        client_id: config.id,
-        ...(provider === 'apple'
-          ? { client_secret: appleSecret }
-          : { client_secret: config.secret, code_verifier: flow.verifier }),
-      }),
-    });
-    if (!tokenResponse.ok) return fail('token');
-    const tokens = (await tokenResponse.json()) as { id_token?: string };
-    if (!tokens.id_token) return fail('no-id-token');
+    // The provider being unreachable, or answering with something other than
+    // JSON, is a failed sign-in for this person, not a crash.
+    let tokens: { id_token?: unknown } | null;
+    try {
+      const tokenResponse = await fetch(config.token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code', code, redirect_uri: `${url.origin}/api/auth/${provider}/callback`,
+          client_id: config.id,
+          ...(provider === 'apple'
+            ? { client_secret: appleSecret }
+            : { client_secret: config.secret, code_verifier: flow.verifier }),
+        }),
+      });
+      if (!tokenResponse.ok) return fail('token');
+      tokens = (await tokenResponse.json()) as { id_token?: unknown } | null;
+    } catch {
+      return fail('token');
+    }
+    if (!tokens || typeof tokens !== 'object') return fail('token');
+    if (typeof tokens.id_token !== 'string' || !tokens.id_token) return fail('no-id-token');
     // The ID token came straight from the provider over TLS, so its issuer is
     // already authenticated (OIDC Core 3.1.3.7). We still check every claim,
     // and LINE's HMAC signature as well.
@@ -341,7 +357,7 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
     const email = provider !== 'line' && verified ? clean(claims.email, 120) || null : null;
     const fallback = provider === 'line' ? 'LINE friend' : provider === 'apple' ? 'Apple friend' : 'Google friend';
     const userId = await upsertUser(env, provider, claims.sub, provider === 'apple' ? name : name ?? fallback, email, fallback);
-    const headers = new Headers({ Location: safeBack(flow.back) });
+    const headers = new Headers({ Location: safeBack(typeof flow.back === 'string' ? flow.back : null) });
     headers.append('Set-Cookie', await startSession(env, userId, url));
     headers.append('Set-Cookie', cookie(FLOW_COOKIE, '', url, 0));
     return new Response(null, { status: 302, headers });
@@ -378,7 +394,7 @@ export async function handleAccounts(request: Request, env: AccountEnv, url: URL
       return json({error:'Not a valid save base.'},400);
     const revision = body.revision;
     const backup = body.backup;
-    if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS) || backup.save.revision !== revision)
+    if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0 || !validOwnedBackup(backup,DOG_IDS,true) || backup.save.revision !== revision)
       return json({ error: 'Not a dog save.' }, 400);
     const name = clean(backup.adoption?.name, 24) || 'Dog';
     // Check the revision inside the write: two devices can pass a separate

@@ -102,7 +102,7 @@ export function outOfQuietHours(t:number):number{
 export function nextCallAt(s:PetState,now:number,adjustTime:((at:number)=>number)=outOfQuietHours):{at:number;reason:CallReason}|null{
   let state=s;
   for(let t=now+STEP;t<=now+AHEAD;t+=STEP){
-    state=decay(state,t);
+    state=decay(state,t,false); // nobody opens the app: the alone clock, whatever STEP is
     const r=whyCalling(state,t);
     if(r&&PUSHABLE.includes(r))return {at:adjustTime(Math.max(t,now+MIN_GAP)),reason:r};
   }

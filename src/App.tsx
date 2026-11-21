@@ -248,7 +248,7 @@ export const App: React.FC = () => {
       const id=activeDogId,trip={...outing.current};outing.current={distance:0,seconds:0};
       if(trip.seconds>=10&&trip.distance>=120){
         let report:string|null=null;
-        void commitPet(base=>{const result=finishParkOuting(base,Date.now(),trip.seconds,trip.distance);report=result.note;return result.state;})
+        void commitPet(base=>{const result=finishParkOuting(base,Date.now(),trip.seconds,trip.distance);report=result.note;return result.state;},'walk')
           .then(saved=>{if(saved&&report&&activeDogRef.current===id)say(report);});
       }
     }
@@ -367,6 +367,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const interval = window.setInterval(() => {
       void commitPet((prev) => {
+        // commitPet has already applied the elapsed time at the right pace (progressStore.mutatePet).
         const drifted = decay(prev);
         // HE GOES TO BED ON HIS OWN.
         //
@@ -553,7 +554,8 @@ export const App: React.FC = () => {
       if(base.sick||base.sleep.asleep)return base;
       accepted=true;
       const kindOf:WishKind=kind==='find-treat'?'cups':'play';
-      const wish=grantWish(logCare(base,kindOf),kindOf,Date.now());wished=wish.granted;base=wish.state;
+      // The Play press already logged this game and answered a play wish; only the cups game is its own care.
+      const wish=kind==='find-treat'?grantWish(logCare(base,kindOf),kindOf,Date.now()):{state:base,granted:false};wished=wish.granted;base=wish.state;
       if(kind==='find-treat')return {...base,noseSkill:Math.min(1,(base.noseSkill??0)+.1),needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:Date.now(),calmSince:undefined,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call};
       return won?{...base,arousal:Math.max(20,Math.min(80,base.arousal+15)),trust:Math.min(100,base.trust+5),weightKg:Math.max(15,(base.weightKg??24.8)-.1),calmSince:undefined}:base;
     },'play');
@@ -804,7 +806,7 @@ export const App: React.FC = () => {
           <div className="panel-body">
             <div className="stage-frame" data-feedback={!!note}>
 
-              {petState.away&&<div className="stage-away" role="status"><p><strong>{currentDog.name} slipped out.</strong> Three days without care was too long. Go to the park and win back trust.</p><button type="button" className="btn-accent" onClick={()=>togglePark()}>Go to the park</button></div>}
+              {petState.away&&<div className="stage-away" role="status"><p><strong>{currentDog.name} slipped out.</strong> After three quiet days your dog went looking for company. Go to the park and win back trust.</p><button type="button" className="btn-accent" onClick={()=>togglePark()}>Go to the park</button></div>}
               <div className="stage-canvas">
               <Suspense fallback={<StageLoading name={currentDog.name} />}>
                 {!isAddDogOpen && currentDog.avatarConfig.customModelUrl ? (

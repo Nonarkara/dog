@@ -14,7 +14,8 @@ export function buyFood(state:PetState):{state:PetState;note:string}{
 }
 export function takeMeal(state:PetState):{state:PetState;allowed:boolean;note:string}{
  const g=gameState(state);
- if(state.needs.hunger>=85)return {state:{...state,game:{...g,extras:g.extras+1}},allowed:false,note:'That belly is full. Save the meal; a little play or company is better now.'};
+ // 75 is where a meal stops adding fullness (pet.ts), so that is where the pantry stops handing one out.
+ if(state.needs.hunger>=75)return {state:{...state,game:{...g,extras:g.extras+1}},allowed:false,note:'That belly is full. Save the meal; a little play or company is better now.'};
  // No paywall on basic care: an empty pantry always has a rescue meal for a hungry dog.
  if(g.portions<1&&state.needs.hunger<35)return {state:{...state,game:g},allowed:true,note:'Emergency pantry bowl — free. '};
  if(g.portions<1)return {state,allowed:false,note:'The pantry is empty. Buy a pouch with paw coins earned by spending time together.'};
@@ -30,7 +31,9 @@ export function socialize(state:PetState,now:number):PetState {const g=gameState
 /** Credit an actual outing on return, not opening the park or repeated Home taps. */
 export function completeParkWalk(state:PetState,now:number,movingSeconds:number,distance:number):PetState {
  const g=gameState(state);
- if(state.sleep.asleep||state.sick||!Number.isFinite(movingSeconds)||!Number.isFinite(distance)||movingSeconds<10||distance<120||now-(g.lastOutingAt??0)<20*60*1000)return state;
+ if(state.sleep.asleep||state.sick||!Number.isFinite(movingSeconds)||!Number.isFinite(distance)||movingSeconds<10||distance<120)return state;
  const life=dailyLife(state);
- return {...state,game:{...g,lastOutingAt:now,coins:Math.min(200,g.coins+3)},life:{...life,boredom:Math.max(0,life.boredom-25),bladder:Math.max(0,life.bladder-30)},trust:Math.min(100,state.trust+3),arousal:Math.max(0,state.arousal-8),needs:{...state.needs,energy:Math.max(0,state.needs.energy-3)},personality:{...state.personality,boldness:Math.min(1,state.personality.boldness+.01)}};
+ // The rewards rest for twenty minutes between outings; the toilet break never does.
+ if(now-(g.lastOutingAt??0)<20*60*1000)return life.bladder>0?{...state,life:{...life,bladder:0}}:state;
+ return {...state,game:{...g,lastOutingAt:now,coins:Math.min(200,g.coins+3)},life:{...life,boredom:Math.max(0,life.boredom-25),bladder:0},trust:Math.min(100,state.trust+3),arousal:Math.max(0,state.arousal-8),needs:{...state.needs,energy:Math.max(0,state.needs.energy-3)},personality:{...state.personality,boldness:Math.min(1,state.personality.boldness+.01)}};
 }

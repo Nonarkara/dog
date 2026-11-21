@@ -17,6 +17,10 @@ export interface ParkOutingResult {
 export function finishParkOuting(state:PetState,now:number,movingSeconds:number,distance:number):ParkOutingResult {
  const walked=completeParkWalk(state,now,movingSeconds,distance);
  if(walked===state)return {state,credited:false,wished:false,coinsAwarded:0,trustAwarded:0,note:null};
+ // Inside the reward cooldown a walk is a toilet break and nothing more: no log entry,
+ // no company credit, no wish. Ten short strolls must not shape a character.
+ if(gameState(walked).lastOutingAt===gameState(state).lastOutingAt)
+  return {state:{...walked,call:state.call?.reason==='toilet'?undefined:state.call},credited:false,wished:false,coinsAwarded:0,trustAwarded:0,note:'Home again: a toilet break. The walk reward rests a while between outings.'};
  let next=logCare({...walked,lastCareAt:now},'walk');
  const call=state.call,life=dailyLife(next);
  // A lower-priority need can disappear behind a new urgent one. Verify its

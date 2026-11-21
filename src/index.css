@@ -877,7 +877,7 @@ html {font-synthesis:none;}
 .care-console:not(.care-detail-view) .care-details-toggle {display:block;font-size:12px;min-height:28px;padding:1px 4px;}
 /* 6px of air under the header rule: at 2px the meter digits touched the
    line above them, which reads as a collision, not as a group. */
-.care-console:not(.care-detail-view)>.care-body {flex:none;padding:6px 6px 4px;gap:3px;}
+.care-console:not(.care-detail-view)>.care-body {flex:none;padding:6px 6px 2px;gap:3px;}
 .care-console:not(.care-detail-view) .care-now {padding-top:1px;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console) {grid-template-rows:minmax(0,1fr) auto auto;}
 .cockpit-workspace--tall:has(>.region-frame>.care-console)>.region-frame {container-type:normal;}
@@ -1112,7 +1112,7 @@ html {font-synthesis:none;}
    fit the console's 102px budget. At 1.35 two lines were 35.1px and a long
    dog name pushed the console half a pixel over the budget it has always
    had. The sentence keeps both lines and the whole instruction. */
-.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.28;padding-bottom:2px;}
+.care-console:not(.care-detail-view) .care-now p {font-size:13px;line-height:1.28;padding-bottom:1px;} /* 1px, not 2: two lines at 2px put the console a quarter-pixel over its 102px budget */
 /* Coach: one row of commands, label-sized actions, no stretched slabs. */
 .region-coach>.panel-head {padding:1px 6px;}
 .region-coach>.panel-head button {min-height:24px;padding:0 6px;font-size:11px;}
