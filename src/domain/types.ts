@@ -258,6 +258,10 @@ export interface PetState {
   home?: import('../components/homeScenes').HomeId;
   /** Today's wish and whether you granted it. */
   wish?: import('./life').Wish;
+  /** When each kind of care last earned trust (pet.ts earnTrust). */
+  trustAt?: Record<string, number>;
+  /** The best trust award each kind has had inside its current rest window (trust.ts). */
+  trustGot?: Record<string, number>;
   /** Time spent with him: today, in total, and the run of days. */
   together?: import('./attention').Together;
   /** He is asking for you, and why. */

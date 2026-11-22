@@ -1137,6 +1137,7 @@ html {font-synthesis:none;}
    a single row with room to spare. */
 .dog-vocab {container-type:inline-size;container-name:dog-vocab;}
 .dog-vocab-row {display:grid;gap:4px;grid-template-columns:repeat(4,max-content);justify-content:start;}
+.dog-vocab-note {margin-top:2px;font-size:11px;line-height:1.2;color:var(--text-faint,var(--text-muted));}
 @container dog-vocab (min-width:25rem){.dog-vocab-row{grid-template-columns:repeat(8,max-content);}}
 .practice-real-notes {padding:2px 6px;}
 .practice-real-notes summary {min-height:24px;font-size:11px;}

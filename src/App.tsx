@@ -49,6 +49,7 @@ import {
   decay,
   settleSleep,
   willSettle,
+  earnTrust,
 } from './domain/pet';
 
 /**
@@ -529,7 +530,7 @@ export const App: React.FC = () => {
       message=answer.answered?`${result.note} You came when ${subject.sex==='female'?'she':'he'} called.`:result.note;
       if(action==='rewardCalm'&&result.state.lastCalmRewardAt===latest.lastCalmRewardAt)trigger=null;
       if(action==='feed'&&result.state.needs.hunger<=latest.needs.hunger)trigger=null;
-      if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state={...result.state,trust:Math.min(100,result.state.trust+1)};
+      if(part&&part===(TOUCH_PREFERENCES[id]??'chest'))result.state=earnTrust(result.state,'touch',1,now);
       if(action==='play'&&(latest.sick||result.state.sleep.asleep))trigger=null;
       let out=answer.answered?logCare({...result.state,call:undefined,trust:Math.min(100,result.state.trust+answer.trustBonus)},'answered'):result.state;
       if(trigger&&(action==='feed'||action==='play'||action==='pet'||action==='walk')){
@@ -556,8 +557,8 @@ export const App: React.FC = () => {
       const kindOf:WishKind=kind==='find-treat'?'cups':'play';
       // The Play press already logged this game and answered a play wish; only the cups game is its own care.
       const wish=kind==='find-treat'?grantWish(logCare(base,kindOf),kindOf,Date.now()):{state:base,granted:false};wished=wish.granted;base=wish.state;
-      if(kind==='find-treat')return {...base,noseSkill:Math.min(1,(base.noseSkill??0)+.1),needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},trust:Math.min(100,base.trust+(won?3:1)),arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:Date.now(),calmSince:undefined,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call};
-      return won?{...base,arousal:Math.max(20,Math.min(80,base.arousal+15)),trust:Math.min(100,base.trust+5),weightKg:Math.max(15,(base.weightKg??24.8)-.1),calmSince:undefined}:base;
+      if(kind==='find-treat')return {...earnTrust(base,'cups',won?3:1,Date.now()),noseSkill:Math.min(1,(base.noseSkill??0)+.1),needs:{...base.needs,energy:Math.max(0,base.needs.energy-4)},arousal:Math.min(80,base.arousal+6),life:{...dailyLife(base),boredom:Math.max(0,dailyLife(base).boredom-50)},lastCareAt:Date.now(),calmSince:undefined,call:['lonely','bored'].includes(base.call?.reason||'')?undefined:base.call};
+      return won?{...earnTrust(base,'catch',5,Date.now()),arousal:Math.max(20,Math.min(80,base.arousal+15)),weightKg:Math.max(15,(base.weightKg??24.8)-.1),calmSince:undefined}:base;
     },'play');
     if(!next||activeDogRef.current!==id)return;
     if(!accepted){say(`${currentDog.name} needs rest. We can play again later.`);return;}

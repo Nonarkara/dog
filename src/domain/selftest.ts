@@ -9,7 +9,9 @@ import {TREES,CROWN,canopyAt,TREE_MAX} from './parkCanopy';
 import {parkScenery} from '../components/parkScenery';
 import {DOG_THEMES} from '../data/dogThemes';
 import {depthScale,REFERENCE,touchFallback} from './parkDepth';
-import {taughtWords} from './capture';
+import {taughtWords,opensTomorrow,nextTeachable} from './capture';
+import {earnTrust,chargeTrust,TRUST_REST_MS,NAP_WAKE_ENERGY} from './pet';
+import {calmInteraction} from './calm';
 import {finishParkOuting} from './parkOuting';
 import {WEIGHT_CEILING_KG} from './pet';
 /**
@@ -679,8 +681,40 @@ ok('a wrong mark never goes below nothing', wrongMark({ association: 0, pairings
 let sitting = captureOf(fresh, 'sit'), reps = 0;
 while (sitting.association < LEARNED) { sitting = pair(sitting, true); reps++; }
 ok('Sit is learned in a handful of good pairings', reps >= 4 && reps <= 6, `${reps} reps`);
-const sat = withCapture(fresh, 'sit', sitting);
-ok('learning Sit opens Down, and only Down', isUnlocked(sat, 'down') && !isUnlocked(sat, 'paw'));
+const learnedDay = new Date(2026, 10, 3, 15).getTime(), nextDay = learnedDay + 20 * 3_600_000;
+const sat = withCapture(fresh, 'sit', sitting, learnedDay);
+ok('learning Sit opens Down the next day, and only Down', isUnlocked(sat, 'down', nextDay) && !isUnlocked(sat, 'paw', nextDay));
+ok('one new word a day: Down stays shut for the rest of the day Sit was learned', !isUnlocked(sat, 'down', learnedDay + 3 * 3_600_000) && opensTomorrow(sat, 'down', learnedDay + 3 * 3_600_000) && !opensTomorrow(sat, 'down', nextDay));
+ok('the learned word itself stays open to practise the same day', isUnlocked(sat, 'sit', learnedDay + 60_000) && nextTeachable(sat, learnedDay + 60_000) === 'sit' && nextTeachable(sat, nextDay) === 'down');
+ok('the day a word was learned is recorded once and never moves', captureOf(withCapture(sat, 'sit', pair(captureOf(sat, 'sit'), true), nextDay), 'sit').learnedAt === learnedDay);
+ok('setting the clock back a day does not open the next word', !isUnlocked(sat, 'down', learnedDay - 30 * 3_600_000));
+ok('one minute past midnight is tomorrow', isUnlocked(withCapture(fresh, 'sit', sitting, new Date(2026, 10, 3, 23, 59).getTime()), 'down', new Date(2026, 10, 4, 0, 1).getTime()));
+{ const two = withCapture(withCapture(fresh, 'sit', sitting, learnedDay - 26 * 3_600_000), 'down', sitting, learnedDay);
+  ok('the day Down is learned, Paw waits for tomorrow', !isUnlocked(two, 'paw', learnedDay + 3_600_000) && isUnlocked(two, 'paw', nextDay)); }
+ok('words known before this rule hold nothing back', isUnlocked({ ...fresh, capture: { sit: { association: 1, pairings: 5 } } } as PetState, 'down', learnedDay));
+{ // Trust is a record of consistency, not of tapping.
+  let s = fresh, t = fresh.updatedAt; for (let i = 0; i < 11; i++) { t += 2500; s = interact(s, 'pet', t).state; }
+  ok('eleven pets in a row earn trust once', near(s.trust, fresh.trust + 4, .05), `${s.trust}`);
+  const later = interact(s, 'pet', t + TRUST_REST_MS + 1000).state;
+  ok('a pet after the ten-minute rest earns trust again', later.trust > s.trust + 3);
+  const mixed = interact(interact(fresh, 'pet', fresh.updatedAt + 2500).state, 'groom', fresh.updatedAt + 5000).state;
+  ok('different kinds of care each earn their own trust', near(mixed.trust, fresh.trust + 7, .05));
+  {const bored={...s,life:{...dailyLife(s),boredom:60},arousal:60},again=interact(bored,'pet',t+2500).state;
+   ok('every pet still does its job on the mood, trust or not', dailyLife(again).boredom<60&&again.arousal<60&&again.trust<=bored.trust);}
+  // Best award in the window, not the first one.
+  const lost=earnTrust(fresh,'cups',1,1000),won=earnTrust(lost,'cups',3,60_000),again=earnTrust(won,'cups',3,120_000);
+  ok('a small award followed by a bigger one in the same rest tops up to the bigger', lost.trust===fresh.trust+1&&won.trust===fresh.trust+3&&again.trust===fresh.trust+3);
+  ok('the rest runs from the first award, not from the top-up', earnTrust(won,'cups',3,1000+TRUST_REST_MS).trust===fresh.trust+6);
+  const miss=chargeTrust(fresh,'practice-miss',.5,1000);
+  ok('a mistake costs trust once per rest, however often it is repeated', miss.trust===fresh.trust-.5&&chargeTrust(miss,'practice-miss',.5,5000).trust===miss.trust&&chargeTrust(miss,'practice-miss',.5,1000+TRUST_REST_MS).trust===fresh.trust-1);
+  const future=earnTrust(fresh,'pet',4,fresh.updatedAt+30*24*3_600_000);
+  ok('a stamp from a clock that ran ahead does not lock the kind', earnTrust(future,'pet',4,fresh.updatedAt+3_600_000).trust===future.trust+4);
+  // The quiet-time reward and real-dog reps rest like everything else.
+  const quiet=(st:PetState,at:number)=>calmInteraction({...st,arousal:30,calmSince:at-10_000,lastCalmRewardAt:undefined},'rewardCalm',at,'Expo').state;
+  const c1=quiet(fresh,fresh.updatedAt+20_000),c2=quiet(c1,fresh.updatedAt+120_000);
+  ok('rewarding calm earns trust once per rest but calm every time', c1.trust===fresh.trust+2&&c2.trust===c1.trust&&c2.discipline===c1.discipline+5, `${c1.trust} ${c2.trust} ${c1.discipline} ${c2.discipline}`);
+  ok('earnTrust never takes trust away and ignores zero', earnTrust(fresh, 'x', 0, 1) === fresh && earnTrust(fresh, 'x', -5, 1) === fresh);
+}
 ok('an old save keeps a skill it already had', captureOf({ ...fresh, lessons: { down: { ...newLesson(), stage: 2 } } }, 'down').association >= LEARNED);
 
 // ---- three cups ----
@@ -920,7 +954,7 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
     seen.add(nextStep(st,name,noon).text);}
    const texts=[...seen];
    ok('the step sweep reaches at least twenty different sentences',texts.length>=20);
-   ok('every step sentence fits two phone lines, even with a 24-character name',texts.every(t=>t.length<=72));
+   ok('every step sentence fits two phone lines, even with a 24-character name',texts.every(t=>t.length<=72),texts.filter(t=>t.length>72).map(t=>`${t.length}: ${t}`).join(' | '));
    ok('no swept step sentence guesses a gender',texts.every(t=>!/\b(him|his|he|her|she|hers)\b/i.test(t)));}
   ok('a one-point drift is not shown as care',meterChanges({trust:60},{trust:61}).length===0);
   ok('a two-point move is shown, with its sign',(()=>{const c=meterChanges({trust:60,energy:50},{trust:63,energy:48});return c.length===2&&c[0].d===3&&c[1].d===-2;})());
@@ -975,6 +1009,28 @@ console.log('\nONE MEANING OF "KNOWS"');
   const taught={...base,capture:{sit:{association:1,pairings:5}}} as PetState;
   ok('a word taught in Coach is a word the dog knows',taughtWords(taught).map(b=>b.name).join()==='sit'&&taughtWords(base).length===0);
   ok('saying a taught word is answered as known, not as unknown',/knows "sit"/.test(communicate(taught,'sit',noon+1000).note)&&/doesn't know "sit"/.test(communicate(base,'sit',noon+1000).note));
+}
+console.log('\nA NAP IS NOT A NIGHT');
+{
+  const H=3_600_000,ten=new Date(2026,10,3,10).getTime(),base=createPetState(ten);
+  const spent={...base,needs:{...base.needs,energy:11},arousal:83};
+  const bed=settleSleep(spent,ten+1000);
+  ok('a spent dog can be put to bed even when wound up',bed.state.sleep.asleep);
+  ok('a rested, wound-up dog still cannot, and is told what calms it',(()=>{const r=settleSleep({...spent,needs:{...spent.needs,energy:60}},ten+1000);return !r.state.sleep.asleep&&/strokes or quiet time/.test(r.note);})());
+  const at=(h:number)=>decay(bed.state,ten+h*H,false);
+  ok('a morning nap is over by early afternoon, not the next morning',at(1).sleep.asleep&&!at(2.5).sleep.asleep&&at(2.5).needs.energy>=NAP_WAKE_ENERGY-2,`asleep@1h ${at(1).sleep.asleep} @2.5h ${at(2.5).sleep.asleep} energy ${at(2.5).needs.energy}`);
+  ok('a dog woken by a finished nap does not drop straight back to sleep',!willSettle(at(2.5),ten+2.5*H));
+  ok('a natural nap wake costs nothing',at(2.5).sleep.wakeCount===bed.state.sleep.wakeCount);
+  const night=new Date(2026,10,3,22,30).getTime(),tucked=settleSleep({...createPetState(night),needs:{hunger:70,energy:30,hygiene:80},arousal:20},night+1000).state;
+  const bedAt=(h:number,m:number,energy:number)=>{const t=new Date(2026,10,3,h,m).getTime();return {t,s:settleSleep({...createPetState(t),needs:{hunger:70,energy,hygiene:80},arousal:20},t+1000).state};};
+  const wakeHour=(b:{t:number;s:PetState})=>{for(let m=10;m<=30*60;m+=10){if(!decay(b.s,b.t+m*60_000,false).sleep.asleep)return m/60;}return Infinity;};
+  const eve1=wakeHour(bedAt(19,59,11)),eve2=wakeHour(bedAt(20,0,11));
+  ok('no cliff at eight in the evening: bed at 19:59 and at 20:00 both sleep until morning',eve1>9&&eve2>9&&Math.abs(eve1-eve2)<.5,`${eve1} h vs ${eve2} h`);
+  const dawn1=wakeHour(bedAt(5,59,11)),dawn2=wakeHour(bedAt(6,0,11));
+  ok('no cliff at six in the morning: bed at 05:59 and at 06:00 both wake within a few hours',dawn1<4&&dawn2<4,`${dawn1} h vs ${dawn2} h`);
+  ok('a nap that runs into the night becomes night sleep and does not end at eleven',wakeHour(bedAt(18,0,5))>10||wakeHour(bedAt(18,0,5))<4);
+  ok('a dog put to bed at half past seven with energy to spare stays down for the night',wakeHour(bedAt(19,30,50))>9);
+  ok('night sleep keeps its long shape: still asleep at three, up after the wake time',decay(tucked,night+4.5*H,false).sleep.asleep&&!decay(tucked,night+10*H,false).sleep.asleep);
 }
 console.log('\nPARK PERSPECTIVE');
 {

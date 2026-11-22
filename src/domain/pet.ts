@@ -48,6 +48,7 @@ export type { Observation, ObservationTag };
 import {gameState,takeMeal} from './companionGame';
 import { dailyLife, advanceDailyLife, ALONE_PACE } from './dailyLife';
 import { taughtWord } from './capture';
+import { earnTrust } from './trust';
 import {calmInteraction,calmNeed} from './calm';
 import {
   BETA_BY_ACTION,
@@ -122,6 +123,8 @@ export function createSleepState(): SleepState {
  * biology: this is a pet that lives with a person, so the bed belongs to the
  * person too.
  */
+/** Daytime sleep restores this much energy an hour; the dog gets up, by day, once it reaches NAP_WAKE_ENERGY. */
+export const NAP_ENERGY_PER_HOUR = 16, NAP_WAKE_ENERGY = 40;
 export const NIGHT_START_HOUR = 22;
 export const NIGHT_END_HOUR = 6;
 
@@ -189,10 +192,12 @@ function settleBody(
       note: `${name} is restless. Give ${p.obj} some quiet time before trying bed again.`,
     };
   }
-  if (state.arousal > 55) {
+  // A dog who is spent can always be put to bed: four games in a row used to leave a
+  // dog too tired to play and too excited to sleep, with no way out the panel named.
+  if (state.arousal > 55 && state.needs.energy >= 25) {
     return {
       state,
-      note: `${name} is too wound up to settle. A walk would bring ${p.poss} arousal down.`,
+      note: `${name} is too wound up to settle. Gentle strokes or quiet time will calm ${p.obj}.`,
     };
   }
 
@@ -310,6 +315,8 @@ export function sickCause(state: PetState): 'mess' | 'hunger' | 'other' | null {
   return life.lowFullnessMinutes >= 180 || state.needs.hunger < 30 ? 'hunger' : 'other';
 }
 
+export { earnTrust, chargeTrust, TRUST_REST_MS } from './trust';
+
 /** Game weight moves between a 15 kg floor and this ceiling; it is never a clinical figure. */
 export const WEIGHT_CEILING_KG=32;
 
@@ -350,7 +357,14 @@ function decayStep(state:PetState,now:number,pace=1):PetState {
 
   // A dog asleep recovers faster than a dog awake, and settles more deeply.
   const asleep = sleep.asleep;
-  const energyRate = asleep ? 4.5 : DECAY_PER_HOUR.energy;
+  // A NAP IS NOT A NIGHT. Sleep that began in the daytime restores energy fast and
+  // ends when the dog is rested: an hour or two, not the twenty a tired dog tucked
+  // in at ten in the morning used to lose. Night sleep keeps its slow, long shape.
+  // Which one it is depends on the clock NOW, not on the minute the dog lay down:
+  // sleep in the night hours is slow and deep, sleep in the day restores quickly.
+  // A dog put to bed from seven in the evening is down for the night.
+  const fellAt=sleep.fellAsleepAt===null?null:new Date(sleep.fellAsleepAt),nightSleep=!!fellAt&&(fellAt.getHours()>=19||fellAt.getHours()<6);
+  const energyRate = asleep ? (isNightHour(now) ? 4.5 : NAP_ENERGY_PER_HOUR) : DECAY_PER_HOUR.energy;
   const daily=advanceDailyLife(state,factor*60,now,pace);
   const mess=(state.poopCount??0)+dailyLife(state).peeCount;
   const poopAcc=1+mess*1.5;
@@ -407,9 +421,9 @@ function decayStep(state:PetState,now:number,pace=1):PetState {
   };
   // Morning waking and a restored daytime nap are natural, without manual-wake penalties.
   const morning=new Date(now),minute=morning.getHours()*60+morning.getMinutes();
-  const fell=sleep.fellAsleepAt===null?null:new Date(sleep.fellAsleepAt),nightSleep=fell&&(fell.getHours()>=20||fell.getHours()<6);
-  const mayWake=nightSleep?minute>=gameState(state).wakeMinute&&minute<20*60:!isNightHour(now);
-  if(asleep&&mayWake&&next.needs.energy>=65&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=60*60_000){
+  const mayWake=nightSleep?minute>=gameState(state).wakeMinute&&minute<19*60:!isNightHour(now);
+  const rested=next.needs.energy>=NAP_WAKE_ENERGY&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=20*60_000;
+  if(asleep&&mayWake&&rested){
     next.sleep={...next.sleep,asleep:false,wokenAt:now};
   }
   if(next.calmSince!==undefined&&(calmNeed(next)||next.arousal>55))next.calmSince=undefined;
@@ -534,18 +548,22 @@ export function interact(
     life: dailyLife(base),
     calmSince:undefined,
   };
+  // Trust for this kind of care, at most once per TRUST_REST_MS (see earnTrust).
+  let earned = false;
+  const credit = (kind: string, amount: number) => { const e = earnTrust({ ...next, trust: base.trust, trustAt: base.trustAt, trustGot: base.trustGot }, kind, amount, now); earned = e.trust > base.trust; next.trust = e.trust; next.trustAt = e.trustAt; next.trustGot = e.trustGot; };
 
   let note = '';
   let outcomeDelivered = true;
   switch (action) {
     case 'pet': {
       next.life={...dailyLife(next),boredom:Math.max(0,dailyLife(base).boredom-25)};
-      next.trust = clamp(base.trust + 4);
+      credit('pet', 4);
       next.personality.sociability=clampTrait(base.personality.sociability+.015);
       next.personality.sensitivity=clampTrait(base.personality.sensitivity-.005);
       next.arousal = clamp(base.arousal - 6);
-      note =
-        base.trust > 70
+      note = !earned
+        ? `${name} enjoys the company. Trust grows with visits through the day, not with more strokes.`
+        : base.trust > 70
           ? `${name} leans into the hand. Company builds trust and eases boredom.`
           : 'Gentle company builds trust and eases boredom.';
       break;
@@ -576,7 +594,7 @@ export function interact(
       const capacity = base.needs.energy / 100;
       next.needs.energy = clamp(base.needs.energy - 16);
       next.arousal = clamp(base.arousal + 22 * capacity + (1 - capacity) * 4);
-      next.trust = clamp(base.trust + 2);
+      credit('play', 2);
       next.personality.playDrive = clampTrait(base.personality.playDrive + 0.05);
       next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.05);
       // A game is the best part of his day: unless he is already tired, play
@@ -599,7 +617,7 @@ export function interact(
       next.personality.sensitivity=clampTrait(base.personality.sensitivity-.01);
       next.life={...dailyLife(next),peeCount:0};
       next.needs.hygiene = clamp(base.needs.hygiene + 30);
-      next.trust = clamp(base.trust + 3);
+      credit('groom', 3);
       next.arousal = clamp(base.arousal - 4);
       if ((base.poopCount ?? 0) > 0) {
         next.poopCount = 0;
@@ -616,7 +634,7 @@ export function interact(
       if (mess > 0) {
         next.poopCount = 0;
         next.needs.hygiene = clamp(base.needs.hygiene + 35);
-        next.trust = clamp(base.trust + 4);
+        credit('clean', 4);
         note = `Cleaned up ${mess} mess${mess > 1 ? 'es' : ''}.`;
       } else {
         outcomeDelivered = false;
@@ -631,7 +649,7 @@ export function interact(
         // Medicine clears the illness and its hunger clock; an empty belly starts it again.
         next.life = { ...dailyLife(base), lowFullnessMinutes: 0 };
         next.needs.energy = clamp(base.needs.energy + 25);
-        next.trust = clamp(base.trust + 10);
+        credit('medicine', 4);
         note = base.needs.hunger < 30
           ? `Medicine worked: ${name} is better. Feed ${p.obj} soon, or hunger will make ${p.obj} ill again.`
           : `Medicine worked: ${name} stops shivering and starts to recover.`;
@@ -652,7 +670,7 @@ export function interact(
       next.needs.energy = clamp(base.needs.energy - 12);
       next.arousal = clamp(base.arousal - 18);
       next.needs.hygiene = clamp(base.needs.hygiene - 4);
-      next.trust = clamp(base.trust + 2);
+      credit('walk', 2);
       next.personality.boldness = clampTrait(base.personality.boldness + 0.03);
       next.weightKg = Math.max(15, (base.weightKg ?? 24.8) - 0.08);
       note = `A sniff walk and a toilet break. ${name} comes back relieved. Arousal down, legs exercised — and ${t} on a walk is a different animal.`;
@@ -721,7 +739,7 @@ export function communicate(
   if (clean === '') {
     note = `You said nothing. ${name} blinked at you.`;
   } else if (strength >= 0.5) {
-    next.trust = clamp(state.trust + 1);
+    { const e = earnTrust(next, 'word', 1, now); next.trust = e.trust; next.trustAt = e.trustAt; next.trustGot = e.trustGot; }
     note = `${name} knows "${clean}". Ears prick, and ${name} looks at you, waiting.`;
   } else if (taughtWord(state, clean)) {
     note = `${name} knows "${clean}" from training, and looks ready. Practise it in Coach.`;

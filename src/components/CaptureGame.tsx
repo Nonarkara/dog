@@ -94,7 +94,7 @@ export const CaptureGame:React.FC<Props>=({dogName,name,petState,onPetStateChang
     if(before<LEARNED&&after>=LEARNED){
       const open=LEARN_ORDER[LEARN_ORDER.indexOf(name)+1];
       sound.chimeSuccess();setBubble('★');
-      setStatus(`${dogName} learned “${word}”!${open?` ${BEHAVIOURS.find(b=>b.name===open)?.label} is open now.`:''}`);
+      setStatus(`${dogName} learned “${word}”!${open?` ${BEHAVIOURS.find(b=>b.name===open)?.label} opens tomorrow: one new word a day.`:''}`);
       window.setTimeout(()=>setBubble(null),1800);
     }else setStatus(msg);
   };

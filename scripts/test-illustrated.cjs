@@ -35,12 +35,12 @@ const out=process.env.DOG_EVIDENCE||'/tmp/dog-illustrated';fs.mkdirSync(out,{rec
   await p.waitForTimeout(350);await shot(action.toLowerCase()+'-0');await p.waitForTimeout(250);await shot(action.toLowerCase()+'-1');await p.waitForTimeout(1700);
  }
  // Touch the painted torso, not only a command button.
- const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].trust);
+ /* Trust rests ten minutes per kind of care (src/domain/trust.ts), so a touch is proven by the care log, which counts every one. */const before=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].careLog?.pet??0);
  // Project a torso point from the actual drawing: the dog can now stop away
  // from centre and face either side, so a fixed screen coordinate is invalid.
  const touch=await p.locator('canvas').first().evaluate(c=>{const r=c.getBoundingClientRect(),v=Math.max(1.08,1/(r.width/r.height)),m=window.__dogDraw;return{x:r.width*(.5+(m.x+.10*m.sx)/(2*v*r.width/r.height)),y:r.height*(.5+(.30*m.sy-m.y)/(2*v))};});
  await p.locator('canvas').first().click({position:touch});await p.waitForTimeout(2500);
- const after=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].trust);assert(after>before,'Direct touch must reach the care state');
+ const after=await p.evaluate(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['paolo-pug'].careLog?.pet??0);assert(after>before,'Direct touch must reach the care state');
  // Bed is tested with a calm dog: the preceding pets legitimately raise
  // arousal, and a wound-up dog refuses bed rather than silently going to sleep.
  await p.evaluate(()=>{const k='canine_os_save_v3',s=JSON.parse(localStorage.getItem(k));s.pets['paolo-pug'].arousal=20;s.pets['paolo-pug'].sleep.restlessness=0;localStorage.setItem(k,JSON.stringify(s));});

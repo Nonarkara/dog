@@ -2,7 +2,7 @@ import {PARK_VERTEX,PARK_FRAGMENT,poseSpring,poseSettling,smooth01,MOTION_LAYOUT
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
-import {nextTeachable} from '../domain/capture';
+import {nextTeachable,isLearned} from '../domain/capture';
 import {BEHAVIOURS,type BehaviourName} from '../domain/types';
 import React, { useEffect, useRef, useState } from 'react';
 import {createPortal} from 'react-dom';
@@ -624,7 +624,7 @@ function IllustratedStage(props: Props & {url:string}) {
       <div><span className="label text-accent">Catch · ball {game.target==='left'?'◀ left':'right ▶'}</span><span className="data ml-2" title={`Round ${game.round} of 5 · Score ${game.score}`}><span className="sr-only">Round </span>{game.round}/5 · <span className="sr-only">Score </span>{game.score}</span>{game.result&&<span className="ml-2 text-accent">{game.result}</span>}</div>
       <div className="flex gap-1"><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="◀ Left" title="Left" onClick={()=>choose('left')}>◀</button><button className="btn btn-quiet px-2" disabled={game.busy} aria-label="Right ▶" title="Right" onClick={()=>choose('right')}>▶</button><button className="btn btn-quiet px-2" title="Close mini-game" onClick={closeGame}>✕</button></div>
     </div>)}
-    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} played, but can’t fetch yet.</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.(teachNext);}}>{teachNext==='fetch'?'Teach fetch ↗':`Teach ${teachLabel} first ↗`}</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
+    {fetchConfused&&dock(<div className="fetch-first"><span>{dog.name} played, but can’t fetch yet.</span><button type="button" className="btn-quiet" onClick={()=>{setFetchConfused(false);latest.current.onTeachFetch?.(teachNext);}}>{teachNext==='fetch'?'Teach fetch ↗':isLearned(props.petState,teachNext)?`Practise ${teachLabel} ↗ (next word tomorrow)`:`Teach ${teachLabel} first ↗`}</button><button type="button" className="btn-quiet" aria-label="Close fetch introduction" onClick={()=>setFetchConfused(false)}>×</button></div>)}
     {(game?.busy||fetchConfused)&&<span key={game?.round??0} className={`illustration-ball illustration-ball--${game?.target??'left'} ${fetchConfused?'illustration-ball--untrained':''}`} role="img" aria-label={`Tennis ball toward ${game?.target??'left'}`}/> }
     {finding&&<TreatGame key={dog.id} name={dog.name} nose={props.petState.noseSkill??0} host={props.controlsHost}
       onTurn={away=>runTrick(away?'away':'back',true)}

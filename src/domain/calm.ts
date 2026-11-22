@@ -1,5 +1,6 @@
 import type {PetState} from './types';
 import {dailyLife} from './dailyLife';
+import {earnTrust} from './trust';
 
 // Authored practice pacing, not a promise about how fast a real dog relaxes.
 export const CALM_WAIT_MS=3000;
@@ -33,8 +34,10 @@ export function calmInteraction(state:PetState,action:'settle'|'rewardCalm',now:
   }
   if(state.calmSince===undefined||state.arousal>55)return {state:{...state,calmSince:undefined},note:'Wait for relaxed body language before rewarding calm.'};
   if(calmRewardWait(state,now)>0)return {state,note:'Keep watching quietly. No reward yet.'};
-  return {state:{...state,updatedAt:now,lastCareAt:now,calmSince:undefined,lastCalmRewardAt:now,
-    trust:Math.min(100,state.trust+2),discipline:Math.min(100,state.discipline+5),
+  // Calm is rewarded every time; trust for it rests like any other kind of care (trust.ts).
+  const trusted=earnTrust(state,'calm',2,now),gained=trusted.trust>state.trust;
+  return {state:{...trusted,updatedAt:now,lastCareAt:now,calmSince:undefined,lastCalmRewardAt:now,
+    discipline:Math.min(100,state.discipline+5),
     call:state.call?.reason==='tantrum'?undefined:state.call},
-    note:`A small reward for ${name}'s relaxed posture. Calm +5 · Trust +2. Game practice; real sessions stay separate.`};
+    note:`A small reward for ${name}'s relaxed posture. Calm +5${gained?' · Trust +2':''}. Game practice; real sessions stay separate.`};
 }

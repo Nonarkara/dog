@@ -17,7 +17,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { DogProfile } from '../types/dog';
 import type { BehaviourName, PetState } from '../domain/types';
 import { BEHAVIOURS } from '../domain/types';
-import { clamp, getBehaviour, pronouns, readiness } from '../domain/pet';
+import { chargeTrust, clamp, earnTrust, getBehaviour, pronouns, readiness } from '../domain/pet';
 import { primaryCue } from '../domain/training';
 import {
   POSE_FOR,
@@ -37,7 +37,7 @@ import {
 import type {PerformPose} from './trainingMotion';
 import {calmNeed} from '../domain/calm';
 import { sound } from '../utils/proceduralAudio';
-import {isLearned,lockedBehind} from '../domain/capture';
+import {isLearned,lockedBehind,opensTomorrow} from '../domain/capture';
 import {CaptureGame} from './CaptureGame';
 
 type Phase = 'ready' | 'waiting' | 'marked' | 'result' | 'saving';
@@ -125,7 +125,9 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
     const next=await onPetStateChange(latest=>{
       if(calmNeed(latest,'training'))return latest;
       r=scoreTrial(latest.lessons?.[name]??newLesson(),{...input,cueCount:count});
-      return {...latest,trust:clamp(latest.trust+r.trustDelta),lessons:{...latest.lessons,[name]:r.lesson}};
+      // A good trial earns trust once per rest (pet.ts earnTrust); a clumsy one always costs.
+      const trusted=r.trustDelta>0?earnTrust(latest,'practice',r.trustDelta,Date.now()):chargeTrust(latest,'practice-miss',-r.trustDelta,Date.now());
+      return {...trusted,lessons:{...latest.lessons,[name]:r.lesson}};
     });
     saving.current=false;setIsSaving(false);
     if(!mounted.current||epoch.current!==submittedEpoch)return;
@@ -262,7 +264,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
             type="button"
             onClick={() => setName(b.name)}
             disabled={!!behind}
-            title={behind?`Opens after ${BEHAVIOURS.find(x=>x.name===behind)?.label}`:isLearned(petState,b.name)?'Learned':'Learning'}
+            title={behind?(opensTomorrow(petState,b.name)?'Opens tomorrow: one new word a day':`Opens after ${BEHAVIOURS.find(x=>x.name===behind)?.label}`):isLearned(petState,b.name)?'Learned':'Learning'}
             aria-pressed={b.name === name}
             className={`btn ${CHIP} ${b.name === name ? 'btn-accent' : 'btn-quiet border-hairline'}`}
           >
@@ -270,6 +272,7 @@ export const PracticeDeck: React.FC<Props> = ({ dog, petState, onPetStateChange,
           </button>
         );})}
         </div>
+        {BEHAVIOURS.some(b=>opensTomorrow(petState,b.name))&&<p className="dog-vocab-note" data-next-word>Next word tomorrow</p>}
       </div>
 
       {!proofing?<><CaptureGame busy={busy} dogName={dog.name} name={name} petState={petState} onPetStateChange={onPetStateChange} onPose={onPose} petPulse={petPulse} unavailable={asleep?`${dog.name} is asleep.`:calmNeed(petState,'training')}/>{isLearned(petState,name)&&<button type="button" className="btn btn-quiet border-hairline capture-proof" onClick={()=>setProofing(true)} title="Lure, signal, word, then distance, duration and distraction">Proof it →</button>}</>:<>

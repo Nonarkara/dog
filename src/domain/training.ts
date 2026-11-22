@@ -18,6 +18,7 @@
 
 import type { Behaviour, BehaviourName, PetState, Schedule, Subject } from './types';
 import { MARKER_WINDOW_MS, clamp, getBehaviour, pronouns, readiness } from './pet';
+import { earnTrust } from './trust';
 
 /** How fast a well-timed, well-scheduled rep raises a behaviour. */
 const BASE_GAIN = 0.16;
@@ -249,8 +250,8 @@ export function recordRep(
       : 0;
   return {
     state: {
-      ...state,
-      trust: clamp(state.trust + trustDelta),
+      // A good rep earns trust once per rest; a harsh one costs every time (trust.ts).
+      ...(trustDelta > 0 ? earnTrust(state, 'real', trustDelta, Date.now()) : { ...state, trust: clamp(state.trust + trustDelta) }),
       behaviours: { ...state.behaviours, [input.behaviour]: outcome.behaviour },
       lastRealSessionAt: input.real ? Date.now() : state.lastRealSessionAt,
     },
