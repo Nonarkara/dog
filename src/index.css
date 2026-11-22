@@ -1286,6 +1286,14 @@ html {font-synthesis:none;}
 /* One name size in the column (17px, the stage name's size); captions at the micro size, not 9px. */
 .record-fold .record-identity h3 {font-size:17px;}
 .record-fold .text-\[9px\] {font-size:11px;}
+/* Real log puts four mode buttons in the Coach header. On a narrow panel that left 46px
+   for "Coach", the word and the help dot (74px), so the dot sat on top of PRACTICE.
+   There the title and the word step aside: the selected tab already names the panel. */
+.coach-head {container-type:inline-size;container-name:dog-coach-head;}
+.coach-modes {min-width:0;max-width:100%;flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end;}
+@container dog-coach-head (max-width:420px){
+ .coach-head[data-mode=log] h2,.coach-head[data-mode=log] .label {display:none;}
+}
 /* The help dot draws at 20px and is touched at 24px. */
 .help-dot {position:relative;}
 .help-dot::after {content:'';position:absolute;inset:-3px;} /* 18px padding box + 3 each side = 24 */

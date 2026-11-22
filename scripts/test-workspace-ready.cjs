@@ -1,6 +1,6 @@
 const{chromium}=require('playwright'),assert=require('node:assert/strict');
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true});try{
- const p=await b.newPage({viewport:{width:1440,height:900}});let releaseApp,releaseRecord,appRequested=false,recordRequested=false;
+ const p=await b.newPage({viewport:{width:1440,height:900}});await p.addInitScript(()=>{try{localStorage.setItem('tdc_record_open','0');}catch{}});/* the record starts open on a tall wide screen; these steps open it themselves */let releaseApp,releaseRecord,appRequested=false,recordRequested=false;
  const appHeld=new Promise(resolve=>releaseApp=resolve),recordHeld=new Promise(resolve=>releaseRecord=resolve);
  await p.route('**/App-*.js',async route=>{appRequested=true;await appHeld;await route.continue();});
  await p.route('**/RecordPanel-*.js',async route=>{recordRequested=true;await recordHeld;await route.continue();});

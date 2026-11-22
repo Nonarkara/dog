@@ -6,7 +6,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 try{
 const fresh=async()=>{
  const context=await browser.newContext({viewport:{width:1440,height:900}});
- const page=await context.newPage();
+ const page=await context.newPage();await page.addInitScript(()=>{try{localStorage.setItem('tdc_record_open','0');}catch{}});/* the record starts open on a tall wide screen; these steps open it themselves */
  await page.clock.setFixedTime(new Date(2026,9,30,12));
  await page.goto(url);
  await page.waitForFunction(()=>!!localStorage.getItem('canine_os_save_v3'));

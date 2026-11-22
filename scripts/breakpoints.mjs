@@ -57,7 +57,8 @@ for (const m of text.matchAll(/@(media|container)([^{]*)\{/g)) {
  * over two. The sweep has to stand on that cliff to measure both sides of
  * it.
  */
-const CONTAINER_CLIFF_VIEWPORTS = [289, 290, 350, 610, 1237, 1238, 1239];
+// The Coach title reappears when its header reaches 420px, around viewport 1298.
+const CONTAINER_CLIFF_VIEWPORTS = [289, 290, 350, 610, 1237, 1238, 1239, 1297, 1298, 1299];
 
 if (process.argv.includes('--with-css')) console.error("stylesheets: " + paths.join(", "));
 console.log(

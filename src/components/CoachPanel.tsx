@@ -331,13 +331,13 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({ dog, petState, onPetStat
   return (
     <div className="panel region-coach flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       {/* ---- head: the region, the mode, the number that matters ------------ */}
-      <div className="panel-head">
+      <div className="panel-head coach-head" data-mode={mode}>
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="font-display text-[12px] leading-none text-zinc-100">Coach</h2>
           <span className="label truncate">{behaviourMeta?.label ?? behaviourName}</span>
           <Help label="How training works" text="Press Watch and keep your eyes on the dog. The moment your dog does it, say the word, then give a tiny treat. Sit comes first; each word you teach opens the next, one new word a day. Practice is the dog on screen; Real log counts reps with your real dog."/>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="coach-modes flex items-center gap-2">
           <div className="flex items-center">
             {(['practice', 'log'] as const).map((m) => (
               <button

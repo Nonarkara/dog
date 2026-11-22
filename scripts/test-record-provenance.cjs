@@ -2,7 +2,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/dog-record-provenance';fs.mkdirSync(out,{recursive:true});
 (async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),report=[];try{
 for(const[w,h]of[[390,844],[1024,768],[1440,900],[1280,720]]){
- const p=await b.newPage({viewport:{width:w,height:h}});p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded'});await p.bringToFront();// Ensure a saved dog exists so the park canvas renders; the live site starts with none.
+ const p=await b.newPage({viewport:{width:w,height:h}});await p.addInitScript(()=>{try{localStorage.setItem('tdc_record_open','0');}catch{}});/* the record starts open on a tall wide screen; these steps open it themselves */p.setDefaultTimeout(15000);await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url,{waitUntil:'domcontentloaded'});await p.bringToFront();// Ensure a saved dog exists so the park canvas renders; the live site starts with none.
 // The app writes its own household — five dogs with their starter clinical
 // examples — as soon as it loads. This fixture used to hand-roll a copy of
 // Expo's record, and the copy was stale: it carried ONE vaccination where
