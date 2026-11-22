@@ -1250,6 +1250,57 @@ html {font-synthesis:none;}
 .record-fold-caret {margin-left:auto;transition:transform .15s ease-out;}
 .record-fold[data-open=true] .record-fold-caret {transform:rotate(90deg);}
 .record-fold>.region-record {flex:1 1 0%;min-height:0;}
+/* The record in the desktop column is a narrow page, not a wide one: whole-word tabs
+   (the counts stay in each tab's aria-label), one column of facts, and ONE header row.
+   The fold's own row carries the title and the five record tools; the panel's second
+   title row ("Expo / Thai Bangkaew Dog", already in the top bar) is gone, so the first
+   fact starts about 115px down instead of 171. */
+.record-fold {container-type:inline-size;container-name:dog-record;position:relative;}
+.record-fold>.region-record>.panel-head h2,.record-fold>.region-record>.panel-head span.truncate {display:none;}
+.record-fold>.region-record>.panel-head {position:absolute;top:0;right:58px;height:34px;min-height:0;padding:0;border:0;background:none;display:flex;align-items:center;}
+.record-fold>.region-record>.panel-head>div:last-child {gap:4px;}
+.record-fold [role=tablist]>[role=tab] {min-height:32px;}
+@container dog-record (max-width:600px){
+ .record-tab-count {display:none;}
+ .cockpit .record-tab-label {font-size:12px;letter-spacing:-.01em;}
+ .record-identity {grid-template-columns:minmax(0,1fr);height:auto;}
+ .record-identity>.pr-1 {padding-right:0;} /* the two-column gutter has no job in one column */
+}
+/* A long mark or habit wraps to a second line in the column; it is never cut to "…". */
+.record-fold .record-scroll .truncate {white-space:normal;overflow:visible;text-overflow:clip;}
+@container dog-record (max-width:400px){
+ .record-fold [role=tablist]>[role=tab] {padding-inline:0;}
+ .cockpit .record-fold .record-tab-label {font-size:11px;letter-spacing:-.02em;overflow:visible;text-overflow:clip;}
+}
+/* One left line and one right line for the whole column: the fold's icon, the record's
+   lines, and the Care and Coach titles above all start 5px inside the panel. */
+.record-fold>.region-record>.panel-body>:not([role=tablist]) {padding-inline:5px;}
+.record-fold .record-fold-head>button:not(.help-dot) {padding-left:5px;}
+/* The open record is as tall as its content, up to the room it has: a short tab leaves page ground, not an empty bordered box. */
+.record-fold[data-open=true] {flex:0 1 auto;min-height:120px;}
+/* Coach keeps the height its lesson needs; the record takes what is left and scrolls inside it. */
+.desktop-detail:has(>.record-fold[data-open=true])>.region-coach {flex:0 0 auto;}
+.record-fold[data-open=true]>.region-record {flex:0 1 auto;min-height:0;display:flex;flex-direction:column;}
+.record-fold[data-open=true]>.region-record>.panel-body {flex:0 1 auto;min-height:0;}
+.record-fold[data-open=true] .record-scroll {flex:0 1 auto;}
+/* One name size in the column (17px, the stage name's size); captions at the micro size, not 9px. */
+.record-fold .record-identity h3 {font-size:17px;}
+.record-fold .text-\[9px\] {font-size:11px;}
+/* The help dot draws at 20px and is touched at 24px. */
+.help-dot {position:relative;}
+.help-dot::after {content:'';position:absolute;inset:-3px;} /* 18px padding box + 3 each side = 24 */
+/* The help dot comes after the record in the document; it still sits at the end of the fold's row. */
+.record-fold>.help-dot {position:absolute;top:7px;right:6px;}
+.record-fold .record-fold-head {padding-right:32px;}
+/* Focus rings inside the column draw inward, so the column's clip never cuts them and
+   the toggle's ring does not look as if it owned the tools beside it. */
+.record-fold-head>button:focus-visible,.record-fold>.region-record>.panel-head button:focus-visible,.record-fold [role=tab]:focus-visible,.record-fold>.help-dot:focus-visible {outline-offset:-2px;}
+/* The record's own tool bars (pipeline, 3D, attach) wrap their steps here instead of cutting them to a letter. */
+.record-fold .bar {max-height:calc(100% - 16px);overflow-y:auto;}
+.record-fold .bar--stack>.flex {flex-wrap:wrap;}
+.record-fold .bar--stack>.flex>:not(.btn-quiet) {flex:1 1 40%;min-width:0;}
+.record-fold .bar [class*=line-clamp] {-webkit-line-clamp:unset;display:block;overflow:visible;}
+.record-fold .bar .truncate {white-space:normal;overflow:visible;text-overflow:clip;}
 .desktop-detail>.region-coach {flex:1 1 0%;min-height:0;}
 .cockpit-workspace--wide .desktop-detail {grid-row:2/4;align-self:stretch;}
 .cockpit-workspace--wide .desktop-detail:has(.record-fold[data-open=true]) {align-self:stretch;}

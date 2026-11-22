@@ -1031,7 +1031,7 @@ export const RecordPanel: React.FC<RecordPanelProps> = ({ dog, onUpdateDog, onAd
 
         {/* ---- the record --------------------------------------------------- */}
         <div className={`flex min-h-0 flex-1 flex-col ${PRINT_AUTO}`}>
-          <p className="record-source-note text-[10px] leading-snug text-faint border-hairline-b pb-1 mb-1">† Starter examples; other entries owner/imported. Health facts unverified.</p>
+          <p className="record-source-note text-[10px] leading-snug text-faint border-hairline-b pb-1 mb-1">† Starter examples. Health facts unverified.</p>
           {/* A printed record carries every section, so the masthead is
               print-only and the inactive panels come back on paper. */}
           <div className="print-only border-hairline-b pb-2">

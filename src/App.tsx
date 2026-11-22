@@ -120,6 +120,9 @@ const NOTE_TTL_MS = 7000;
  * how much room the frame has been given. They usually agree; when they do
  * not, the frame is the truth.
  */
+/** In a smaller window the open record would show only a few lines under Coach, so it starts folded.
+ * Measured: 1280x800 shows 184px of record, 1366x768 151px; 1024x768 only 102px and 1280x720 under 70px. */
+const RECORD_OPEN_MIN_HEIGHT=760,RECORD_OPEN_MIN_WIDTH=1200;
 function useWide(): boolean {
   // The current compact lesson fits ordinary laptop windows. Keep a lower
   // height bound so a very short landscape view can use the tabbed layout.
@@ -158,7 +161,15 @@ export const App: React.FC = () => {
   const [liveRoom,setLiveRoom]=useState<string|null>(()=>{const room=new URLSearchParams(location.search).get('park');return room&&validRoom(room)?room:null;});
   const [activeRegion, setActiveRegion] = useState<RegionKey>(()=>liveRoom?'commons':'care');
   const [companionView,setCompanionView]=useState(false);
-  const [recordOpen, setRecordOpen] = useState(false);
+  // On a wide screen the column under Coach has room, so the record starts open there
+  // and fills it with the dog's own facts; a reader who folds it away stays folded.
+  // The reader's own choice (true/false) wins; until there is one (null) the record
+  // follows the window: open when it is tall enough to show real content, folded when not.
+  const [recordChoice, setRecordChoice] = useState<boolean|null>(()=>{try{const kept=localStorage.getItem('tdc_record_open');return kept===null?null:kept==='1';}catch{return null;}});
+  const [recordRoom, setRecordRoom] = useState(()=>window.innerWidth>=RECORD_OPEN_MIN_WIDTH&&window.innerHeight>=RECORD_OPEN_MIN_HEIGHT);
+  useEffect(()=>{const fit=()=>setRecordRoom(window.innerWidth>=RECORD_OPEN_MIN_WIDTH&&window.innerHeight>=RECORD_OPEN_MIN_HEIGHT);window.addEventListener('resize',fit);return()=>window.removeEventListener('resize',fit);},[]);
+  const recordOpen=recordChoice??recordRoom;
+  const setRecordOpen=(next:boolean|((open:boolean)=>boolean))=>{const value=typeof next==='function'?next(recordOpen):next;try{localStorage.setItem('tdc_record_open',value?'1':'0');}catch{/* storage is a convenience */}setRecordChoice(value);};
   // Signed-in owners: every save goes to the cloud a few seconds later.
   useEffect(()=>playMode()==='own'?startCloudSync():undefined,[]);
   useEffect(()=>{const url=new URL(location.href);if(liveRoom)url.searchParams.set('park',liveRoom);else url.searchParams.delete('park');if(url.href!==location.href)history.replaceState(history.state,'',url);},[liveRoom]);
@@ -890,8 +901,10 @@ export const App: React.FC = () => {
             <div className="desktop-detail">{renderRegion('coach')}
               {/* The papers fold to one row; most play never needs them. */}
               <div className="record-fold" data-open={recordOpen}>
-                <div className="record-fold-head"><button type="button" className="btn-quiet" aria-expanded={recordOpen} onClick={()=>setRecordOpen(o=>!o)}><BookOpen size={16} aria-hidden="true"/><span className="label">Record</span><span className="record-fold-caret" aria-hidden="true">›</span></button><Help label="What is the record" text={`${currentDog.name}'s papers: ID, vaccines, parasite care, history and photos. Starter entries are examples until you change them.`}/></div>
+                <div className="record-fold-head"><button type="button" className="btn-quiet" aria-expanded={recordOpen} onClick={()=>setRecordOpen(o=>!o)}><BookOpen size={16} aria-hidden="true"/><span className="label">Record</span><span className="record-fold-caret" aria-hidden="true">›</span></button></div>
                 {recordOpen&&renderRegion('record')}
+                {/* After the record in the document, so Tab runs Record, tools, help: the order the row reads. */}
+                <Help label="What is the record" text={`${currentDog.name}'s papers: ID, vaccines, parasite care, history and photos. Starter entries are examples until you change them.`}/>
               </div>
             </div>
           </>
