@@ -31,11 +31,22 @@ const skirting=(fill:string)=>`<path d="M-4000-10H4000V0H-4000Z" fill="${fill}" 
 
 const SCENES:Record<HomeId,{wall:string;floor:string}>={
   house:{
-    wall:wall('#f1e7d2',`${pane(-160,-240,104,96,'#845a2f')}<path d="M-176-246C-160-210-164-176-182-136H-158C-148-176-150-210-160-246ZM-40-246C-56-210-52-176-34-136H-58C-68-176-66-210-56-246Z" fill="#bbc6a9" stroke="#526449" stroke-width="2"/><path d="M-188-248H-28" stroke="${INK}" stroke-width="4"/>
-<rect x="74" y="-236" width="74" height="54" fill="#fbfaee" stroke="#845a2f" stroke-width="5"/><path d="M78-196Q98-220 116-204T144-210V-186H78Z" fill="#bbc6a9"/><circle cx="130" cy="-218" r="5" fill="#e2c47c"/>
+    wall:wall('#f1e7d2',`<path d="M-163-243h110v102h-110Z" fill="#deebed" stroke="#845a2f" stroke-width="6"/>
+<path d="M-160-176q25-27 51-5t53-5v42h-104Z" fill="#a9b994"/>
+<path d="M-160-157q22-13 50 0t54-10v23h-104Z" fill="#bbc6a9"/>
+<path d="M-108-240v96M-160-192h104" stroke="#845a2f" stroke-width="4"/>
+<path d="M-152-224l14-10M-100-212l18-16" stroke="#fbfaee" stroke-width="2.5"/>
+<path d="M-170-142h123v6h-123Z" fill="#eadbc0" ${LINE}/>
+<path d="M-176-246C-160-210-164-176-182-136H-158C-148-176-150-210-160-246ZM-40-246C-56-210-52-176-34-136H-58C-68-176-66-210-56-246Z" fill="#bbc6a9" stroke="#526449" stroke-width="2"/><path d="M-188-248H-28" stroke="${INK}" stroke-width="4"/>
+<rect x="74" y="-236" width="74" height="54" fill="#fbfaee" stroke="#845a2f" stroke-width="5"/>
+<path d="M80-197q21-20 38-7t24-6v22H80Z" fill="#bbc6a9"/>
+<image x="80" y="-230" width="62" height="42" href="/dogs/scenes/house-hills.webp" preserveAspectRatio="xMidYMid slice"/>
 <path d="M96-76Q96-94 114-94H226V-34H96Z" fill="#a9b994" ${LINE}/><path d="M84-48H240V-8H84Z" fill="#bbc6a9" ${LINE}/><path d="M84-56Q74-56 74-46V-4H100V-46Q100-56 90-56Z" fill="#a9b994" ${LINE}/><path d="M118-80H154V-52H118Z" fill="#e2c47c" ${LINE} transform="rotate(-8 136 -66)"/><path d="M90-4V2" ${LINE}/>
 <path d="M-196-112V-4M-214-4H-178M-196-112Q-218-112-222-136H-170Q-174-112-196-112Z" fill="#e2c47c" ${LINE}/>${skirting('#eadbc0')}`),
-    floor:floor('#d9bf95',`${lines(5,i=>`<path d="M-4000 ${16+i*22}H4000" stroke="#c4a676" stroke-width="2"/>`)}${lines(12,i=>`<path d="M${-260+i*46+(i%2)*21} ${16+(i%5)*22}v22" stroke="#c4a676" stroke-width="2"/>`)}<ellipse cx="0" cy="50" rx="150" ry="26" fill="#bbc6a9" stroke="#a9b994" stroke-width="3"/>`),
+    floor:floor('#d9bf95',`${lines(5,i=>`<path d="M-4000 ${16+i*22}H4000" stroke="#c4a676" stroke-width="2"/>`)}${lines(12,i=>`<path d="M${-260+i*46+(i%2)*21} ${16+(i%5)*22}v22" stroke="#c4a676" stroke-width="2"/>`)}<ellipse cx="0" cy="54" rx="154" ry="28" fill="#c4a676"/>
+<ellipse cx="0" cy="50" rx="150" ry="26" fill="#bbc6a9" stroke="#526449" stroke-width="1.5"/>
+<ellipse cx="0" cy="50" rx="140" ry="21" fill="none" stroke="#526449" stroke-opacity=".36" stroke-width="1"/>
+<path d="M-146 44l-9-2m6 6-9-1m8 5h-9m10 4-9 1m10 3-9 2M146 44l9-2m-6 6 9-1m-8 5h9m-10 4 9 1m-10 3 9 2" stroke="#526449" stroke-opacity=".55" fill="none"/>`),
   },
   farm:{
     wall:wall('#e6eff0',`<circle cx="30" cy="-226" r="16" fill="#f2df9e"/><path d="M-4000-50C-300-120-160-70-20-96S220-130 4000-60V0H-4000Z" fill="#c8d4b4"/><path d="M-4000-24C-260-64-120-30 40-56S260-70 4000-30V0H-4000Z" fill="#bbc6a9"/>

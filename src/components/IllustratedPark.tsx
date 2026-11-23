@@ -124,7 +124,8 @@ export function IllustratedPark(props:Props){
   const original=DEFAULT_DOGS.find(d=>d.id===props.dogId),authored=original&&!props.appearance.avatarConfig.customModelUrl&&(['pattern','baseColor','secondaryColor','maskColor'] as const).every(k=>original.avatarConfig[k]===props.appearance.avatarConfig[k]);
   const ownFallback:MetaverseNeighborDog={id:ownId,name:props.name,breed:props.appearance.breed,tribe:'Your dog',ownerName:'You',personality:'',avatarColors:{base:props.appearance.avatarConfig.baseColor,secondary:props.appearance.avatarConfig.secondaryColor,mask:props.appearance.avatarConfig.maskColor},earShape:'pricked',position:[0,0,0],action:'sitting',speed:0};
   spawn(ownId,props.name,authored?props.dogId:'',authored?`/dogs/${FILES[props.dogId]}.webp`:visitorArt(ownFallback),0,95,true);
-  const positions=[[-112,-46],[118,-42],[-117,235],[112,244],[-300,-90],[290,220],[-265,365],[310,-290],[0,-375]];
+  // The home pack gathers far enough inside the initial frame for ears and tail tips.
+  const positions=[[-103,-24],[106,-23],[-96,207],[99,213],[-300,-90],[290,220],[-265,365],[310,-290],[0,-375]];
   const spawnNeighbor=(dog:MetaverseNeighborDog)=>{const known=dog.artId??(dog.id.startsWith('pack-')?dog.id.slice(5):''),file=FILES[known],i=actors.size-1,p=positions[i%positions.length];spawn(dog.id,dog.name,known||'expo-2021',file?`/dogs/${file}.webp`:visitorArt(dog),p[0]+Math.floor(i/positions.length)*35,p[1]);
    const a=actors.get(dog.id);if(a&&dog.remote){a.remote=true;a.grown=dog.grown??1;a.bubble=hungerBubble();}};
   props.neighbors.forEach(spawnNeighbor);
@@ -293,9 +294,12 @@ export function IllustratedPark(props:Props){
     const distance=Math.hypot(a.tx-a.x,a.ty-a.y),moving=distance>2&&(a.own||!reduced.matches)&&!(a.own&&resting)&&now>a.petUntil&&now>a.sniffUntil&&now>a.bowUntil&&!still(a.mode);
     const desiredHeading=moving?Math.atan2(a.ty-a.y,a.tx-a.x):a.heading;
     const error=Math.atan2(Math.sin(desiredHeading-a.heading),Math.cos(desiredHeading-a.heading));
-    a.heading=turnAngle(a.heading,desiredHeading,dt*4.4);
+    a.heading=turnAngle(a.heading,desiredHeading,Math.min(dt*4.4,Math.abs(error)*(1-Math.exp(-dt*12))));
     const playSpeed=a.mode==='chase'?104:a.mode==='flee'?96:a.mode==='visit'||a.mode==='walkto'?52:null;
-    const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?40:distance>100*unit||dx||dy?78:58):30))*unit*Math.min(1.08,PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error)):0;
+    // Leave keyboard steering direct. For a destination, shorten the final
+    // steps so the body arrives with the feet instead of hitting a hard stop.
+    const arrival=dx||dy?1:.28+.72*smooth01(2,32*unit,distance);
+    const wantedSpeed=moving?(playSpeed??(a.own?(p.ambient&&!dx&&!dy?40:distance>100*unit||dx||dy?78:58):30))*unit*Math.min(1.08,PLAY_PERSONALITIES[a.artId]?.pace??1)*Math.max(0,Math.cos(error))*arrival:0;
     a.speed+=(wantedSpeed-a.speed)*(1-Math.exp(-dt*(moving?7:11)));
     if(!moving&&(now<a.petUntil||now<a.sniffUntil||now<a.bowUntil||still(a.mode)||(a.own&&resting)))a.speed=0;
     const step=moving?Math.min(distance,a.speed*depthScale(a.y/unit)*dt):0;let traveled=0;

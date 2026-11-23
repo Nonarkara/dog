@@ -1,4 +1,4 @@
-import {PARK_VERTEX,PARK_FRAGMENT,poseSpring,poseSettling,smooth01,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
+import {PARK_VERTEX,PARK_FRAGMENT,poseSettling,smooth01,MOTION_LAYOUT,MOTION_FLOOR,walkIndex,tileUv,unwarpMotionPoint,motionTouchPart,runNeckFor,frameArt,sourceRig,writeRig,type MotionArtName} from './parkMotion';
 import {growthStage} from '../domain/growth';
 import {chooseBehaviour,type DogBehaviour} from './dogBehaviour';
 import {fetchLearned,touchPart,TOUCH_PREFERENCES,type TouchPart} from '../domain/companionGame';
@@ -23,6 +23,7 @@ import {homeScene,isHome} from './homeScenes';
 
 interface Props extends PerformanceProps {
   controlsHost?: HTMLElement|null;
+  carePending?: boolean;
   dog: DogProfile; petState: PetState; pose?: AvatarPose;
   interactionTrigger: AvatarInteractionTrigger; onInteractionEnd?: () => void;
   onCare?: (action: Interaction) => void;
@@ -340,7 +341,7 @@ function IllustratedStage(props: Props & {url:string}) {
       const action=p.interactionTrigger;
       const activeFun=fun.current&&now<fun.current.until&&!asleep&&!p.petState.sick&&(!p.pose||p.pose==='stand')?fun.current:null;
       const mood=dailyMood(p.petState),toilet=now<toiletUntil.current&&!asleep&&!p.petState.sick;
-      const free=p.petState.calmSince===undefined&&!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
+      const free=p.petState.calmSince===undefined&&!p.carePending&&!action&&!gameRef.current&&!findingRef.current&&!activeFun&&(!p.pose||p.pose==='stand')&&now>reaction.current.petUntil;
       // Keep the household's earlier spontaneous greetings alongside daily life.
       if(now>nextGreeting){nextGreeting=now+18000+Math.random()*12000;if(free&&mood==='content'&&!toilet&&!reduced.matches&&canPlay()&&p.petState.needs.energy>35)runTrick(growthStage(p.petState).progress<.35&&atlas?'turn':personality.idle);}
       if(wasSleeping&&!asleep)wakePending=true;wasSleeping=asleep;
@@ -419,12 +420,12 @@ function IllustratedStage(props: Props & {url:string}) {
       if(posed&&poseRun.settledAt===null)poseRun.settledAt=now;
       const lesson=request?trainingMotion(request.pose,poseRun.settledAt===null?0:now-poseRun.settledAt,reduced.matches):null;
       if(lesson){uniforms.gaze.value.x=lesson.gaze;uniforms.motion.value.y=Math.max(uniforms.motion.value.y,lesson.run);}
-      // A critically damped step (a soft spring when he lowers himself) instead of a
-      // symmetric smoothstep: it leaves rest gently and arrives without a stop.
-      const eased=poseSpring(transition,settleKind?.62:1);
+      // Meet halfway with no overshoot: both drawings arrive at the same
+      // face position before the swap. Only the torso settles afterward.
+      const eased=smooth01(0,1,transition);
       // The two drawings differ in silhouette, so they are NEVER shown together: a cross-fade
       // put a see-through second dog on screen mid-transition (reviewed, with screenshots).
-      // Exactly one opaque drawing per frame; the spring and the warp hide the swap.
+      // Exactly one opaque drawing per frame; the matching landmarks hide the swap.
       const swapped=eased>=.5;
       uniforms.morphAmount.value=1-eased;uniforms.opacity.value=1;
       outgoingUniforms.morphAmount.value=eased;outgoingUniforms.opacity.value=1;

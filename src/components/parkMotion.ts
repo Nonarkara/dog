@@ -51,21 +51,6 @@ export function gaitRig(source:Point[],phase:number,amount:number,heading:number
 /** Smooth 0..1 ramp between two edges (GLSL smoothstep). */
 export const smooth01=(a:number,b:number,x:number)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
 /**
- * Progress of a pose change over normalised time 0..1: the step response of a spring.
- * zeta >= 1 is critically damped (no overshoot, leaves rest gently, settles softly);
- * below 1 it overshoots a little and rocks back, which is how a body lands on the ground.
- * Normalised so it is exactly 0 at 0 and exactly 1 at 1, with zero speed at the start.
- */
-export function poseSpring(t:number,zeta=1):number{
- const c=Math.min(1,Math.max(0,t)),w=10;
- const raw=(u:number)=>{
-  if(zeta>=1)return 1-(1+w*u)*Math.exp(-w*u);
-  const wd=w*Math.sqrt(1-zeta*zeta);
-  return 1-Math.exp(-zeta*w*u)*(Math.cos(wd*u)+zeta*w/wd*Math.sin(wd*u));
- };
- return raw(c)/raw(1);
-}
-/**
  * Body drop added to the torso while the pose changes. Lowering himself he first
  * rises a hair (anticipation), then sinks past the new pose and is eased back (settle).
  * Zero at both ends, so it can never leave a pop behind.

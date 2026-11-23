@@ -845,6 +845,7 @@ export const App: React.FC = () => {
                     onCare={handleInteract}
                     onBed={handleBed}
                     onMiniGameComplete={handleMiniGameComplete}
+                    carePending={pendingAction!==null}
                     interactionTrigger={interactionTrigger}
                     fallback={
                       <DogAvatar3D

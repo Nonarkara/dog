@@ -76,3 +76,10 @@ Goal: replace the blurry RIFE in-betweens in Expo's turn (atlas frames between t
 3. **Kontext asked to rotate a clean key by about 20°** either returned the key unchanged or turned him the wrong way (flipped to face left).
 
 Conclusion: Flux draws a convincing Expo but cannot be steered to a precise body angle, which is what a turn needs. Owner decision: stop, keep the current 60 fps animation. The real fix, if ever wanted, is extra hand-drawn angles between the keys so RIFE only blends small gaps. Do not retry Flux for this without a new technique (for example a pose-conditioned model).
+
+## House artwork (2026-11-24)
+
+The house wall print is a local FLUX.1 Schnell still, generated offline with
+MFLUX (seed 261124, four steps, 448×320). The shipped 224×160 WebP weighs
+1,870 bytes. It is a framed prop in the SVG room, with the landscape drawing
+underneath as a fallback. The dog animation continues to use its authored poses.

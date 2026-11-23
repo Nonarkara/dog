@@ -912,7 +912,7 @@ ok('the last cup left is always the bone', pickCup(2, [2], 0, () => .99) === 2);
      ok('leaving the canopy still happens once the dog is clearly past the rim',at(1.06,'t1')===null);
      ok('entering needs the inner rim: the band alone does not put a lawn dog on the canopy',at(1.02,null)===null&&at(.98,null)==='t1');}
     // The bench is drawn on its ground line: translate(x groundY) scale(k) translate(0 -ground).
-    const benchMatch=scenery.match(/translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\) translate\(0 (-?[\d.]+)\)">[^]*?M-72 -4V-62M72 -4V-62/);
+    const benchMatch=scenery.match(/data-landmark="bench" transform="translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\) translate\(0 (-?[\d.]+)\)">[^]*?M-72 -4V-62M72 -4V-62/);
     const [bx,by,bk,bg]=benchMatch?benchMatch.slice(1,5).map(Number):[0,0,0,0],benchTop=by+(-62+bg)*bk,benchLeft=bx-84*bk;
     ok('park bench sits on the lawn in front of the back fence (never hidden by fence rails)',!!benchMatch&&benchTop>-222&&benchLeft>44,`top ${benchTop} left ${benchLeft}`);
     const lastTuft=scenery.lastIndexOf('M-12 2q-2-12-6-14'),firstTree=scenery.indexOf('M-83-55C-113-95');

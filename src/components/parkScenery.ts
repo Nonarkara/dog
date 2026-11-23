@@ -40,7 +40,7 @@ const fence=`<path d="M-640-256H-60M-640-241H-60M44-256H640M44-241H640" stroke="
 const gate=[-60,44].map(x=>`${contact(x,-222,12,3.4)}<path d="M${x} -222V-282" stroke="${INK}" stroke-width="10"/><path d="M${x-8} -282H${x+8}" stroke="${INK}" stroke-width="5"/>`).join('');
 const treeBody=([x,y,s,v]:(number|string)[],withShadow=true)=>`<g transform="translate(${x} ${y}) scale(${s})">${withShadow?`<ellipse cy="65" rx="90" cx="18" ry="20" fill="${SHADE}"/>`:''}<path d="M-30 66Q-14 62-13 44Q-8 6-16-60H18Q6 6 14 44Q15 62 32 66Q0 72-30 66Z" fill="#77624e" stroke="${INK}" stroke-width="2"/><path d="M-4 52Q-6 10-9-30M8 48Q6 14 9-24" fill="none" stroke="${INK}" stroke-width="1.4"/><path d="M-8 3L-43-38M8-5l29-37" stroke="#77624e" stroke-width="9"/><path d="M-83-55C-113-95-62-144-27-132C-2-169 47-154 55-126C105-134 121-76 92-57C105-20 49-4 26-20C-12 6-60-9-63-30C-89-24-102-42-83-55Z" fill="#386344" stroke="#294434" stroke-width="2"/><path d="M-65-79Q-35-125 4-104M24-124q43-5 55 37M-20-32q34 9 52-6" fill="none" stroke="#526449" stroke-width="7"/>${v==='a'?'<path d="M-56-96C-70-118-40-134-16-124C4-132 24-118 16-102C30-92 12-76-8-82C-30-72-50-82-56-96Z" fill="#4a7a55"/><path d="M-30-108q10-8 22-4M6-116q9-4 16 3" fill="none" stroke="#6f9678" stroke-width="4"/>':'<path d="M-42-88C-30-110 2-114 16-98C34-100 46-84 34-72C40-58 20-50 4-58C-16-48-38-64-42-88Z" fill="#4a7a55"/><path d="M-16-92q9-7 20-3M12-82q8-2 12 5" fill="none" stroke="#6f9678" stroke-width="4"/>'}</g>`;
 const tree=(args:(number|string)[])=>treeBody(args,true);
-const bench=`<g transform="${onGround(145,-148,44)}">${contact(0,44,92,12)}<path d="M-72 -4V-62M72 -4V-62" stroke="${INK}" stroke-width="7"/><path d="M-78-56H78M-78-38H78" stroke="${TIMBER}" stroke-width="13"/><path d="M-78-61H78M-78-43H78" stroke="#eadbc0" stroke-width="1.6"/><path d="M-66 4L-58 36M66 4L58 36" stroke="${INK}" stroke-width="6" opacity=".55"/><path d="M-84-4H80L88 10H-76Z" fill="#a77b4d" stroke="${INK}" stroke-width="2"/><path d="M-76 10H88V22H-76Z" fill="${TIMBER}" stroke="${INK}" stroke-width="2"/><path d="M-70 22L-72 44M82 22L80 44" stroke="${INK}" stroke-width="8"/>${contact(-72,45,9,2.6)}${contact(80,45,9,2.6)}</g>`;
+const bench=`<g data-landmark="bench" transform="${onGround(145,-148,44)}">${contact(0,44,92,12)}<path d="M-72 -4V-62M72 -4V-62" stroke="${INK}" stroke-width="7"/><path d="M-78-56H78M-78-38H78" stroke="${TIMBER}" stroke-width="13"/><path d="M-78-61H78M-78-43H78" stroke="#eadbc0" stroke-width="1.6"/><path d="M-66 4L-58 36M66 4L58 36" stroke="${INK}" stroke-width="6" opacity=".55"/><path d="M-84-4H80L88 10H-76Z" fill="#a77b4d" stroke="${INK}" stroke-width="2"/><path d="M-76 10H88V22H-76Z" fill="${TIMBER}" stroke="${INK}" stroke-width="2"/><path d="M-70 22L-72 44M82 22L80 44" stroke="${INK}" stroke-width="8"/>${contact(-72,45,9,2.6)}${contact(80,45,9,2.6)}</g>`;
 const bowl=`<g transform="${onGround(66,225,8)}">${contact(0,8,38,9)}<path d="M-25-6L-20 7Q0 15 20 7L25-6Z" fill="#77624e" stroke="${INK}" stroke-width="2"/><ellipse cy="-6" rx="25" ry="9" fill="#eadbc0" stroke="${INK}" stroke-width="2"/><ellipse cy="-6" rx="18" ry="5.6" fill="#deebed"/><path d="M-9-7q9-3 17 0" fill="none" stroke="${CREAM}" stroke-width="1.6"/></g>`;
 const hoop=`<g transform="${onGround(-95,-148,42)}">${contact(-30,42,12,3.4)}${contact(30,42,12,3.4)}<path d="M-30 42V-10M30 42V-10" stroke="${INK}" stroke-width="7"/><circle cy="-14" r="26" fill="none" stroke="#386344" stroke-width="10"/><circle cy="-14" r="26" fill="none" stroke="#526449" stroke-width="3" stroke-dasharray="5 7"/></g>`;
 const jump=`<g transform="${onGround(250,50,48)}">${contact(-34,48,12,3.4)}${contact(34,48,12,3.4)}${contact(0,48,40,5)}<path d="M-34 48V-22M34 48V-22" stroke="${INK}" stroke-width="7"/><path d="M-38-18H38" stroke="#b37736" stroke-width="9"/><path d="M-38-4H38" stroke="#eadbc0" stroke-width="6"/></g>`;
@@ -65,6 +65,14 @@ export const PARK_FOREGROUND_PROPS:readonly ParkForegroundProp[]=[
  })),
 ];
 const pads=[[-212,116,13],[-186,130,9],[-318,60,11]].map(([x,y,r],i)=>`<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${f(r*.5)}" fill="#8fae86" stroke="#526449" stroke-width="1.4"/><path d="M${x} ${y}l${r} ${-r*.2}" stroke="#526449" stroke-width="1.4"/>${i===0?`<circle cx="${x+4}" cy="${y-5}" r="3.4" fill="#e0a9b0"/><circle cx="${x+4}" cy="${y-5}" r="1.3" fill="${CREAM}"/>`:''}`).join('');
+// Low patches follow the trail and the shore. They stay below the dogs,
+// and use the same ground scale as the benches and agility equipment.
+const meadowPatch=(x:number,y:number,seed:number)=>`<g transform="${onGround(x,y,0)}">${Array.from({length:9},(_,i)=>{
+ const px=f((rnd(seed+i)*2-1)*41),py=f((rnd(seed+i+31)*2-1)*11);
+ const h=f(4+rnd(seed+i+71)*7);
+ const bloom=i%3===0?`<circle cy="-${h}" r="2.4" fill="${i%2===0?CREAM:'#e8d9a0'}"/>`:'';
+ return `<g transform="translate(${px} ${py})"><path d="M0 0q0-${h} 2-${h}M0 0l-4-3" fill="none" stroke="#7fa379" stroke-width="1.1"/>${bloom}</g>`;
+}).join('')}</g>`;
 const sideHedge=(sign:number)=>{const x=(y:number)=>sign*(530+(y+252)*.04);let d=`M${sign*1600} -300V1300H${f(x(1300))}`;for(let y=1300,i=0;y>-252;y-=40,i++)d+=`Q${f(x(y-20)+sign*-12*(.6+rnd(i+70)*.4))} ${y-20} ${f(x(y-40))} ${y-40}`;return d+'Z';};
 export function parkScenery(){return `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="park-scenery" viewBox="-200 -300 400 600">
 <defs>
@@ -87,10 +95,12 @@ export function parkScenery(){return `<svg xmlns="http://www.w3.org/2000/svg" ar
  <path d="${poly(pathPts.L)}L${f(pathPts.R[pathPts.R.length-1][0])} ${f(pathPts.R[pathPts.R.length-1][1])}${poly(pathPts.R.slice().reverse()).replace('M','L')}Z" fill="#f4f0de"/>
  <path d="${poly(pathPts.L)}M${poly(pathPts.R).slice(1)}" fill="none" stroke="#b3a784" stroke-width="2"/>
  ${pebbles}
+ ${meadowPatch(-89,-66,130)}${meadowPatch(181,110,170)}${meadowPatch(49,330,210)}${meadowPatch(-110,196,250)}
  <path d="${pondRing(1.09)}" fill="#cfd3ae" stroke="${INK}" stroke-width="2"/>
  <path d="${pondRing(.985)}" fill="#c9dadd" stroke="#8fa6a8" stroke-width="2"/>
  <path d="${pondRing(.93,6)}" fill="#deebed"/>
  <path d="M-370 80q30 8 60 0M-340 130q40 8 80-1M-300 60q20 6 40 0" fill="none" stroke="${CREAM}" stroke-width="2.6"/>
+ <path d="M-406 111q42 46 109 54m-92-61q32 37 80 44" fill="none" stroke="#fbfaee" stroke-width="2" opacity=".78"/>
  ${pads}
  ${stones}
  ${reeds}

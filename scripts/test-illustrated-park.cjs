@@ -5,6 +5,18 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
  const snap=async(p,name)=>{const c=await p.context().newCDPSession(p),{data}=await c.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const data=p=>p.locator('.park-world canvas').evaluate(c=>{const scale=c.getBoundingClientRect().width/c.clientWidth;return {...c.dataset,dogWidth:+c.dataset.dogWidth*scale,smallestDogWidth:+c.dataset.smallestDogWidth*scale,w:c.clientWidth,h:c.clientHeight};});
  const frameCheck=d=>{/* far dogs draw smaller (parkDepth.ts); a finger reaches a small dog through its 120px touch box, proven in test-park-perspective.cjs and the touchFallback selftest */assert(d.dogWidth>=60,'touchable: own dog never draws tiny');assert(d.smallestDogWidth>=60,'touchable: neighbours never draw tiny');assert(d.focusX-d.focusWidth/2>=-2&&+d.focusX+d.focusWidth/2<=d.w+2,'Selected dog fits horizontally');assert(d.focusY-d.focusHeight/2>=-2&&+d.focusY+d.focusHeight/2<=d.h+2,'Selected dog fits vertically');};
+ // With roaming paused, test the opening composition before following a dog.
+ for (const [w,h] of [[390,844],[1024,768]]) {
+  const p=await open(w,h,true);
+  const d=await data(p);
+  const dogs=JSON.parse(d.dogBoxes);
+  assert.equal(dogs.length,5);
+  for (const dog of dogs) {
+   assert(dog.x-dog.w/2>=4&&dog.x+dog.w/2<=d.w-4,`${dog.id} must fit horizontally at ${w}px`);
+   assert(dog.y-dog.h>=4&&dog.y+24<=d.h,`${dog.id} and its name must fit vertically at ${w}px`);
+  }
+  await p.close();
+ }
  for(const[w,h]of[[390,667],[390,844],[1024,768],[1440,900]]){
   const p=await open(w,h);let d=await data(p);assert(d.visibleDogs>=4);assert(d.h>h*.7);assert.equal(await p.locator('.park-help,.park-selected,.park-import-note').count(),0);frameCheck(d);await snap(p,`${w}x${h}-default`);report.push({state:'default',w,h,...d});
   for(let i=0;i<4;i++){const button=p.getByRole('button',{name:'Zoom out',exact:true});if(await button.isEnabled())await button.click();}await p.waitForTimeout(500);d=await data(p);assert.equal(+d.zoom,.85);frameCheck(d);await snap(p,`${w}x${h}-wide`);report.push({state:'minimum zoom',w,h,...d});
