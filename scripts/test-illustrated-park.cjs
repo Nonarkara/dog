@@ -1,6 +1,6 @@
 const{chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
 const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.env.DOG_EVIDENCE||'/tmp/illustrated-park';fs.mkdirSync(out,{recursive:true});
-(async()=>{const b=await chromium.launch({channel:'chrome',headless:true}),report=[],errors=[];try{
+(async()=>{const b=await chromium.launch({channel:process.env.DOG_BUNDLED_CHROMIUM?'chromium':'chrome',headless:true}),report=[],errors=[];try{
  const open=async(w,h,reduce=false)=>{const p=await b.newPage({viewport:{width:w,height:h},reducedMotion:reduce?'reduce':'no-preference'});p.setDefaultTimeout(20000);p.on('pageerror',e=>errors.push(e.message));await p.clock.setFixedTime(new Date(2026,9,30,12));await p.goto(url);await p.waitForFunction(()=>+document.querySelector('canvas')?.dataset.frames>4);await p.getByRole('button',{name:'Open Commons park'}).click();await p.waitForFunction(()=>document.querySelector('canvas')?.dataset.renderer==='illustrated-park'&&+document.querySelector('canvas').dataset.frames>20&&+document.querySelector('canvas').dataset.visibleDogs>=4);return p;};
  const snap=async(p,name)=>{const c=await p.context().newCDPSession(p),{data}=await c.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${out}/${name}.png`,Buffer.from(data,'base64'));};
  const data=p=>p.locator('.park-world canvas').evaluate(c=>{const scale=c.getBoundingClientRect().width/c.clientWidth;return {...c.dataset,dogWidth:+c.dataset.dogWidth*scale,smallestDogWidth:+c.dataset.smallestDogWidth*scale,w:c.clientWidth,h:c.clientHeight};});
@@ -17,6 +17,7 @@ const url=process.env.DOG_URL||'http://127.0.0.1:4178/?mode=play',out=process.en
   }
   await p.close();
  }
+ if(process.env.DOG_PARK_SMOKE==='1'){console.log('PASS opening park fits all five dogs on phone and tablet');return;}
  for(const[w,h]of[[390,667],[390,844],[1024,768],[1440,900]]){
   const p=await open(w,h);let d=await data(p);assert(d.visibleDogs>=4);assert(d.h>h*.7);assert.equal(await p.locator('.park-help,.park-selected,.park-import-note').count(),0);frameCheck(d);await snap(p,`${w}x${h}-default`);report.push({state:'default',w,h,...d});
   for(let i=0;i<4;i++){const button=p.getByRole('button',{name:'Zoom out',exact:true});if(await button.isEnabled())await button.click();}await p.waitForTimeout(500);d=await data(p);assert.equal(+d.zoom,.85);frameCheck(d);await snap(p,`${w}x${h}-wide`);report.push({state:'minimum zoom',w,h,...d});

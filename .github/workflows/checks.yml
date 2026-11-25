@@ -24,4 +24,9 @@ jobs:
       - run: npm run test:care
       - run: npm run test:auth
       - run: npm run test:push
+      - run: npm run test:room
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:release-smoke
+        env:
+          DOG_BUNDLED_CHROMIUM: '1'

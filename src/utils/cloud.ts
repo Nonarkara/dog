@@ -22,6 +22,7 @@ export const readSyncStatus=()=>syncStatus;
 const reportSync=(status:SyncStatus)=>{syncStatus=status;window.dispatchEvent(new Event('tdc-cloud-status'));};
 let expectedAccountId:string|undefined;
 let cloudBaseRevision:number|null|undefined;
+let syncedLocalRevision:number|undefined;
 let uploadInFlight=false;
 let needsReconcile=false;
 const ACCOUNT_KEY = 'tama_dog_chi_cloud_owner';
@@ -32,6 +33,7 @@ function acknowledgedBase(me:Me,seed:string|undefined):AcknowledgedBase|null{
 }
 function rememberBase(localRevisionAtAck:number){
   const adoption=readAdoption();
+  syncedLocalRevision=localRevisionAtAck;
   if(expectedAccountId&&adoption)localStorage.setItem(BASE_KEY,JSON.stringify({accountId:expectedAccountId,seed:adoption.seed,serverRevision:cloudBaseRevision,localRevisionAtAck}));
 }
 const bindAccount=(me:Me,localRevisionAtAck=localRevision())=>{
@@ -74,6 +76,7 @@ const localRevision = (): number => {
 export async function pullIfNewer(me: Me): Promise<'restored' | 'kept' | 'none' | 'conflict'> {
   setCloud(false);
   if (!me.user) {reportSync('local');return 'none';}
+  const inspectedSave=localStorage.getItem(OWN_SAVE_KEY);
   const local=readAdoption();
   const previous=localStorage.getItem(ACCOUNT_KEY);
   if (local && previous && me.user.id && previous!==me.user.id) {reportSync('conflict');return 'conflict';}
@@ -97,7 +100,10 @@ export async function pullIfNewer(me: Me): Promise<'restored' | 'kept' | 'none' 
     if(revision===me.dog.revision&&JSON.stringify(ownedBackup())!==JSON.stringify(remote)){reportSync('conflict');return 'conflict';}
     bindAccount(me,me.dog.revision);return 'kept';
   }
-  await restoreOwnedBackup(me.dog.backup);
+  if(!await restoreOwnedBackup(me.dog.backup,inspectedSave)){
+    reportSync('conflict');
+    return 'conflict';
+  }
   bindAccount(me);
   return 'restored';
 }
@@ -112,9 +118,13 @@ export async function resolveCloudDog(me:Me):Promise<void>{
 
 /** Push against the last observed server base. A conflict pauses uploads for an explicit recheck. */
 export async function pushOwnedDog(keepalive = false): Promise<'saved' | 'newer-elsewhere' | 'skipped' | 'failed'> {
-  if (!cloudOn()||uploadInFlight) return 'skipped';
+  if (!cloudOn()||!expectedAccountId||uploadInFlight) return 'skipped';
   let backup;
   try { backup = ownedBackup(); } catch { return 'skipped'; }
+  if(cloudBaseRevision!=null&&backup.save.revision===syncedLocalRevision){
+    reportSync('saved');
+    return 'skipped';
+  }
   uploadInFlight=true;
   try {
     const body=JSON.stringify({ revision: backup.save.revision, backup, expectedAccountId, baseRevision:cloudBaseRevision });

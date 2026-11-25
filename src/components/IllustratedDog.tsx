@@ -269,15 +269,28 @@ function IllustratedStage(props: Props & {url:string}) {
       renderer.initTexture(texture);atlas={texture,alpha,width:mask.width,tile:mask.width/MOTION_LAYOUT.columns};
       setMotionReady(true);
     },undefined,()=>{/* Optional movement never replaces the approved base dog. */}),1200);
-    for(const key of ['stand','sit','down','paw','sleep','feed','pet','bow','sick'] as const){
+    let optionalPoseTimer=0;
+    const loadPose=(key:ArtPose)=>{
       const source=key==='stand'?url:url.replace('.webp',`-${key}.webp`);
       loader.load(source,t=>{
         if(disposed){t.dispose();return;}t.colorSpace=THREE.SRGBColorSpace;renderer.initTexture(t);textures.set(key,t);
         const image=t.image as HTMLImageElement;
         if(maskCtx){maskCtx.clearRect(0,0,192,192);maskCtx.drawImage(image,0,0,192,192);const rgba=maskCtx.getImageData(0,0,192,192).data,alpha=new Uint8ClampedArray(192*192);for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3];masks.set(key,{pixels:alpha,w:192,h:192});}
-        if(key==='stand'){uniforms.art.value=t;const m=masks.get(key);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}setReady(true);}
-      },undefined,()=>{if(!disposed)setFailed(true);});
-    }
+        if(key==='stand'){
+          uniforms.art.value=t;const m=masks.get(key);if(m){pixels=m.pixels;imageW=m.w;imageH=m.h;}setReady(true);
+          // Fetch the immediate care poses first. The remaining poses can
+          // wait for the standing dog to be drawn and ready for touch.
+          optionalPoseTimer=window.setTimeout(()=>{
+            for(const pose of ['sit','down','paw','bow'] as const)loadPose(pose);
+          },250);
+        }
+      },undefined,()=>{if(!disposed&&key==='stand')setFailed(true);});
+    };
+    loadPose('stand');
+    loadPose('pet');
+    loadPose('feed');
+    loadPose('sleep');
+    loadPose('sick');
     let pendingResize=false,lastWidth=0,lastHeight=0,barSpace=.23,lastChromeRead=-Infinity;
     const measureChrome=()=>{const canvasBox=canvas.getBoundingClientRect(),toysBox=container.closest('.illustrated-stage')?.querySelector('.dog-toys')?.getBoundingClientRect();barSpace=toysBox?(canvasBox.right-toysBox.left+6)/Math.max(1,canvasBox.width)*(camera.right-camera.left):.23;};
     const resize=()=>{pendingResize=false;const w=container.clientWidth,h=container.clientHeight;if(!w||!h||w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h);const v=Math.max(1.08,1.0/(w/h));camera.left=-v*w/h;camera.right=v*w/h;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix();container.parentElement?.style.setProperty('--dog-floor',`${(.5+.82/(camera.top-camera.bottom))*h-8}px`);};
@@ -579,7 +592,7 @@ function IllustratedStage(props: Props & {url:string}) {
     };
     renderer.compile(scene,camera);
     frame=requestAnimationFrame(animate);
-    return()=>{disposed=true;clearTimeout(atlasTimer);atlas?.texture.dispose();if(touchTimer.current)clearTimeout(touchTimer.current);cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
+    return()=>{disposed=true;clearTimeout(atlasTimer);clearTimeout(optionalPoseTimer);atlas?.texture.dispose();if(touchTimer.current)clearTimeout(touchTimer.current);cancelAnimationFrame(frame);observer.disconnect();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);textures.forEach(t=>t.dispose());masks.clear();geometry.dispose();material.dispose();outgoingMaterial.dispose();floorGeometry.dispose();floorMaterial.dispose();toyGeometry.dispose();toyMaterial.dispose();renderer.dispose();canvas.remove();};
   },[dog.id,url,failed]);
 
   if(failed||!url)return <>{fallback}</>;

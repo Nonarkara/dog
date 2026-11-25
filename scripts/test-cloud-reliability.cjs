@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const base=process.env.DOG_URL||'http://127.0.0.1:4190';
-(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
+(async()=>{const browser=await chromium.launch({channel:process.env.DOG_BUNDLED_CHROMIUM?'chromium':'chrome',headless:true});try{
  const p=await browser.newPage({viewport:{width:390,height:844}});await p.clock.setFixedTime(new Date(2026,10,3,12));
  await p.route('**/api/me',r=>r.fulfill({json:{user:null,dog:null,providers:['google','line']}}));
  await p.goto(base+'/?mode=play');await p.waitForSelector('.region-stage canvas');
@@ -21,6 +21,11 @@ const base=process.env.DOG_URL||'http://127.0.0.1:4190';
   // Capture fetch at the browser boundary. Simulate Chrome's real body ceiling.
   const native=window.fetch,calls=[];window.fetch=async(path,options)=>{if(path==='/api/dog'){const bytes=new TextEncoder().encode(options.body).length;calls.push({bytes,keepalive:options.keepalive,expectedAccountId:JSON.parse(options.body).expectedAccountId,baseRevision:JSON.parse(options.body).baseRevision,revision:JSON.parse(options.body).revision});if(options.keepalive&&bytes>65536)throw new TypeError('keepalive quota');return new Response('{}',{status:200});}return native(path,options);};
   localStorage.setItem('tama_dog_chi_cloud_owner','changed-in-another-tab');
+  const unchanged=await cloud.pushOwnedDog(true),unchangedRequests=calls.length;
+  const changed=JSON.parse(localStorage.getItem(key));
+  changed.revision+=1;
+  changed.pets['expo-2021'].trust+=1;
+  localStorage.setItem(key,JSON.stringify(changed));
   const small=await cloud.pushOwnedDog(true);
   const large=JSON.parse(localStorage.getItem(key));large.revision+=1;large.dogs[0].photos=[{url:'data:image/jpeg;base64,'+'A'.repeat(100000)}];localStorage.setItem(key,JSON.stringify(large));
   const big=await cloud.pushOwnedDog(true);
@@ -43,12 +48,39 @@ const base=process.env.DOG_URL||'http://127.0.0.1:4190';
   const ambiguous=store.ownedBackup();ambiguous.save.pets['expo-2021'].trust+=1;
   const migrationConflict=await cloud.pullIfNewer({...account,dog:{...account.dog,revision:ambiguous.save.revision,backup:JSON.stringify(ambiguous)}});
   await cloud.resolveCloudDog(editedAccount);
+  // Queue another writer ahead of restore. It persists care after cloud
+  // reconciliation has read the browser, but before restore gets the lock.
+  const db=await new Promise((resolve,reject)=>{
+   const request=indexedDB.open('canine_os_progress_mutex',1);
+   request.onsuccess=()=>resolve(request.result);
+   request.onerror=()=>reject(request.error);
+  });
+  const writer=db.transaction('writer','readwrite').objectStore('writer').get('fixture');
+  let newerLocal;
+  writer.onsuccess=()=>{
+   const next=JSON.parse(localStorage.getItem(key));
+   next.revision+=1;
+   next.pets['expo-2021'].trust+=3;
+   newerLocal=JSON.stringify(next);
+   localStorage.setItem(key,newerLocal);
+  };
+  const raceCloud=structuredClone(remoteEdit);
+  raceCloud.save.revision=12;
+  const racedRestore=await cloud.pullIfNewer({...editedAccount,dog:{...editedAccount.dog,revision:12,backup:JSON.stringify(raceCloud)}});
+  const queuedCarePreserved=!!newerLocal&&localStorage.getItem(key)===newerLocal&&!cloud.cloudOn();
+  db.close();
+  await cloud.resolveCloudDog(editedAccount);
+  const unsent=JSON.parse(localStorage.getItem(key));
+  unsent.revision+=1;
+  localStorage.setItem(key,JSON.stringify(unsent));
   let release;window.fetch=async(path,options)=>path==='/api/dog'?await new Promise(resolve=>release=resolve):native(path,options);
   const waiting=cloud.pushOwnedDog(),overlap=await cloud.pushOwnedDog();
   while(!release)await new Promise(resolve=>setTimeout(resolve,0));release(new Response('{}',{status:401}));await waiting;
   const expired=cloud.readSyncStatus()==='auth-required'&&!cloud.cloudOn();window.fetch=native;
-  return{differentDog,untouched,blocked,resolved,otherAccount,accountBlocked,sameDog,small,big,calls,overlap,expired,pulled,noEditReopen,keptPulled,reopenedConflict,conflictPreserved,migrationConflict};
+  return{differentDog,untouched,blocked,resolved,otherAccount,accountBlocked,sameDog,unchanged,unchangedRequests,small,big,calls,overlap,expired,pulled,noEditReopen,keptPulled,reopenedConflict,conflictPreserved,migrationConflict,racedRestore,queuedCarePreserved};
  });
+ assert.equal(results.unchanged,'skipped');assert.equal(results.unchangedRequests,0,'Unchanged dog must not make a save request');
+ assert.equal(results.racedRestore,'conflict');assert(results.queuedCarePreserved,'Queued local care survives cloud restore');
  assert.equal(results.differentDog,'conflict');assert(results.untouched&&results.blocked&&results.resolved);assert.equal(results.otherAccount,'conflict');assert(results.accountBlocked);assert.equal(results.sameDog,'kept');assert.equal(results.small,'saved');assert.equal(results.big,'saved');assert.equal(results.calls[0].expectedAccountId,'account-B');assert(results.calls[0].keepalive);assert.equal(results.calls[0].baseRevision,1);assert.equal(results.calls[1].baseRevision,results.calls[0].revision);assert(results.calls[1].revision>results.calls[1].baseRevision);assert.equal(results.overlap,'skipped');assert(results.expired);assert.equal(results.pulled,'restored');assert.equal(results.noEditReopen,'kept');assert(results.keptPulled);assert.equal(results.reopenedConflict,'conflict');assert(results.conflictPreserved);assert.equal(results.migrationConflict,'conflict');assert(results.calls[1].bytes>65536&&!results.calls[1].keepalive);
  // Exercise the real entry gate with a second account, not only the utility.
  await p.route('**/api/me',r=>r.fulfill({json:{user:{id:'account-C',name:'Owner C',provider:'google'},dog:null,providers:['google']}}));

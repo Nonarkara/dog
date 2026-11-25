@@ -1040,6 +1040,7 @@ export const App: React.FC = () => {
 
       {/* ---- the controls ---------------------------------------------------- */}
       {activeRegion!=='commons'&&<CommandBar
+        compactPreview={new URLSearchParams(location.search).get('care')==='compact'}
         labelsVisible={labelsVisible}
         onToggleLabels={toggleLabels}
         dog={currentDog}

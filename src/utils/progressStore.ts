@@ -100,7 +100,14 @@ export function validateOwnedBackup(raw:string){
  if(!validOwnedBackup(data,DEFAULT_DOGS.map(d=>d.id)))throw new Error('This is not a complete Tama-Dog-Chi owned-dog backup. Your current dog was not changed.');
  return data as {format:string;adoption:NonNullable<ReturnType<typeof readAdoption>>;save:ReturnType<typeof current>};
 }
-export function restoreOwnedBackup(raw:string):Promise<void>{
+export function restoreOwnedBackup(raw:string, expectedSave?:string|null):Promise<boolean>{
  const data=validateOwnedBackup(raw);
- return exclusive(()=>{const old=localStorage.getItem(OWN_SAVE_KEY),existing=old?JSON.parse(old):null;localStorage.setItem(OWN_SAVE_KEY,JSON.stringify({...data.save,adoption:data.adoption,revision:Math.max(data.save.revision,validSave(existing)?existing.revision:0)+1}));});
+ return exclusive(()=>{
+  const old=localStorage.getItem(OWN_SAVE_KEY);
+  if(expectedSave!==undefined&&old!==expectedSave)return false;
+  const existing:unknown=old===null?null:JSON.parse(old);
+  const revision=Math.max(data.save.revision,validSave(existing)?existing.revision:0)+1;
+  localStorage.setItem(OWN_SAVE_KEY,JSON.stringify({...data.save,adoption:data.adoption,revision}));
+  return true;
+ });
 }

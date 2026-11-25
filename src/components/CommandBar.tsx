@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Broom,
   CircleHelp,
@@ -7,6 +7,7 @@ import {
   Moon,
   Pill,
   Stethoscope,
+  SlidersHorizontal,
   Utensils,
   Volleyball,
   X,
@@ -22,6 +23,7 @@ import { VitalsModal } from './VitalsModal';
 export type CareAction = Interaction;
 
 interface CommandBarProps {
+  compactPreview?: boolean;
   labelsVisible: boolean;
   onToggleLabels: () => void;
   dog: DogProfile;
@@ -64,6 +66,7 @@ const GERUND: Record<CareAction, string> = {
 };
 
 export const CommandBar: React.FC<CommandBarProps> = ({
+  compactPreview = false,
   labelsVisible,
   onToggleLabels,
   dog,
@@ -75,6 +78,19 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   onOpenVitals,
 }) => {
   const [showVitals, setShowVitals] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsToggle = useRef<HTMLButtonElement>(null);
+  const tools = useRef<HTMLDivElement>(null);
+  const collapsed = compactPreview && !toolsOpen;
+
+  useEffect(() => {
+    if (compactPreview && toolsOpen) tools.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+  }, [compactPreview, toolsOpen]);
+
+  const closeTools = () => {
+    setToolsOpen(false);
+    toolsToggle.current?.focus();
+  };
   const asleep = petState.sleep?.asleep ?? false;
   const isSick = petState.sick ?? false;
   const life = dailyLife(petState);
@@ -141,7 +157,31 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
   return (
     <>
+      {compactPreview && (
+        <div className="care-tools-preview no-print">
+          <button
+            ref={toolsToggle}
+            type="button"
+            className="btn-quiet"
+            aria-controls="care-command-tools"
+            aria-expanded={toolsOpen}
+            onClick={toolsOpen ? closeTools : () => setToolsOpen(true)}
+          >
+            <SlidersHorizontal size={16} aria-hidden="true" />
+            {toolsOpen ? 'Close care tools' : 'Care tools'}
+          </button>
+        </div>
+      )}
       <div
+        ref={tools}
+        id="care-command-tools"
+        hidden={collapsed}
+        onKeyDown={event => {
+          if (compactPreview && toolsOpen && event.key === 'Escape') {
+            event.stopPropagation();
+            closeTools();
+          }
+        }}
         className={`command-bar no-print icon-commands ${labelsVisible ? 'labels-visible' : ''}`}
         role="group"
         aria-label="Care controls"

@@ -22,7 +22,23 @@ await openToys(p);
  for(let i=0;i<8&&!(await p.getByText('Learned ✓',{exact:true}).count());i++){await p.getByRole('button',{name:'Watch',exact:true}).click();await p.getByRole('button',{name:/^Say /}).waitFor({timeout:30000});await p.getByRole('button',{name:/^Say /}).click();await p.getByRole('button',{name:'Tiny treat',exact:true}).click();await p.waitForFunction(()=>!document.querySelector('[data-capture-phase]')||document.querySelector('[data-capture-phase]').dataset.capturePhase==='ready');await p.waitForTimeout(400);}
  assert(await p.getByText('Learned ✓',{exact:true}).count(),'Sit should be learned through the capture game');
  await proof();
- await p.evaluate(()=>{window.dayRandom=Math.random;Math.random=()=>.01});await deck().getByRole('button',{name:'Lure',exact:true}).click();await p.evaluate(()=>Math.random=window.dayRandom);await p.waitForFunction(()=>document.querySelector('.region-stage canvas')?.dataset.performanceDone==='true');await deck().getByRole('button',{name:'Yes! (mark)',exact:true}).click();await deck().getByRole('button',{name:'Treat',exact:true}).click();await deck().getByRole('button',{name:'Next trial',exact:true}).waitFor();const trained=await state();assert(trained.lessons.sit.skill>.2);await checkpoint('rewarded virtual practice');
+ await p.evaluate(()=>{window.dayRandom=Math.random;Math.random=()=>.01});
+ await deck().getByRole('button',{name:'Lure',exact:true}).click();
+ await p.evaluate(()=>Math.random=window.dayRandom);
+ // Wait for the coach to accept the animation's completion. The dashboard's
+ // canvas flag can flip a frame before the coach is ready to score a marker.
+ await p.waitForFunction(()=>{
+  const deck=document.querySelector('[data-practice-phase="waiting"]');
+  if(!deck?.textContent.includes('Done — mark it now!'))return false;
+  const mark=[...deck.querySelectorAll('button')].find(button=>button.textContent.trim()==='Yes! (mark)');
+  if(!mark||mark.disabled)return false;
+  mark.click();
+  return true;
+ });
+ await deck().getByRole('button',{name:'Treat',exact:true}).click();
+ await deck().getByRole('button',{name:'Next trial',exact:true}).waitFor();
+ const trained=await state();assert(trained.lessons.sit.skill>.2,await deck().innerText());
+ await checkpoint('rewarded virtual practice');
  await coach.getByRole('button',{name:'REAL LOG',exact:true}).click();await coach.getByLabel('Cue',{exact:true}).fill('sit please');await coach.getByLabel('Cue',{exact:true}).press('Enter');await p.waitForFunction(()=>JSON.parse(localStorage.getItem('canine_os_save_v3')).pets['expo-2021'].behaviours.sit?.cues.includes('sit please'));
  await coach.getByLabel('Manual delay',{exact:true}).fill('100');await coach.getByRole('button',{name:'Log',exact:true}).click();await coach.getByRole('button',{name:'Next rep',exact:true}).waitFor();const real=await state();assert.equal(real.behaviours.sit.history.filter(a=>a.real).length,1);assert.equal(real.lessons.sit.skill,trained.lessons.sit.skill);await coach.getByRole('button',{name:'Next rep',exact:true}).click();
  await coach.getByRole('button',{name:'REHEARSAL',exact:true}).click();await coach.getByLabel('Manual delay',{exact:true}).fill('100');await coach.getByRole('button',{name:'Log',exact:true}).click();await coach.getByRole('button',{name:'Next rep',exact:true}).waitFor();assert.equal((await state()).behaviours.sit.strength,real.behaviours.sit.strength);await coach.getByRole('button',{name:'Next rep',exact:true}).click();

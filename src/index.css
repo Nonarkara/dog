@@ -1457,3 +1457,20 @@ html {font-synthesis:none;}
 .care-step-btn:active{transform:scale(.97);}
 .care-step-btn:disabled{opacity:.45;cursor:default;}
 .care-step[data-why=idle]>.care-step-btn,.care-step[data-why=wish]>.care-step-btn{background:transparent;color:var(--accent);}
+
+/* Review-only care layout. Keep the dog and its current cue above the tools. */
+.command-bar[hidden] { display:none; }
+.care-tools-preview {
+  display:flex;
+  padding:4px;
+  align-items:center;
+  border-top:1px solid var(--border-dim);
+  background:var(--bg-elevated);
+}
+.care-tools-preview button {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:34px;
+  padding:0 8px;
+}
