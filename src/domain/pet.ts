@@ -128,11 +128,14 @@ export const NAP_ENERGY_PER_HOUR = 16, NAP_WAKE_ENERGY = 40;
 export const NIGHT_START_HOUR = 22;
 export const NIGHT_END_HOUR = 6;
 
-/** TRUE when the clock says it is the small hours. */
-export function isNightHour(now: number): boolean {
-  const hour = new Date(now).getHours();
-  return hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR;
+/** TRUE between the household's bedtime (default 22:00; 20:00 to 01:00) and six in the morning. */
+export function isNightHour(now: number, bedMinute: number): boolean {
+  const d = new Date(now), m = d.getHours() * 60 + d.getMinutes(), end = NIGHT_END_HOUR * 60;
+  return bedMinute < 1440 ? m >= bedMinute || m < end : m >= bedMinute - 1440 && m < end;
 }
+const bedOf = (state: PetState) => gameState(state).bedMinute;
+/** Sleep that starts this late is a night's sleep: three hours before bedtime, never later than 23:59. */
+const nightSleepFrom = (bedMinute: number) => Math.min(1439, bedMinute - 180);
 
 /**
  * HOW STRONGLY HE WANTS TO SLEEP, 0..1.
@@ -143,7 +146,7 @@ export function isNightHour(now: number): boolean {
  */
 export function sleepPressure(state: PetState, now: number = Date.now()): number {
   const tired = 1 - state.needs.energy / 100;
-  const night = isNightHour(now) ? 0.65 : 0;
+  const night = isNightHour(now, bedOf(state)) ? 0.65 : 0;
   // The deepest pressure is in the small hours, not at bedtime.
   const hour = new Date(now).getHours();
   const deepNight = hour >= 1 && hour < 4 ? 0.15 : 0;
@@ -362,9 +365,11 @@ function decayStep(state:PetState,now:number,pace=1):PetState {
   // in at ten in the morning used to lose. Night sleep keeps its slow, long shape.
   // Which one it is depends on the clock NOW, not on the minute the dog lay down:
   // sleep in the night hours is slow and deep, sleep in the day restores quickly.
-  // A dog put to bed from seven in the evening is down for the night.
-  const fellAt=sleep.fellAsleepAt===null?null:new Date(sleep.fellAsleepAt),nightSleep=!!fellAt&&(fellAt.getHours()>=19||fellAt.getHours()<6);
-  const energyRate = asleep ? (isNightHour(now) ? 4.5 : NAP_ENERGY_PER_HOUR) : DECAY_PER_HOUR.energy;
+  // A dog put to bed within three hours of the household's bedtime is down for the
+  // night (from 19:00 with the default 22:00); earlier than that it is a nap.
+  const fellAt=sleep.fellAsleepAt===null?null:new Date(sleep.fellAsleepAt),fellMinute=fellAt?fellAt.getHours()*60+fellAt.getMinutes():0;
+  const nightFrom=nightSleepFrom(bedOf(state)),nightSleep=!!fellAt&&(fellMinute>=nightFrom||fellMinute<NIGHT_END_HOUR*60);
+  const energyRate = asleep ? (isNightHour(now, bedOf(state)) ? 4.5 : NAP_ENERGY_PER_HOUR) : DECAY_PER_HOUR.energy;
   const daily=advanceDailyLife(state,factor*60,now,pace);
   const mess=(state.poopCount??0)+dailyLife(state).peeCount;
   const poopAcc=1+mess*1.5;
@@ -421,7 +426,7 @@ function decayStep(state:PetState,now:number,pace=1):PetState {
   };
   // Morning waking and a restored daytime nap are natural, without manual-wake penalties.
   const morning=new Date(now),minute=morning.getHours()*60+morning.getMinutes();
-  const mayWake=nightSleep?minute>=gameState(state).wakeMinute&&minute<19*60:!isNightHour(now);
+  const mayWake=nightSleep?minute>=gameState(state).wakeMinute&&minute<nightFrom:!isNightHour(now, bedOf(state));
   const rested=next.needs.energy>=NAP_WAKE_ENERGY&&sleep.fellAsleepAt!==null&&now-sleep.fellAsleepAt>=20*60_000;
   if(asleep&&mayWake&&rested){
     next.sleep={...next.sleep,asleep:false,wokenAt:now};

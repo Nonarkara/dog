@@ -1,6 +1,6 @@
 import {growCompanion,growthStage} from './growth';
 import {rescorlaWagner, rescorlaWagnerCompound, reinforceCue, extinguishCue, spontaneousRecovery} from './conditioning';
-import {gameState,buyFood,takeMeal,fetchLearned,discoverTouch,socialize,completeParkWalk,TOUCH_PREFERENCES} from './companionGame';
+import {gameState,buyFood,takeMeal,fetchLearned,discoverTouch,socialize,completeParkWalk,TOUCH_PREFERENCES,moveHome,ownsHome,HOME_PRICES,DEFAULT_BEDTIME,BEDTIME_EARLIEST,BEDTIME_LATEST} from './companionGame';
 import {DOG_BEHAVIOURS,behaviourPool,chooseBehaviour} from '../components/dogBehaviour';
 import {newIdle,stepIdle,idlePool,idleWeight, type IdleContext} from '../components/fallbackIdle';
 import {recordSources,recordExport} from '../utils/recordProvenance';
@@ -32,7 +32,7 @@ import { createPetState, decay, decayBehaviour, interact, observe, performChance
 import { applyRep, readinessToAdvance, recordRep, scheduleEffect, setCue, timingQuality, timingVerdict, nextApproximation, primaryCue } from './training';
 import type { Behaviour, PetState } from './types';
 import { dailyLife, dailyMood } from './dailyLife';
-import { settleSleep, willSettle } from './pet';
+import { settleSleep, willSettle, isNightHour } from './pet';
 import { coatColorAt } from './coat';
 import { coax, maybeRunAway, COAX_PETS, RETURN_TRUST } from './runaway';
 import { chooseActivity, type Activity } from './parkPersonality';
@@ -1031,6 +1031,34 @@ console.log('\nA NAP IS NOT A NIGHT');
   ok('a nap that runs into the night becomes night sleep and does not end at eleven',wakeHour(bedAt(18,0,5))>10||wakeHour(bedAt(18,0,5))<4);
   ok('a dog put to bed at half past seven with energy to spare stays down for the night',wakeHour(bedAt(19,30,50))>9);
   ok('night sleep keeps its long shape: still asleep at three, up after the wake time',decay(tucked,night+4.5*H,false).sleep.asleep&&!decay(tucked,night+10*H,false).sleep.asleep);
+}
+console.log('\nCOINS AND EVENINGS');
+{
+  const t=new Date(2026,10,3,12).getTime(),base=createPetState(t),rich={...base,game:{...gameState(base),coins:100}} as PetState;
+  ok('the house is free and owned from the start',ownsHome(base,'house')&&!ownsHome(base,'farm'));
+  const poor=moveHome(base,'heaven');
+  ok('a room you cannot afford is not bought and says what it costs',!poor.moved&&poor.state===base&&/90 paw coins/.test(poor.note));
+  const farm=moveHome(rich,'farm');
+  ok('buying a room spends its price once and moves the dog in',farm.moved&&farm.state.home==='farm'&&gameState(farm.state).coins===50);
+  const back=moveHome(moveHome(farm.state,'house').state,'farm');
+  ok('an owned room is free to move back to, any time',back.moved&&gameState(back.state).coins===50&&back.state.home==='farm');
+  ok('a room a dog already lives in from an older save counts as owned',ownsHome({...base,home:'office'} as PetState,'office')&&moveHome({...base,home:'office'} as PetState,'office').moved);
+  ok('coins conserve: spent = price, and nothing else changes',(()=>{const r=moveHome(rich,'school').state;return gameState(rich).coins-gameState(r).coins===HOME_PRICES.school&&r.trust===rich.trust&&r.needs.hunger===rich.needs.hunger;})());
+  {const older={...rich,home:'office'} as PetState,out=moveHome(older,'house').state,back=moveHome(out,'office');
+   ok('moving out of a room an older save chose keeps it owned, and moving back is free',ownsHome(out,'office')&&back.moved&&gameState(back.state).coins===gameState(older).coins);}
+  ok('a bought room is kept after moving out of it',ownsHome(moveHome(farm.state,'house').state,'farm'));
+  const at=(h:number,m=0)=>new Date(2026,10,3,h,m).getTime(),next=(h:number,m=0)=>new Date(2026,10,4,h,m).getTime();
+  ok('default bedtime is 22:00, night runs to 06:00',!isNightHour(at(21,59))&&isNightHour(at(22,0))&&isNightHour(next(5,59))&&!isNightHour(next(6,0)));
+  ok('a household bedtime of 00:30 keeps the evening open',!isNightHour(at(23,30),24*60+30)&&isNightHour(next(0,30),24*60+30)&&isNightHour(next(5,0),24*60+30)&&!isNightHour(next(7,0),24*60+30));
+  ok('an early household bedtime of 20:00 starts the night at eight',isNightHour(at(20,0),20*60)&&!isNightHour(at(19,59),20*60));
+  const owl={...base,game:{...gameState(base),bedMinute:24*60+30},needs:{...base.needs,energy:70},arousal:20} as PetState,lark={...owl,game:{...gameState(owl),bedMinute:DEFAULT_BEDTIME}} as PetState;
+  ok('at 23:00 a rested dog with a late bedtime stays up; with the default one it settles',!willSettle(owl,at(23,0))&&willSettle(lark,at(23,0)));
+  {const tuck=(bed:number)=>{const t0=at(21,0),s0=settleSleep({...base,game:{...gameState(base),bedMinute:bed},needs:{...base.needs,energy:30},arousal:20} as PetState,t0+1000).state;for(let m=10;m<=14*60;m+=10){const x=decay(s0,t0+m*60_000,false);if(!x.sleep.asleep)return m/60;}return Infinity;};
+   const lateHouse=tuck(24*60+60),usual=tuck(DEFAULT_BEDTIME);
+   ok('with a 01:00 bedtime, a dog tucked in at 21:00 naps and is up the same evening',lateHouse<3,`${lateHouse} h`);
+   ok('with the default bedtime, a dog tucked in at 21:00 sleeps through to morning',usual>8,`${usual} h`);}
+  ok('an off-grid bedtime from a crafted save snaps to the half hour the picker can show',gameState({...base,game:{...gameState(base),bedMinute:1234}} as PetState).bedMinute===1230);
+  ok('bedtime is bounded to 20:00 to 01:00',gameState({...base,game:{...gameState(base),bedMinute:3}} as PetState).bedMinute===BEDTIME_EARLIEST&&gameState({...base,game:{...gameState(base),bedMinute:9999}} as PetState).bedMinute===BEDTIME_LATEST);
 }
 console.log('\nPARK PERSPECTIVE');
 {

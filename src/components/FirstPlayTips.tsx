@@ -5,7 +5,7 @@ const TIPS={
  pet:{title:'Gentle company',text:'Stroke slowly. Each dog has a favorite spot—watch for a happy lean.'},
  clean:{title:'Clean little home',text:'The broom clears mess and cleans the coat. Regular cleanup protects game health.'},
  feed:{title:'Meals and rewards',text:'Keep regular meals. Use tiny training rewards from the daily allowance; never skip meals to force learning.'},
- coins:{title:'Your pantry',text:'Active time together earns paw coins. Six coins buy three meals; hungry dogs have an emergency bowl.'},
+ coins:{title:'Your pantry',text:'Time together earns paw coins. Six buy three meals; the rest save up for new rooms. Hungry dogs have an emergency bowl.'},
  walk:{title:'A sniff walk',text:'Tap the ground to explore. Gentle greetings build your dog’s social confidence.'},
  bed:{title:'Goodnight together',text:'Tuck your dog in when you settle down. Each dog has a wake habit; rest restores energy.'},
  wake:{title:'A little morning woof',text:'Opt in to wake-up barking. Keep the app open with sound allowed; this is not a lock-screen alarm.'},

@@ -5,6 +5,7 @@ import {downloadOwnedBackup} from '../utils/downloadOwnedBackup';
 import {playMode} from '../utils/playMode';
 import {PushOffer} from './PushOffer';
 import {HOMES,isHome,type HomeId} from './homeScenes';
+import {ownsHome,HOME_PRICES,gameState} from '../domain/companionGame';
 import {growthLabel,CHARACTER_TEXT,wishFor,WISH_SHORT} from '../domain/life';
 import {recordSources} from '../utils/recordProvenance';
 import { dailyLife } from '../domain/dailyLife';
@@ -88,6 +89,11 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
      care consoles: every meter, every line, twice. Six bars read as
      twelve, and a screen reader could meet the console twice. */
   const [detailsOpen,setDetailsOpen]=useState(false);
+  // Choosing a room you do not own only proposes it: buying takes one more, deliberate tap,
+  // so arrowing through the list with a keyboard can never spend coins.
+  const [roomOffer,setRoomOffer]=useState<HomeId|null>(null);
+  // An offer belongs to one dog and one look at the details; it never carries over.
+  React.useEffect(()=>{setRoomOffer(null);},[dog.id,detailsOpen]);
   const isSick = petState.sick ?? false;
   const poops = (petState.poopCount ?? 0)+dailyLife(petState).peeCount;
   const disciplineVal = Math.round(petState.discipline ?? 60);
@@ -209,7 +215,9 @@ export const CarePanel: React.FC<CarePanelProps> = ({ dog, petState, detailView=
         </div>
 
         {detailView&&playMode()==='own'&&<div className="owned-diary"><p>{growthLabel(petState)} · your {dog.name}</p><p>{petState.character?`${dog.name} grew up ${CHARACTER_TEXT[petState.character.name]}`:'One minute of active attention on a new day helps your puppy grow. How you raise your puppy decides who your dog becomes.'}</p><button type="button" className="btn-quiet" onClick={()=>{try{downloadOwnedBackup(dog.name);setBackupNote('Backup downloaded. Restore it from the mode screen.');}catch{setBackupNote('Could not create a complete backup yet. Please try again.');}}}>Export your dog ↗</button>{backupNote&&<p role="status">{backupNote}</p>}</div>}
-        {detailView&&onHome&&<label className="home-pick">Home <select value={isHome(petState.home)?petState.home:'house'} onChange={e=>onHome(e.target.value as HomeId)}>{HOMES.map(h=><option key={h.id} value={h.id}>{h.label}</option>)}</select></label>}
+        {detailView&&onHome&&<div className="home-pick"><label>Home <select value={roomOffer??(isHome(petState.home)?petState.home:'house')} onChange={e=>{const id=e.target.value as HomeId;if(ownsHome(petState,id)){setRoomOffer(null);onHome(id);}else setRoomOffer(id);}}>{HOMES.map(h=><option key={h.id} value={h.id}>{ownsHome(petState,h.id)?h.label:`${h.label} · ${HOME_PRICES[h.id]} coins`}</option>)}</select></label>
+          {roomOffer&&(()=>{const price=HOME_PRICES[roomOffer],coins=Math.floor(gameState(petState).coins),short=price-coins;return <><button type="button" className="btn-accent" data-buy-room disabled={busy||short>0} onClick={()=>{onHome(roomOffer);setRoomOffer(null);}}>{short>0?`Need ${short} more coins`:`Buy · ${price} coins`}</button><button type="button" className="btn-quiet" onClick={()=>setRoomOffer(null)}>Cancel</button></>;})()}
+          <p className="home-coins" role="status">{Math.floor(gameState(petState).coins)} paw coins{roomOffer?'':'. Rooms you buy are kept.'}</p></div>}
         {detailView&&onPalette&&<label className="home-pick">Palette <select value={dog.avatarConfig.palette||dog.id} onChange={e=>onPalette(e.target.value)}>{THEME_CHOICES.map(t=><option key={t.id} value={t.id}>{t.name} · {t.plate}</option>)}</select></label>}
         {/* THE CARE LOG */}
         <div className="care-history border-hairline-t">
