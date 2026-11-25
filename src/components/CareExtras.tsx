@@ -22,7 +22,7 @@ export function CareExtras({kind,dog,state,busy,onClose,onBuy,onFeed,onBed,onPre
   </>:<>
    <div className="care-extra-actions"><button className="btn-accent" disabled={busy||state.sleep.asleep} onClick={onBed}><Moon size={18}/>Tuck {dog.name} in</button><label>Usual wake time <input type="time" min="04:00" max="10:00" value={time} onChange={e=>{const [h,m]=e.target.value.split(':').map(Number);if(Number.isFinite(h)&&Number.isFinite(m))onPreference({wakeMinute:h*60+m});}}/></label>
     <label>Bedtime <select aria-label="Bedtime" value={g.bedMinute} disabled={busy} onChange={e=>onPreference({bedMinute:Number(e.target.value)})}>{BEDTIMES.map(m=><option key={m} value={m}>{clock(m)}</option>)}</select></label></div>
-   <button type="button" className="btn-quiet wake-bark" role="switch" aria-checked={g.wakeBark} disabled={busy} onClick={()=>onPreference({wakeBark:!g.wakeBark})}>{g.wakeBark?<Volume2 size={18} aria-hidden="true"/>:<VolumeX size={18} aria-hidden="true"/>}Bark when {dog.name} wakes</button>
+   <button type="button" className="btn-quiet border-hairline wake-bark self-start px-1.5" role="switch" aria-checked={g.wakeBark} disabled={busy} onClick={()=>onPreference({wakeBark:!g.wakeBark})}>{g.wakeBark?<Volume2 size={18} aria-hidden="true"/>:<VolumeX size={18} aria-hidden="true"/>}Bark when {dog.name} wakes <span className="label" aria-hidden="true">{g.wakeBark?'On':'Off'}</span></button>
    <p>{dog.name} has a personal rhythm. A restful night brings a stretch before the day starts.</p>
    <p className="text-faint">Barking works while this app is open and sound is allowed. It is not a reliable lock-screen alarm.</p>
   </>}
