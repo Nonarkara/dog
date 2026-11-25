@@ -1036,6 +1036,7 @@ console.log('\nCOINS AND EVENINGS');
 {
   const t=new Date(2026,10,3,12).getTime(),base=createPetState(t),rich={...base,game:{...gameState(base),coins:100}} as PetState;
   ok('the house is free and owned from the start',ownsHome(base,'house')&&!ownsHome(base,'farm'));
+  ok('unknown room keys do not change the saved dog or balance', ['unlisted','constructor'].every(id=>moveHome(base,id).state===base));
   const poor=moveHome(base,'heaven');
   ok('a room you cannot afford is not bought and says what it costs',!poor.moved&&poor.state===base&&/90 paw coins/.test(poor.note));
   const farm=moveHome(rich,'farm');
@@ -1048,7 +1049,7 @@ console.log('\nCOINS AND EVENINGS');
    ok('moving out of a room an older save chose keeps it owned, and moving back is free',ownsHome(out,'office')&&back.moved&&gameState(back.state).coins===gameState(older).coins);}
   ok('a bought room is kept after moving out of it',ownsHome(moveHome(farm.state,'house').state,'farm'));
   const at=(h:number,m=0)=>new Date(2026,10,3,h,m).getTime(),next=(h:number,m=0)=>new Date(2026,10,4,h,m).getTime();
-  ok('default bedtime is 22:00, night runs to 06:00',!isNightHour(at(21,59))&&isNightHour(at(22,0))&&isNightHour(next(5,59))&&!isNightHour(next(6,0)));
+  ok('default bedtime is 22:00, night runs to 06:00',!isNightHour(at(21,59),DEFAULT_BEDTIME)&&isNightHour(at(22,0),DEFAULT_BEDTIME)&&isNightHour(next(5,59),DEFAULT_BEDTIME)&&!isNightHour(next(6,0),DEFAULT_BEDTIME));
   ok('a household bedtime of 00:30 keeps the evening open',!isNightHour(at(23,30),24*60+30)&&isNightHour(next(0,30),24*60+30)&&isNightHour(next(5,0),24*60+30)&&!isNightHour(next(7,0),24*60+30));
   ok('an early household bedtime of 20:00 starts the night at eight',isNightHour(at(20,0),20*60)&&!isNightHour(at(19,59),20*60));
   const owl={...base,game:{...gameState(base),bedMinute:24*60+30},needs:{...base.needs,energy:70},arousal:20} as PetState,lark={...owl,game:{...gameState(owl),bedMinute:DEFAULT_BEDTIME}} as PetState;

@@ -56,8 +56,8 @@ export function completeParkWalk(state:PetState,now:number,movingSeconds:number,
 export const HOME_PRICES:Record<string,number>={house:0,apartment:30,studio:30,farm:50,school:60,office:60,heaven:90};
 export const ownsHome=(state:PetState,id:string)=>(HOME_PRICES[id]??Infinity)===0||state.home===id||gameState(state).homes.includes(id);
 export function moveHome(state:PetState,id:string):{state:PetState;moved:boolean;note:string}{
+ if(!Object.hasOwn(HOME_PRICES,id))return {state,moved:false,note:''};
  const price=HOME_PRICES[id];
- if(price===undefined)return {state,moved:false,note:''};
  const g=gameState(state);
  // The room being left stays owned, even one an older save chose before rooms had prices.
  const kept=state.home&&state.home!==id&&(HOME_PRICES[state.home]??0)>0&&!g.homes.includes(state.home)?[...g.homes,state.home]:g.homes;

@@ -58,3 +58,18 @@ controlled sample, not a device latency guarantee. Neither build fetched
 Expo's optional 3D files in the sampled home or park journeys. Park transfer
 at the first visible dogs varied with in-flight atlas loads, so the run does
 not establish a park speedup.
+
+## Bedtime and room release
+
+Deploy from a clean checkout of the current `origin/main` after the
+**Companion checks** workflow has succeeded for that SHA. `npm run deploy`
+now enforces this, reinstalls locked dependencies, and builds before it
+uploads. Check the live asset bytes and record the Worker version after
+deploying. Keep a rollback version that understands saved bedtimes and rooms.
+
+The release smoke suite exercises the actual bedtime and wake-time
+controls with both edits queued behind the browser write lock. It checks
+room cancellation, purchase, returning to an owned room, insufficient
+funds, and persistence. The remaining account portability and reminder
+checks require dedicated signed-in devices. The wake sound is an in-app
+setting, separate from push delivery.

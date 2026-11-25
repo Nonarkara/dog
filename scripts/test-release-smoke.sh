@@ -33,4 +33,5 @@ done
 [[ "$ready" == 1 ]]
 DOG_URL="$preview/?mode=play" node scripts/test-workspace-ready.cjs
 DOG_URL="$preview/?mode=play" DOG_PARK_SMOKE=1 node scripts/test-illustrated-park.cjs
+DOG_URL="$preview/?mode=play" node scripts/test-bedtime-rooms.cjs
 DOG_URL="$dev" node scripts/test-cloud-reliability.cjs
