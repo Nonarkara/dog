@@ -15,9 +15,9 @@ cleanup() {
   rmdir "$log"
 }
 trap 'cleanup "$?"' EXIT
-node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port "$preview_port" --strictPort >"$log/preview" 2>&1 &
+NO_COLOR=1 FORCE_COLOR=0 node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port "$preview_port" --strictPort >"$log/preview" 2>&1 &
 preview_pid=$!
-node node_modules/vite/bin/vite.js --host 127.0.0.1 --port "$dev_port" --strictPort >"$log/dev" 2>&1 &
+NO_COLOR=1 FORCE_COLOR=0 node node_modules/vite/bin/vite.js --host 127.0.0.1 --port "$dev_port" --strictPort >"$log/dev" 2>&1 &
 dev_pid=$!
 ready=0
 for attempt in {1..80}; do
